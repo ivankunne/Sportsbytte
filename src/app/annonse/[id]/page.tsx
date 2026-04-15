@@ -9,6 +9,7 @@ import { formatDaysAgo } from "@/lib/queries";
 import { ConditionBadge } from "@/components/ConditionBadge";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { ListingCard } from "@/components/ListingCard";
+import { ComingSoonButton } from "@/components/ComingSoonButton";
 
 export default function ListingDetailPage({
   params,
@@ -71,7 +72,7 @@ export default function ListingDetailPage({
   if (!listing) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-20 text-center">
-        <h1 className="font-display text-3xl font-semibold">Annonse ikke funnet</h1>
+        <h1 className="font-display text-3xl font-bold">Annonse ikke funnet</h1>
         <Link href="/utforsk" className="mt-4 inline-block text-forest hover:underline">
           Tilbake til utforsk
         </Link>
@@ -85,7 +86,7 @@ export default function ListingDetailPage({
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
       {/* Breadcrumb */}
-      <nav className="mb-6 text-sm text-ink-muted">
+      <nav className="mb-6 text-sm text-ink-light">
         <Link href="/" className="hover:text-forest">Hjem</Link>
         <span className="mx-2">/</span>
         <Link href="/utforsk" className="hover:text-forest">Utforsk</Link>
@@ -128,7 +129,7 @@ export default function ListingDetailPage({
           {listing.description && (
             <div className="mt-8">
               <h2 className="font-display text-xl font-semibold text-ink mb-4">Beskrivelse</h2>
-              <p className="text-ink-light leading-relaxed">{listing.description}</p>
+              <p className="text-ink-mid leading-relaxed">{listing.description}</p>
             </div>
           )}
 
@@ -139,8 +140,8 @@ export default function ListingDetailPage({
                 <table className="w-full">
                   <tbody>
                     {Object.entries(specs).map(([key, value], i) => (
-                      <tr key={key} className={i > 0 ? "border-t border-cream" : ""}>
-                        <td className="px-5 py-3 text-sm font-medium text-ink-muted w-1/3">{key}</td>
+                      <tr key={key} className={i > 0 ? "border-t border-border" : ""}>
+                        <td className="px-5 py-3 text-sm font-medium text-ink-light w-1/3">{key}</td>
                         <td className="px-5 py-3 text-sm text-ink">{value}</td>
                       </tr>
                     ))}
@@ -154,30 +155,35 @@ export default function ListingDetailPage({
         {/* Right: Purchase panel */}
         <div className="lg:col-span-2">
           <div className="lg:sticky lg:top-24 space-y-6">
-            <div className="bg-white rounded-xl p-6 shadow-sm">
+            <div className="bg-white rounded-xl p-6 border border-border">
               <div className="flex gap-2 mb-2">
                 <CategoryBadge category={listing.category} />
                 <ConditionBadge condition={listing.condition} size="md" />
               </div>
-              <h1 className="font-display text-2xl font-semibold text-ink leading-snug">
+              <h1 className="font-display text-2xl font-bold text-ink leading-snug">
                 {listing.title}
               </h1>
 
               <div className="flex items-baseline gap-2 mt-4 mb-6">
-                <span className="text-3xl font-bold text-forest font-display">
+                <span className="text-3xl font-display font-bold text-forest">
                   {listing.price.toLocaleString("nb-NO")}
                 </span>
-                <span className="text-lg text-ink-muted">kr</span>
+                <span className="text-lg text-ink-mid">kr</span>
               </div>
 
               <div className="space-y-3 mb-6">
-                {/* TODO MVP: Replace with Vipps checkout */}
-                <button className="w-full rounded-full bg-amber py-3.5 text-sm font-bold text-white hover:bg-amber-dark transition-colors">
+                <ComingSoonButton
+                  feature="Vipps-betaling"
+                  className="w-full rounded-lg bg-amber py-3.5 text-sm font-bold text-white hover:brightness-92 transition-colors duration-[120ms]"
+                >
                   Kjøp nå
-                </button>
-                <button className="w-full rounded-full border-2 border-forest py-3 text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors">
+                </ComingSoonButton>
+                <ComingSoonButton
+                  feature="Meldinger"
+                  className="w-full rounded-lg border-2 border-forest py-3 text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors duration-[120ms]"
+                >
                   Send melding til selger
-                </button>
+                </ComingSoonButton>
               </div>
 
               <div className="flex items-start gap-3 p-4 rounded-xl bg-cream text-sm">
@@ -186,41 +192,41 @@ export default function ListingDetailPage({
                 </svg>
                 <div>
                   <p className="font-medium text-ink">Frakt med Bring fra 99 kr</p>
-                  <p className="text-ink-muted mt-0.5">Label genereres automatisk</p>
+                  <p className="text-ink-mid mt-0.5">Label genereres automatisk</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-50 text-sm mt-3">
-                <svg className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-forest-light text-sm mt-3">
+                <svg className="h-5 w-5 text-forest flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                 </svg>
                 <div>
-                  <p className="font-medium text-emerald-800">Kjøperbeskyttelse inkludert</p>
-                  <p className="text-emerald-700/70 mt-0.5">Betaling via Vipps</p>
+                  <p className="font-medium text-forest">Kjøperbeskyttelse inkludert</p>
+                  <p className="text-forest-mid mt-0.5">Betaling via Vipps</p>
                 </div>
               </div>
             </div>
 
             {/* Seller card */}
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-sm font-semibold text-ink-muted uppercase tracking-wider mb-4">Selger</h3>
+            <div className="bg-white rounded-xl p-6 border border-border">
+              <h3 className="text-sm font-semibold text-ink-light uppercase tracking-wider mb-4">Selger</h3>
               <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-full bg-forest/10 flex items-center justify-center text-forest font-bold text-sm">
+                <div className="h-12 w-12 rounded-full bg-forest-light flex items-center justify-center text-forest font-bold text-sm">
                   {listing.profiles.avatar}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <Link href={`/profil/${listing.profiles.slug}`} className="font-medium text-ink hover:text-forest transition-colors">
+                    <Link href={`/profil/${listing.profiles.slug}`} className="font-medium text-ink hover:text-forest transition-colors duration-[120ms]">
                       {listing.profiles.name}
                     </Link>
-                    <span className="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5">
+                    <span className="inline-flex items-center gap-1 text-xs text-forest bg-forest-light rounded-full px-2 py-0.5">
                       <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
                       </svg>
                       Verifisert
                     </span>
                   </div>
-                  <p className="text-xs text-ink-muted">
+                  <p className="text-xs text-ink-light">
                     Medlem siden {listing.profiles.member_since} • {listing.profiles.rating} ⭐
                   </p>
                 </div>
@@ -228,7 +234,7 @@ export default function ListingDetailPage({
 
               <Link
                 href={`/klubb/${listing.clubs.slug}`}
-                className="flex items-center gap-2 p-3 rounded-lg bg-cream hover:bg-cream-dark transition-colors"
+                className="flex items-center gap-2 p-3 rounded-lg bg-cream hover:bg-border transition-colors duration-[120ms]"
               >
                 <div
                   className="h-8 w-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
@@ -238,11 +244,11 @@ export default function ListingDetailPage({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-forest">{listing.clubs.name}</p>
-                  <p className="text-xs text-ink-muted">Verifisert medlem</p>
+                  <p className="text-xs text-ink-light">Verifisert medlem</p>
                 </div>
               </Link>
 
-              <div className="mt-4 flex items-center gap-2 text-xs text-ink-muted">
+              <div className="mt-4 flex items-center gap-2 text-xs text-ink-light">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -260,7 +266,7 @@ export default function ListingDetailPage({
             <h2 className="font-display text-2xl font-semibold text-ink">
               Andre annonser fra {listing.clubs.name}
             </h2>
-            <Link href={`/klubb/${listing.clubs.slug}`} className="text-sm font-medium text-forest hover:text-forest-light transition-colors">
+            <Link href={`/klubb/${listing.clubs.slug}`} className="text-sm font-medium text-forest hover:text-forest-light transition-colors duration-[120ms]">
               Se alle →
             </Link>
           </div>

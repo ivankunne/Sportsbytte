@@ -1,4 +1,10 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "For lagledere",
+  description: "Se hvordan Sportsbyttet hjelper lagledere med digitale byttemarked, utstyrsoversikt og kommunikasjon med foreldre.",
+};
 
 export default function ForTeamLeadersPage() {
   return (
@@ -7,10 +13,10 @@ export default function ForTeamLeadersPage() {
         <span className="text-xs font-bold text-amber uppercase tracking-wider">
           For lagledere
         </span>
-        <h1 className="mt-2 font-display text-3xl sm:text-4xl font-semibold text-ink leading-tight">
+        <h1 className="mt-2 font-display text-3xl sm:text-4xl font-bold text-ink leading-tight">
           Gi klubben din en digital byttebod
         </h1>
-        <p className="mt-4 text-lg text-ink-light leading-relaxed">
+        <p className="mt-4 text-lg text-ink-mid leading-relaxed">
           Som lagleder vet du at utstyrsbytting allerede skjer — i
           garderoben, på Facebook, på treninger. Sportsbyttet samler alt på
           ett sted og gjør det trygt, enkelt og organisert.
@@ -75,10 +81,10 @@ export default function ForTeamLeadersPage() {
             desc: "Vis at klubben tar miljøansvar. Gjenbruk av utstyr er bra for miljøet — og for omdømmet.",
           },
         ].map((item) => (
-          <div key={item.title} className="bg-white rounded-xl p-6 shadow-sm">
+          <div key={item.title} className="bg-white rounded-xl p-6 border border-border">
             <div className="text-forest mb-3">{item.icon}</div>
             <h3 className="font-display text-lg font-semibold text-ink">{item.title}</h3>
-            <p className="mt-2 text-sm text-ink-light leading-relaxed">{item.desc}</p>
+            <p className="mt-2 text-sm text-ink-mid leading-relaxed">{item.desc}</p>
           </div>
         ))}
       </div>
@@ -106,17 +112,16 @@ export default function ForTeamLeadersPage() {
         </div>
       </div>
 
-      {/* Testimonial placeholder */}
-      <div className="mt-16 bg-forest/5 rounded-2xl p-8 sm:p-10">
+      {/* Vision quote */}
+      <div className="mt-16 bg-forest-light rounded-2xl p-8 sm:p-10">
         <blockquote className="text-center">
           <p className="font-display text-xl sm:text-2xl text-ink leading-relaxed italic">
-            &ldquo;Sportsbyttet har gjort det så mye enklere å organisere
-            utstyrsbytting i klubben. Foreldrene elsker det, og vi sparer
-            masse tid.&rdquo;
+            &ldquo;Tenk deg at all utstyrsbyttingen i klubben skjer på ett
+            sted — enkelt, trygt og organisert. Det er det vi bygger.&rdquo;
           </p>
           <footer className="mt-4">
-            <p className="font-medium text-ink">Marte Johansen</p>
-            <p className="text-sm text-ink-muted">Lagleder, Bergen Skiklubb Junior</p>
+            <p className="font-medium text-ink">Ivan</p>
+            <p className="text-sm text-ink-light">Grunnlegger, Sportsbyttet</p>
           </footer>
         </blockquote>
       </div>
@@ -126,19 +131,19 @@ export default function ForTeamLeadersPage() {
         <h2 className="font-display text-2xl font-semibold text-ink">
           Klar til å komme i gang?
         </h2>
-        <p className="mt-2 text-ink-light">
+        <p className="mt-2 text-ink-mid">
           Registrer klubben gratis — vi hjelper deg med resten.
         </p>
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/registrer-klubb"
-            className="rounded-full bg-amber px-7 py-3 text-sm font-semibold text-white hover:bg-amber-dark transition-colors"
+            className="rounded-lg bg-amber px-7 py-3 text-sm font-semibold text-white hover:brightness-92 transition-colors duration-[120ms]"
           >
             Registrer din klubb
           </Link>
           <Link
             href="/priser"
-            className="text-sm font-medium text-forest hover:text-forest-light transition-colors"
+            className="text-sm font-medium text-forest hover:text-forest-mid transition-colors duration-[120ms]"
           >
             Se priser →
           </Link>

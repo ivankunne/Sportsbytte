@@ -2,47 +2,57 @@
 
 @theme inline {
   --color-forest: #1a3c2e;
-  --color-forest-light: #2a5c44;
-  --color-forest-dark: #0f2a1e;
+  --color-forest-mid: #2d5c44;
+  --color-forest-light: #e8f2ec;
   --color-amber: #e8843a;
-  --color-amber-light: #f09d5a;
-  --color-amber-dark: #d06a20;
+  --color-amber-light: #fdf0e6;
   --color-cream: #f7f5f0;
-  --color-cream-dark: #ede9e0;
   --color-ink: #1a1a1a;
-  --color-ink-light: #4a4a4a;
-  --color-ink-muted: #7a7a7a;
+  --color-ink-mid: #4a4a4a;
+  --color-ink-light: #8a8a8a;
+  --color-border: #e2ddd6;
+  --color-white: #ffffff;
   --font-display: var(--font-fraunces);
-  --font-body: var(--font-dm-sans);
+  --font-sans: var(--font-dm-sans);
+}
+
+:root {
+  --forest:       #1a3c2e;
+  --forest-mid:   #2d5c44;
+  --forest-light: #e8f2ec;
+  --amber:        #e8843a;
+  --amber-light:  #fdf0e6;
+  --cream:        #f7f5f0;
+  --ink:          #1a1a1a;
+  --ink-mid:      #4a4a4a;
+  --ink-light:    #8a8a8a;
+  --white:        #ffffff;
+  --border:       #e2ddd6;
 }
 
 body {
-  background-color: var(--color-cream);
-  color: var(--color-ink);
-  font-family: var(--font-body), system-ui, sans-serif;
+  background-color: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-sans), 'DM Sans', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), 'Fraunces', Georgia, serif;
 }
 
-.grain-overlay {
-  position: relative;
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.grain-overlay::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.03;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 256px 256px;
-  z-index: 1;
-}
-
-.grain-overlay > * {
-  position: relative;
-  z-index: 2;
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
 }

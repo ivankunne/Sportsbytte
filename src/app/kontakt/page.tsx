@@ -1,15 +1,20 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { ContactForm } from "./ContactForm";
 
-// TODO MVP: Replace form with actual email/CRM integration (e.g. Resend, SendGrid, or HubSpot)
+export const metadata: Metadata = {
+  title: "Kontakt oss",
+  description: "Ta kontakt med Sportsbyttet for spørsmål om klubbregistrering, samarbeid eller teknisk hjelp.",
+};
 
 export default function ContactPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
       <div className="text-center mb-12">
-        <h1 className="font-display text-3xl sm:text-4xl font-semibold text-ink">
+        <h1 className="font-display text-3xl sm:text-4xl font-bold text-ink">
           Kontakt oss
         </h1>
-        <p className="mt-3 text-ink-light max-w-lg mx-auto">
+        <p className="mt-3 text-ink-mid max-w-lg mx-auto">
           Har du spørsmål om Sportsbyttet, klubbregistrering eller samarbeid?
           Vi svarer vanligvis innen 24 timer.
         </p>
@@ -17,59 +22,16 @@ export default function ContactPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
         {/* Contact form */}
-        <div className="lg:col-span-3 bg-white rounded-2xl p-6 sm:p-8 shadow-sm">
+        <div className="lg:col-span-3 bg-white rounded-2xl p-6 sm:p-8 border border-border">
           <h2 className="font-display text-xl font-semibold text-ink mb-6">
             Send oss en melding
           </h2>
-
-          <form className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-ink mb-1.5">Navn *</label>
-                <input id="name" type="text" className="w-full rounded-lg border border-cream-dark px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest" />
-              </div>
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-ink mb-1.5">E-post *</label>
-                <input id="email" type="email" placeholder="din@epost.no" className="w-full rounded-lg border border-cream-dark px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest" />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="subject" className="block text-sm font-medium text-ink mb-1.5">Emne</label>
-              <select id="subject" className="w-full rounded-lg border border-cream-dark px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest">
-                <option value="">Velg emne</option>
-                <option>Generelt spørsmål</option>
-                <option>Klubbregistrering</option>
-                <option>Teknisk problem</option>
-                <option>Samarbeid / Partnerskap</option>
-                <option>Presse</option>
-                <option>Annet</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="message" className="block text-sm font-medium text-ink mb-1.5">Melding *</label>
-              <textarea
-                id="message"
-                rows={5}
-                placeholder="Fortell oss hva vi kan hjelpe med..."
-                className="w-full rounded-lg border border-cream-dark px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
-              />
-            </div>
-
-            {/* TODO MVP: Wire up form submission */}
-            <button
-              type="button"
-              className="w-full rounded-full bg-forest py-3 text-sm font-semibold text-white hover:bg-forest-light transition-colors"
-            >
-              Send melding
-            </button>
-          </form>
+          <ContactForm />
         </div>
 
         {/* Contact info sidebar */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm">
+          <div className="bg-white rounded-xl p-6 border border-border">
             <h3 className="font-display text-lg font-semibold text-ink mb-4">
               Kontaktinfo
             </h3>
@@ -80,7 +42,7 @@ export default function ContactPage() {
                 </svg>
                 <div>
                   <p className="text-sm font-medium text-ink">E-post</p>
-                  <p className="text-sm text-ink-muted">hei@sportsbyttet.no</p>
+                  <p className="text-sm text-ink-light">hei@sportsbyttet.no</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -90,35 +52,35 @@ export default function ContactPage() {
                 </svg>
                 <div>
                   <p className="text-sm font-medium text-ink">Adresse</p>
-                  <p className="text-sm text-ink-muted">Bergen, Norge</p>
+                  <p className="text-sm text-ink-light">Bergen, Norge</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-forest/5 rounded-xl p-6">
+          <div className="bg-forest-light rounded-xl p-6">
             <h3 className="font-display text-lg font-semibold text-ink mb-2">
               For klubber
             </h3>
-            <p className="text-sm text-ink-light mb-4">
+            <p className="text-sm text-ink-mid mb-4">
               Vil du registrere klubben din? Vi hjelper deg med oppsett og
               lansering.
             </p>
             <Link
               href="/registrer-klubb"
-              className="text-sm font-semibold text-forest hover:text-forest-light transition-colors"
+              className="text-sm font-semibold text-forest hover:text-forest-mid transition-colors duration-[120ms]"
             >
               Registrer klubb →
             </Link>
           </div>
 
-          <div className="bg-amber/10 rounded-xl p-6">
+          <div className="bg-amber-light rounded-xl p-6">
             <h3 className="font-display text-lg font-semibold text-ink mb-2">
               Responstid
             </h3>
-            <p className="text-sm text-ink-light">
+            <p className="text-sm text-ink-mid">
               Vi svarer vanligvis innen <strong>24 timer</strong> på
-              hverdager. For akutte saker, ring oss direkte.
+              hverdager.
             </p>
           </div>
         </div>

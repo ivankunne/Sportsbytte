@@ -4,18 +4,20 @@ type Props = {
 };
 
 const conditionStyles: Record<string, string> = {
-  "Som ny": "bg-emerald-100 text-emerald-800",
-  "Pent brukt": "bg-blue-100 text-blue-800",
-  "Godt brukt": "bg-amber-100 text-amber-800",
-  "Mye brukt": "bg-gray-100 text-gray-700",
+  "Som ny": "bg-[#e6f5ee] text-[#1a6b3e]",
+  "Pent brukt": "bg-[#e8f1fb] text-[#1a4a8a]",
+  "Godt brukt": "bg-[#fdf0e6] text-[#954a00]",
+  "Mye brukt": "bg-[#f2f2f2] text-[#555555]",
 };
 
 export function ConditionBadge({ condition, size = "sm" }: Props) {
-  const style = conditionStyles[condition] ?? "bg-gray-100 text-gray-700";
-  const sizeClass = size === "md" ? "px-3 py-1 text-sm" : "px-2 py-0.5 text-xs";
+  const style = conditionStyles[condition] ?? "bg-[#f2f2f2] text-[#555555]";
+  const sizeClass = size === "md"
+    ? "px-3 py-1 text-[13px]"
+    : "px-3 py-1 text-xs";
 
   return (
-    <span className={`inline-block rounded-full font-medium ${style} ${sizeClass}`}>
+    <span className={`inline-block rounded-[20px] font-medium ${style} ${sizeClass}`}>
       {condition}
     </span>
   );

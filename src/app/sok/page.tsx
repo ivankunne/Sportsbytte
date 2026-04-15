@@ -129,7 +129,7 @@ function SearchPage() {
       <div className="max-w-2xl mx-auto mb-8">
         <div className="relative">
           <svg
-            className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-muted"
+            className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-light"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -146,13 +146,15 @@ function SearchPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Søk etter utstyr, klubber, personer..."
+            aria-label="Søk etter utstyr, klubber og personer"
             autoFocus
-            className="w-full rounded-full border border-cream-dark bg-white pl-12 pr-5 py-3.5 text-base placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest transition-all"
+            className="w-full rounded-lg border border-border bg-white pl-12 pr-5 py-3.5 text-base placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest transition-all"
           />
           {query && (
             <button
               onClick={() => setQuery("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors"
+              aria-label="Tøm søk"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-light hover:text-ink transition-colors duration-[120ms]"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -164,15 +166,18 @@ function SearchPage() {
 
       {/* Tabs */}
       {hasQuery && (
-        <div className="flex gap-1 border-b border-cream-dark mb-8 overflow-x-auto">
+        <div role="tablist" aria-label="Søkeresultater" className="flex gap-1 border-b border-border mb-8 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`panel-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-[120ms] whitespace-nowrap ${
                 activeTab === tab.id
                   ? "border-forest text-forest"
-                  : "border-transparent text-ink-muted hover:text-ink hover:border-cream-dark"
+                  : "border-transparent text-ink-light hover:text-ink hover:border-border"
               }`}
             >
               {tab.label}
@@ -180,8 +185,8 @@ function SearchPage() {
                 <span
                   className={`text-xs rounded-full px-1.5 py-0.5 ${
                     activeTab === tab.id
-                      ? "bg-forest/10 text-forest"
-                      : "bg-cream text-ink-muted"
+                      ? "bg-forest-light text-forest"
+                      : "bg-cream text-ink-light"
                   }`}
                 >
                   {tab.count}
@@ -206,12 +211,12 @@ function SearchPage() {
           <h2 className="font-display text-xl font-semibold text-ink">
             Ingen resultater for &ldquo;{debouncedQuery}&rdquo;
           </h2>
-          <p className="mt-2 text-sm text-ink-muted max-w-md mx-auto">
+          <p className="mt-2 text-sm text-ink-light max-w-md mx-auto">
             Prøv et annet søkeord, eller utforsk kategoriene våre.
           </p>
           <Link
             href="/utforsk"
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-forest px-6 py-2.5 text-sm font-semibold text-white hover:bg-forest-light transition-colors"
+            className="mt-6 inline-flex items-center justify-center rounded-lg bg-forest px-6 py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
           >
             Utforsk alt utstyr
           </Link>
@@ -222,10 +227,10 @@ function SearchPage() {
       {!hasQuery && !loading && (
         <div className="text-center py-16">
           <div className="text-5xl mb-4">⛷️</div>
-          <h2 className="font-display text-2xl font-semibold text-ink">
+          <h2 className="font-display text-2xl font-bold text-ink">
             Hva leter du etter?
           </h2>
-          <p className="mt-2 text-ink-muted max-w-md mx-auto">
+          <p className="mt-2 text-ink-light max-w-md mx-auto">
             Søk etter sportsutstyr, klubber eller selgere. Skriv inn et søkeord for å starte.
           </p>
         </div>
@@ -240,7 +245,7 @@ function SearchPage() {
               <section>
                 {activeTab === "alle" && (
                   <div className="flex items-center gap-2.5 mb-4">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 text-xs">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-forest-light text-forest text-xs">
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
                     </span>
                     <h2 className="font-display text-lg font-semibold text-ink">
@@ -253,7 +258,7 @@ function SearchPage() {
                     <Link
                       key={cat.id}
                       href={`/utforsk?kategori=${cat.slug}`}
-                      className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-ink hover:bg-cream-dark transition-colors shadow-sm"
+                      className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-ink hover:bg-cream transition-colors duration-[120ms] shadow-sm"
                     >
                       <span className="text-lg">{cat.emoji}</span>
                       {cat.name}
@@ -269,7 +274,7 @@ function SearchPage() {
               <section>
                 {activeTab === "alle" && (
                   <div className="flex items-center gap-2.5 mb-4">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-xs">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-forest-light text-forest text-xs">
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>
                     </span>
                     <h2 className="font-display text-lg font-semibold text-ink">
@@ -282,7 +287,7 @@ function SearchPage() {
                     <Link
                       key={club.id}
                       href={`/klubb/${club.slug}`}
-                      className="flex items-center gap-4 bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
+                      className="flex items-center gap-4 bg-white rounded-xl p-4 border border-border hover:shadow-md transition-all hover:-translate-y-0.5"
                     >
                       <div
                         className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-white text-sm font-bold"
@@ -295,11 +300,11 @@ function SearchPage() {
                           <p className="font-semibold text-ink truncate">
                             {club.name}
                           </p>
-                          <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 bg-blue-50 text-blue-700">
+                          <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 bg-forest-light text-forest-mid">
                             Klubb
                           </span>
                         </div>
-                        <p className="text-xs text-ink-muted">
+                        <p className="text-xs text-ink-light">
                           {club.members.toLocaleString("nb-NO")} medlemmer •{" "}
                           {club.active_listings} annonser
                         </p>
@@ -319,7 +324,7 @@ function SearchPage() {
               <section>
                 {activeTab === "alle" && (
                   <div className="flex items-center gap-2.5 mb-4">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-violet-50 text-violet-600 text-xs">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-forest-light text-forest text-xs">
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
                     </span>
                     <h2 className="font-display text-lg font-semibold text-ink">
@@ -332,9 +337,9 @@ function SearchPage() {
                     <Link
                       key={profile.id}
                       href={`/profil/${profile.slug}`}
-                      className="flex items-center gap-4 bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
+                      className="flex items-center gap-4 bg-white rounded-xl p-4 border border-border hover:shadow-md transition-all hover:-translate-y-0.5"
                     >
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-forest/10 text-forest text-sm font-bold">
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-forest-light text-forest text-sm font-bold">
                         {profile.avatar}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -342,11 +347,11 @@ function SearchPage() {
                           <p className="font-semibold text-ink truncate">
                             {profile.name}
                           </p>
-                          <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 bg-violet-50 text-violet-700">
+                          <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 bg-forest-light text-forest-mid">
                             Person
                           </span>
                         </div>
-                        <p className="text-xs text-ink-muted truncate">
+                        <p className="text-xs text-ink-light truncate">
                           {profile.clubs?.name ?? "Ingen klubb"} •{" "}
                           {profile.total_sold} solgt
                         </p>
@@ -366,7 +371,7 @@ function SearchPage() {
               <section>
                 {activeTab === "alle" && (
                   <div className="flex items-center gap-2.5 mb-4">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-50 text-amber-600 text-xs">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-light text-amber text-xs">
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" /></svg>
                     </span>
                     <h2 className="font-display text-lg font-semibold text-ink">

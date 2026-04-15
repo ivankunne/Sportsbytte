@@ -107,10 +107,10 @@ function ExplorePage() {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-ink">
+          <h1 className="font-display text-3xl font-bold text-ink">
             Utforsk utstyr
           </h1>
-          <p className="mt-1 text-sm text-ink-muted">
+          <p className="mt-1 text-sm text-ink-light">
             {loading ? "Laster..." : `${listings.length} annonser fra ${uniqueClubs.size} klubber`}
           </p>
         </div>
@@ -118,7 +118,7 @@ function ExplorePage() {
         <div className="flex gap-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:flex-initial">
             <svg
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-light pointer-events-none"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -131,13 +131,15 @@ function ExplorePage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Søk etter utstyr..."
-              className="w-full sm:w-64 rounded-full border border-cream-dark bg-white pl-10 pr-4 py-2.5 text-sm placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-forest/20"
+              aria-label="Søk etter utstyr"
+              className="w-full sm:w-64 rounded-lg border border-border bg-white pl-10 pr-4 py-2.5 text-sm placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20"
             />
           </div>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="rounded-full border border-cream-dark bg-white px-4 py-2.5 text-sm text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20"
+            aria-label="Sorter annonser"
+            className="rounded-lg border border-border bg-white px-4 py-2.5 text-sm text-ink-mid focus:outline-none focus:ring-2 focus:ring-forest/20"
           >
             <option value="nyeste">Nyeste</option>
             <option value="pris-lav">Laveste pris</option>
@@ -149,10 +151,10 @@ function ExplorePage() {
       <div className="flex flex-wrap gap-2 mb-8">
         <button
           onClick={() => setActiveCategory("")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+          className={`rounded-[20px] px-4 py-1.5 text-sm font-medium transition-colors duration-[120ms] ${
             !activeCategory
               ? "bg-forest text-white"
-              : "bg-white text-ink-light hover:bg-cream-dark"
+              : "bg-forest-light text-forest hover:bg-forest hover:text-white"
           }`}
         >
           Alle
@@ -163,10 +165,10 @@ function ExplorePage() {
             onClick={() =>
               setActiveCategory(activeCategory === cat.slug ? "" : cat.slug)
             }
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-[20px] px-4 py-1.5 text-sm font-medium transition-colors duration-[120ms] ${
               activeCategory === cat.slug
                 ? "bg-forest text-white"
-                : "bg-white text-ink-light hover:bg-cream-dark"
+                : "bg-forest-light text-forest hover:bg-forest hover:text-white"
             }`}
           >
             {cat.emoji} {cat.name}
@@ -190,7 +192,7 @@ function ExplorePage() {
           <h2 className="font-display text-xl font-semibold text-ink">
             Ingen annonser funnet
           </h2>
-          <p className="mt-2 text-sm text-ink-muted">
+          <p className="mt-2 text-sm text-ink-light">
             Prøv å fjerne filtre eller søk med et annet ord.
           </p>
           <button
@@ -199,7 +201,7 @@ function ExplorePage() {
               setActiveCategory("");
               setSort("nyeste");
             }}
-            className="mt-4 text-sm font-medium text-forest hover:text-forest-light transition-colors"
+            className="mt-4 text-sm font-medium text-forest hover:text-forest-mid transition-colors duration-[120ms]"
           >
             Nullstill alle filtre
           </button>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { Logo } from "./Logo";
 import type {
   ListingWithRelations,
   Club,
@@ -32,7 +33,6 @@ export function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (
@@ -47,7 +47,6 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Keyboard shortcut: Cmd/Ctrl+K to focus
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -129,7 +128,6 @@ export function Header() {
     setLoading(false);
   }, []);
 
-  // Debounced search
   useEffect(() => {
     const id = setTimeout(() => quickSearch(query), 200);
     return () => clearTimeout(id);
@@ -169,26 +167,24 @@ export function Header() {
   }
 
   const typeBadge: Record<string, { label: string; bg: string; text: string }> = {
-    club: { label: "Klubb", bg: "bg-blue-50", text: "text-blue-700" },
-    profile: { label: "Person", bg: "bg-violet-50", text: "text-violet-700" },
-    listing: { label: "Utstyr", bg: "bg-amber-50", text: "text-amber-700" },
+    club: { label: "Klubb", bg: "bg-forest-light", text: "text-forest-mid" },
+    profile: { label: "Person", bg: "bg-forest-light", text: "text-forest-mid" },
+    listing: { label: "Utstyr", bg: "bg-amber-light", text: "text-amber" },
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-cream/95 backdrop-blur-sm border-b border-cream-dark">
+    <header className="sticky top-0 z-50 bg-white border-b border-border">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-1 flex-shrink-0">
-            <span className="font-display text-2xl font-semibold text-forest">
-              <span className="text-3xl">S</span>portsbyttet
-            </span>
+          <Link href="/" className="flex items-center flex-shrink-0">
+            <Logo variant="light" className="text-2xl" />
           </Link>
 
           {/* Desktop search */}
           <div className="hidden md:block flex-1 max-w-md mx-4" ref={dropdownRef}>
             <div className="relative">
               <svg
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-light pointer-events-none"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -208,15 +204,16 @@ export function Header() {
                 onFocus={() => setSearchOpen(true)}
                 onKeyDown={handleKeyDown}
                 placeholder="Søk utstyr, klubber, personer..."
-                className="w-full rounded-full border border-cream-dark bg-white pl-10 pr-16 py-2 text-sm placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition-all"
+                aria-label="Søk på Sportsbyttet"
+                className="w-full rounded-lg border border-border bg-white pl-10 pr-16 py-2 text-sm placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition-all"
               />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:inline-flex items-center gap-0.5 rounded border border-cream-dark bg-cream px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:inline-flex items-center gap-0.5 rounded border border-border bg-cream px-1.5 py-0.5 text-[10px] font-medium text-ink-light">
                 ⌘K
               </kbd>
 
               {/* Quick results dropdown */}
               {searchOpen && query.trim() && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-cream-dark overflow-hidden z-50">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-border overflow-hidden z-50">
                   {loading && (
                     <div className="flex items-center justify-center py-6">
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-forest border-r-transparent" />
@@ -224,7 +221,7 @@ export function Header() {
                   )}
 
                   {!loading && results.length === 0 && (
-                    <div className="px-4 py-6 text-center text-sm text-ink-muted">
+                    <div className="px-4 py-6 text-center text-sm text-ink-light">
                       Ingen resultater for &ldquo;{query}&rdquo;
                     </div>
                   )}
@@ -240,9 +237,9 @@ export function Header() {
                             setResults([]);
                             setSearchOpen(false);
                           }}
-                          className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                          className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors duration-[120ms] ${
                             selectedIdx === i
-                              ? "bg-forest/5"
+                              ? "bg-forest-light"
                               : "hover:bg-cream"
                           }`}
                         >
@@ -255,12 +252,12 @@ export function Header() {
                             </div>
                           )}
                           {r.type === "profile" && (
-                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-forest/10 text-forest text-[10px] font-bold">
+                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-forest-light text-forest text-[10px] font-bold">
                               {r.avatar}
                             </div>
                           )}
                           {r.type === "listing" && (
-                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber/10 text-amber">
+                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-light text-amber">
                               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
@@ -271,20 +268,20 @@ export function Header() {
                             <p className="font-medium text-ink truncate">
                               {r.title}
                             </p>
-                            <p className="text-xs text-ink-muted truncate">
+                            <p className="text-[13px] text-ink-light truncate">
                               {r.subtitle}
                             </p>
                           </div>
-                          <span className={`text-[10px] font-semibold uppercase tracking-wider flex-shrink-0 rounded-full px-2 py-0.5 ${typeBadge[r.type].bg} ${typeBadge[r.type].text}`}>
+                          <span className={`text-[10px] font-semibold uppercase tracking-wider flex-shrink-0 rounded-[20px] px-2 py-0.5 ${typeBadge[r.type].bg} ${typeBadge[r.type].text}`}>
                             {typeBadge[r.type].label}
                           </span>
                         </Link>
                       ))}
 
-                      <div className="border-t border-cream mt-1 pt-1">
+                      <div className="border-t border-border mt-1 pt-1">
                         <button
                           onClick={goToFullSearch}
-                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-forest font-medium hover:bg-cream transition-colors"
+                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-forest font-medium hover:bg-cream transition-colors duration-[120ms]"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -303,25 +300,25 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-6 flex-shrink-0">
             <Link
               href="/utforsk"
-              className="text-sm font-medium text-ink-light hover:text-forest transition-colors"
+              className="text-sm font-medium text-ink-mid hover:text-forest transition-colors duration-[120ms]"
             >
               Utforsk
             </Link>
             <Link
               href="/klubber"
-              className="text-sm font-medium text-ink-light hover:text-forest transition-colors"
+              className="text-sm font-medium text-ink-mid hover:text-forest transition-colors duration-[120ms]"
             >
               Klubber
             </Link>
             <Link
               href="/selg"
-              className="text-sm font-medium text-ink-light hover:text-forest transition-colors"
+              className="text-sm font-medium text-ink-mid hover:text-forest transition-colors duration-[120ms]"
             >
               Selg
             </Link>
             <Link
               href="/registrer-klubb"
-              className="rounded-full bg-amber px-5 py-2 text-sm font-semibold text-white hover:bg-amber-dark transition-colors"
+              className="rounded-lg bg-forest px-5 py-2 text-sm font-medium text-white hover:bg-forest-mid transition-colors duration-[120ms]"
             >
               Registrer klubb
             </Link>
@@ -334,7 +331,7 @@ export function Header() {
                 setSearchOpen(!searchOpen);
                 setMenuOpen(false);
               }}
-              className="p-2 text-ink"
+              className="p-2 text-forest"
               aria-label="Søk"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -342,7 +339,7 @@ export function Header() {
               </svg>
             </button>
             <button
-              className="p-2 text-ink"
+              className="p-2 text-forest"
               onClick={() => {
                 setMenuOpen(!menuOpen);
                 setSearchOpen(false);
@@ -365,7 +362,7 @@ export function Header() {
 
       {/* Mobile search bar */}
       {searchOpen && (
-        <div className="md:hidden border-t border-cream-dark bg-cream px-4 py-3">
+        <div className="md:hidden border-t border-border bg-white px-4 py-3">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -378,7 +375,7 @@ export function Header() {
           >
             <div className="relative">
               <svg
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-light"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -391,8 +388,9 @@ export function Header() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Søk utstyr, klubber, personer..."
+                aria-label="Søk på Sportsbyttet"
                 autoFocus
-                className="w-full rounded-full border border-cream-dark bg-white pl-10 pr-4 py-2.5 text-sm placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-forest/20"
+                className="w-full rounded-lg border border-border bg-white pl-10 pr-4 py-2.5 text-sm placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20"
               />
             </div>
           </form>
@@ -401,32 +399,32 @@ export function Header() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden border-t border-cream-dark bg-cream">
+        <div className="md:hidden border-t border-border bg-white">
           <div className="px-4 py-4 space-y-3">
             <Link
               href="/utforsk"
-              className="block text-sm font-medium text-ink-light hover:text-forest"
+              className="block text-sm font-medium text-ink-mid hover:text-forest"
               onClick={() => setMenuOpen(false)}
             >
               Utforsk utstyr
             </Link>
             <Link
               href="/klubber"
-              className="block text-sm font-medium text-ink-light hover:text-forest"
+              className="block text-sm font-medium text-ink-mid hover:text-forest"
               onClick={() => setMenuOpen(false)}
             >
               Klubber
             </Link>
             <Link
               href="/selg"
-              className="block text-sm font-medium text-ink-light hover:text-forest"
+              className="block text-sm font-medium text-ink-mid hover:text-forest"
               onClick={() => setMenuOpen(false)}
             >
               Selg utstyr
             </Link>
             <Link
               href="/registrer-klubb"
-              className="block w-full text-center rounded-full bg-amber px-5 py-2.5 text-sm font-semibold text-white"
+              className="block w-full text-center rounded-lg bg-forest px-5 py-2.5 text-sm font-medium text-white"
               onClick={() => setMenuOpen(false)}
             >
               Registrer din klubb

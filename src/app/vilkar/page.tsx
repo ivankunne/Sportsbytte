@@ -1,10 +1,17 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Brukervilkår",
+  description: "Les Sportsbyttets brukervilkår for bruk av plattformen.",
+};
+
 export default function TermsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
-      <h1 className="font-display text-3xl sm:text-4xl font-semibold text-ink">
+      <h1 className="font-display text-3xl sm:text-4xl font-bold text-ink">
         Brukervilkår
       </h1>
-      <p className="mt-2 text-sm text-ink-muted">Sist oppdatert: 15. april 2026</p>
+      <p className="mt-2 text-sm text-ink-light">Sist oppdatert: 15. april 2026</p>
 
       <div className="mt-10 space-y-8">
         <Section title="1. Om tjenesten">
@@ -91,7 +98,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section>
       <h2 className="font-display text-xl font-semibold text-ink mb-3">{title}</h2>
-      <div className="text-ink-light leading-relaxed text-sm">{children}</div>
+      <div className="text-ink-mid leading-relaxed text-sm">{children}</div>
     </section>
   );
 }

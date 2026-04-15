@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   getProfileBySlug,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { ListingCard } from "@/components/ListingCard";
+import { ComingSoonButton } from "@/components/ComingSoonButton";
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -21,6 +23,16 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const profile = await getProfileBySlug(slug);
+  if (!profile) return {};
+  return {
+    title: `${profile.name} — Selger`,
+    description: `Se annonser og vurderinger fra ${profile.name} på Sportsbyttet. ${profile.total_sold} solgte varer, ${profile.rating} ⭐ vurdering.`,
+  };
+}
+
 export default async function ProfilePage({ params }: Props) {
   const { slug } = await params;
   const seller = await getProfileBySlug(slug);
@@ -28,7 +40,7 @@ export default async function ProfilePage({ params }: Props) {
   if (!seller) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-20 text-center">
-        <h1 className="font-display text-3xl font-semibold">Bruker ikke funnet</h1>
+        <h1 className="font-display text-3xl font-bold">Bruker ikke funnet</h1>
         <Link href="/" className="mt-4 inline-block text-forest hover:underline">
           Tilbake til forsiden
         </Link>
@@ -52,18 +64,18 @@ export default async function ProfilePage({ params }: Props) {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       {/* Profile header */}
-      <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm mb-8">
+      <div className="bg-white rounded-2xl p-6 sm:p-8 border border-border mb-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <div className="h-20 w-20 rounded-full bg-forest/10 flex items-center justify-center text-forest font-bold text-2xl font-display">
+          <div className="h-20 w-20 rounded-full bg-forest-light flex items-center justify-center text-forest font-bold text-2xl font-display">
             {seller.avatar}
           </div>
 
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="font-display text-2xl font-semibold text-ink">
+              <h1 className="font-display text-2xl font-bold text-ink">
                 {seller.name}
               </h1>
-              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 rounded-full px-2.5 py-0.5">
+              <span className="inline-flex items-center gap-1 text-xs text-forest bg-forest-light rounded-full px-2.5 py-0.5">
                 <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
                 </svg>
@@ -71,25 +83,28 @@ export default async function ProfilePage({ params }: Props) {
               </span>
             </div>
             <p className="mt-1 text-sm text-ink-light">{seller.bio}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-ink-muted">
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-ink-light">
               <span>Medlem siden {seller.member_since}</span>
-              <span className="h-1 w-1 rounded-full bg-ink-muted" />
+              <span className="h-1 w-1 rounded-full bg-ink-light" />
               <span>{seller.rating} ⭐ ({seller.total_sold} vurderinger)</span>
-              <span className="h-1 w-1 rounded-full bg-ink-muted" />
+              <span className="h-1 w-1 rounded-full bg-ink-light" />
               <span>{seller.total_sold} solgte varer</span>
             </div>
           </div>
 
-          <button className="rounded-full border-2 border-forest px-6 py-2 text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors">
+          <ComingSoonButton
+            feature="Meldinger"
+            className="rounded-lg border-2 border-forest px-6 py-2 text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors duration-[120ms]"
+          >
             Send melding
-          </button>
+          </ComingSoonButton>
         </div>
 
         {seller.clubs && (
-          <div className="mt-6 pt-6 border-t border-cream">
+          <div className="mt-6 pt-6 border-t border-border">
             <Link
               href={`/klubb/${seller.clubs.slug}`}
-              className="inline-flex items-center gap-3 px-4 py-2 rounded-lg bg-cream hover:bg-cream-dark transition-colors"
+              className="inline-flex items-center gap-3 px-4 py-2 rounded-lg bg-cream hover:bg-cream transition-colors duration-[120ms]"
             >
               <div
                 className="h-8 w-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
@@ -99,7 +114,7 @@ export default async function ProfilePage({ params }: Props) {
               </div>
               <div>
                 <p className="text-sm font-medium text-ink">{seller.clubs.name}</p>
-                <p className="text-xs text-ink-muted">Verifisert medlem</p>
+                <p className="text-xs text-ink-light">Verifisert medlem</p>
               </div>
             </Link>
           </div>
@@ -108,17 +123,17 @@ export default async function ProfilePage({ params }: Props) {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-          <p className="text-2xl font-bold font-display text-forest">{activeListingCount}</p>
-          <p className="text-xs text-ink-muted">Aktive annonser</p>
+        <div className="bg-white rounded-xl p-4 text-center border border-border">
+          <p className="font-display text-2xl font-bold text-forest">{activeListingCount}</p>
+          <p className="text-xs text-ink-light">Aktive annonser</p>
         </div>
-        <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-          <p className="text-2xl font-bold font-display text-forest">{seller.total_sold}</p>
-          <p className="text-xs text-ink-muted">Solgte varer</p>
+        <div className="bg-white rounded-xl p-4 text-center border border-border">
+          <p className="font-display text-2xl font-bold text-forest">{seller.total_sold}</p>
+          <p className="text-xs text-ink-light">Solgte varer</p>
         </div>
-        <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-          <p className="text-2xl font-bold font-display text-forest">{seller.rating} ⭐</p>
-          <p className="text-xs text-ink-muted">Vurdering</p>
+        <div className="bg-white rounded-xl p-4 text-center border border-border">
+          <p className="font-display text-2xl font-bold text-forest">{seller.rating} ⭐</p>
+          <p className="text-xs text-ink-light">Vurdering</p>
         </div>
       </div>
 
@@ -136,7 +151,7 @@ export default async function ProfilePage({ params }: Props) {
           </div>
         ) : (
           <div className="bg-white rounded-xl p-10 text-center">
-            <p className="text-ink-muted">Ingen aktive annonser for øyeblikket.</p>
+            <p className="text-ink-light">Ingen aktive annonser for øyeblikket.</p>
           </div>
         )}
       </div>
@@ -147,21 +162,21 @@ export default async function ProfilePage({ params }: Props) {
           <h2 className="font-display text-xl font-semibold text-ink mb-6">Vurderinger</h2>
           <div className="space-y-4">
             {reviews.map((review) => (
-              <div key={review.id} className="bg-white rounded-xl p-5 shadow-sm">
+              <div key={review.id} className="bg-white rounded-xl p-5 border border-border">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-forest/10 flex items-center justify-center text-forest text-xs font-bold">
+                    <div className="h-8 w-8 rounded-full bg-forest-light flex items-center justify-center text-forest text-xs font-bold">
                       {review.author_name[0]}
                     </div>
                     <span className="text-sm font-medium text-ink">{review.author_name}</span>
                   </div>
-                  <span className="text-xs text-ink-muted">{formatDaysAgo(review.created_at)}</span>
+                  <span className="text-xs text-ink-light">{formatDaysAgo(review.created_at)}</span>
                 </div>
                 <div className="flex gap-0.5 mb-2">
                   {Array.from({ length: 5 }).map((_, j) => (
                     <svg
                       key={j}
-                      className={`h-4 w-4 ${j < review.rating ? "text-amber" : "text-cream-dark"}`}
+                      className={`h-4 w-4 ${j < review.rating ? "text-amber" : "text-border"}`}
                       viewBox="0 0 20 20"
                       fill="currentColor"
                     >

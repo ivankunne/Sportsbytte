@@ -62,14 +62,12 @@ export function ClubListings({ clubId, clubName, initialListings }: Props) {
     setLoading(false);
   }, [query, activeCategory, sort, clubId, categories]);
 
-  // Debounce search
   const [debouncedQuery, setDebouncedQuery] = useState("");
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(id);
   }, [query]);
 
-  // Re-fetch on filter change (skip initial render to use SSR data)
   const [initialized, setInitialized] = useState(false);
   useEffect(() => {
     if (!initialized && !debouncedQuery && !activeCategory && sort === "nyeste") {
@@ -87,10 +85,10 @@ export function ClubListings({ clubId, clubName, initialListings }: Props) {
         <div className="flex flex-wrap gap-2 flex-1">
           <button
             onClick={() => setActiveCategory("")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-[20px] px-4 py-1.5 text-[13px] font-medium transition-colors duration-[120ms] ${
               !activeCategory
                 ? "bg-forest text-white"
-                : "bg-white text-ink-light hover:bg-cream-dark"
+                : "bg-forest-light text-forest hover:bg-forest hover:text-white"
             }`}
           >
             Alle
@@ -101,10 +99,10 @@ export function ClubListings({ clubId, clubName, initialListings }: Props) {
               onClick={() =>
                 setActiveCategory(activeCategory === cat.slug ? "" : cat.slug)
               }
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              className={`rounded-[20px] px-4 py-1.5 text-[13px] font-medium transition-colors duration-[120ms] ${
                 activeCategory === cat.slug
                   ? "bg-forest text-white"
-                  : "bg-white text-ink-light hover:bg-cream-dark"
+                  : "bg-forest-light text-forest hover:bg-forest hover:text-white"
               }`}
             >
               {cat.emoji} {cat.name}
@@ -114,7 +112,7 @@ export function ClubListings({ clubId, clubName, initialListings }: Props) {
         <div className="flex gap-3">
           <div className="relative flex-1 sm:flex-initial">
             <svg
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-light pointer-events-none"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -127,13 +125,13 @@ export function ClubListings({ clubId, clubName, initialListings }: Props) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Søk i ${clubName}...`}
-              className="rounded-full border border-cream-dark bg-white pl-10 pr-4 py-1.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-forest/20 w-full sm:w-56"
+              className="rounded-lg border border-border bg-white pl-10 pr-4 py-1.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest w-full sm:w-56"
             />
           </div>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="rounded-full border border-cream-dark bg-white px-4 py-1.5 text-sm text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20"
+            className="rounded-lg border border-border bg-white px-4 py-1.5 text-sm text-ink-mid focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
           >
             <option value="nyeste">Nyeste</option>
             <option value="pris-lav">Laveste pris</option>
@@ -155,7 +153,7 @@ export function ClubListings({ clubId, clubName, initialListings }: Props) {
         </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-ink-muted">
+          <p className="text-ink-light">
             {query || activeCategory
               ? "Ingen annonser matcher filtrene dine."
               : "Ingen annonser i denne klubben ennå."}
@@ -167,7 +165,7 @@ export function ClubListings({ clubId, clubName, initialListings }: Props) {
                 setActiveCategory("");
                 setSort("nyeste");
               }}
-              className="mt-3 text-sm font-medium text-forest hover:text-forest-light transition-colors"
+              className="mt-3 text-sm font-medium text-forest hover:text-forest-mid transition-colors duration-[120ms]"
             >
               Nullstill filtre
             </button>

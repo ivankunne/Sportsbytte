@@ -1,22 +1,38 @@
 import Link from "next/link";
-import { getFeaturedListings, getAllCategories } from "@/lib/queries";
+import { getFeaturedListings, getAllCategories, getAllClubs } from "@/lib/queries";
+import { supabase } from "@/lib/supabase";
 import { ListingCard } from "@/components/ListingCard";
 
 export const revalidate = 60;
 
+async function getPlatformStats() {
+  const [listingsRes, clubsRes, soldRes] = await Promise.all([
+    supabase.from("listings").select("id", { count: "exact", head: true }).eq("is_sold", false),
+    supabase.from("clubs").select("id", { count: "exact", head: true }),
+    supabase.from("clubs").select("total_sold"),
+  ]);
+  const totalSold = (soldRes.data ?? []).reduce((sum, c) => sum + c.total_sold, 0);
+  return {
+    listings: listingsRes.count ?? 0,
+    clubs: clubsRes.count ?? 0,
+    sold: totalSold,
+  };
+}
+
 export default async function HomePage() {
-  const [featured, categories] = await Promise.all([
+  const [featured, categories, stats] = await Promise.all([
     getFeaturedListings(6),
     getAllCategories(),
+    getPlatformStats(),
   ]);
 
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-cream grain-overlay">
+      <section className="relative overflow-hidden bg-forest">
         <div className="absolute inset-0 overflow-hidden">
           <svg
-            className="absolute -bottom-1 left-0 w-full text-forest/5"
+            className="absolute -bottom-1 left-0 w-full text-white/5"
             viewBox="0 0 1440 400"
             preserveAspectRatio="none"
             fill="currentColor"
@@ -24,7 +40,7 @@ export default async function HomePage() {
             <path d="M0,400 L0,250 Q200,100 400,200 Q600,320 800,180 Q1000,50 1200,150 Q1350,220 1440,180 L1440,400 Z" />
           </svg>
           <svg
-            className="absolute -bottom-1 left-0 w-full text-forest/[0.03]"
+            className="absolute -bottom-1 left-0 w-full text-white/[0.03]"
             viewBox="0 0 1440 400"
             preserveAspectRatio="none"
             fill="currentColor"
@@ -33,27 +49,27 @@ export default async function HomePage() {
           </svg>
         </div>
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36">
+        <div className="relative mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-20 sm:py-28 lg:py-36">
           <div className="max-w-2xl">
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold text-ink leading-[1.1] tracking-tight">
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] font-bold text-white leading-[1.1] tracking-tight">
               Brukt utstyr.{" "}
-              <span className="text-forest">Ekte kvalitet.</span>{" "}
+              <span className="text-white/70">Ekte kvalitet.</span>{" "}
               <span className="text-amber">Din klubb.</span>
             </h1>
-            <p className="mt-6 text-lg sm:text-xl text-ink-light leading-relaxed max-w-xl">
+            <p className="mt-6 text-lg sm:text-xl text-white/70 leading-relaxed max-w-xl">
               Kjøp og selg brukt sportsutstyr direkte mellom klubbmedlemmer.
               Trygg betaling, enkel frakt med Bring.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
               <Link
                 href="/utforsk"
-                className="inline-flex items-center justify-center rounded-full bg-forest px-7 py-3 text-sm font-semibold text-white hover:bg-forest-light transition-colors"
+                className="inline-flex items-center justify-center rounded-lg bg-amber px-7 py-3 text-sm font-medium text-white hover:brightness-92 transition-all duration-[120ms]"
               >
                 Utforsk utstyr
               </Link>
               <Link
                 href="/registrer-klubb"
-                className="inline-flex items-center justify-center rounded-full border-2 border-forest px-7 py-3 text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors"
+                className="inline-flex items-center justify-center rounded-lg border-[1.5px] border-white/40 px-7 py-3 text-sm font-medium text-white hover:bg-white/10 transition-all duration-[120ms]"
               >
                 Registrer din klubb
               </Link>
@@ -63,37 +79,36 @@ export default async function HomePage() {
       </section>
 
       {/* Stats bar */}
-      {/* TODO: Replace hardcoded stats with a Supabase RPC aggregate function */}
-      <section className="bg-forest text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
+      <section className="bg-forest-mid text-white">
+        <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-5">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 text-center">
             <div>
-              <span className="text-2xl font-bold font-display">2 847</span>
-              <span className="ml-2 text-sm text-white/70">annonser</span>
+              <span className="text-2xl font-bold font-display">{stats.listings.toLocaleString("nb-NO")}</span>
+              <span className="ml-2 text-sm text-white/60">annonser</span>
             </div>
             <div className="hidden sm:block w-px h-6 bg-white/20" />
             <div>
-              <span className="text-2xl font-bold font-display">34</span>
-              <span className="ml-2 text-sm text-white/70">klubber</span>
+              <span className="text-2xl font-bold font-display">{stats.clubs.toLocaleString("nb-NO")}</span>
+              <span className="ml-2 text-sm text-white/60">klubber</span>
             </div>
             <div className="hidden sm:block w-px h-6 bg-white/20" />
             <div>
-              <span className="text-2xl font-bold font-display">1 203</span>
-              <span className="ml-2 text-sm text-white/70">solgte varer</span>
+              <span className="text-2xl font-bold font-display">{stats.sold.toLocaleString("nb-NO")}</span>
+              <span className="ml-2 text-sm text-white/60">solgte varer</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* Featured listings */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      <section className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-12 sm:py-16">
         <div className="flex items-end justify-between mb-8">
           <h2 className="font-display text-2xl sm:text-3xl font-semibold text-ink">
             Nylig lagt ut
           </h2>
           <Link
             href="/utforsk"
-            className="text-sm font-medium text-forest hover:text-forest-light transition-colors"
+            className="text-sm font-medium text-forest hover:text-forest-mid transition-colors duration-[120ms]"
           >
             Se alle →
           </Link>
@@ -107,8 +122,8 @@ export default async function HomePage() {
       </section>
 
       {/* Categories */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      <section className="bg-white border-y border-border">
+        <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-12 sm:py-16">
           <h2 className="font-display text-2xl sm:text-3xl font-semibold text-ink mb-8">
             Utforsk etter kategori
           </h2>
@@ -118,7 +133,7 @@ export default async function HomePage() {
               <Link
                 key={cat.slug}
                 href={`/utforsk?kategori=${cat.slug}`}
-                className="group flex flex-col items-center gap-3 rounded-xl bg-cream p-6 hover:bg-forest hover:text-white transition-all duration-200"
+                className="group flex flex-col items-center gap-3 rounded-xl bg-cream border border-border p-6 hover:bg-forest hover:border-forest hover:text-white transition-all duration-[120ms]"
               >
                 <span className="text-3xl">{cat.emoji}</span>
                 <span className="text-sm font-medium text-center group-hover:text-white">
@@ -131,7 +146,7 @@ export default async function HomePage() {
       </section>
 
       {/* How it works */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      <section className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-12 sm:py-16">
         <h2 className="font-display text-2xl sm:text-3xl font-semibold text-ink text-center mb-12">
           Slik fungerer det
         </h2>
@@ -171,16 +186,16 @@ export default async function HomePage() {
             },
           ].map((item) => (
             <div key={item.step} className="text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-forest/10 text-forest">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-forest-light text-forest">
                 {item.icon}
               </div>
-              <span className="text-xs font-bold text-amber uppercase tracking-wider">
+              <span className="text-[11px] font-semibold text-amber uppercase tracking-[0.1em]">
                 Steg {item.step}
               </span>
               <h3 className="mt-2 font-display text-xl font-semibold text-ink">
                 {item.title}
               </h3>
-              <p className="mt-2 text-sm text-ink-light leading-relaxed">
+              <p className="mt-2 text-sm text-ink-mid leading-relaxed">
                 {item.desc}
               </p>
             </div>
@@ -189,14 +204,14 @@ export default async function HomePage() {
       </section>
 
       {/* Club feature section */}
-      <section className="bg-forest grain-overlay">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      <section className="bg-forest">
+        <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-12 sm:py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <span className="text-xs font-bold text-amber uppercase tracking-wider">
+              <span className="text-[11px] font-semibold text-amber uppercase tracking-[0.1em]">
                 For idrettslag
               </span>
-              <h2 className="mt-3 font-display text-3xl sm:text-4xl font-semibold text-white leading-tight">
+              <h2 className="mt-3 font-display text-3xl sm:text-4xl font-bold text-white leading-tight">
                 Din klubb fortjener sin egen markedsplass
               </h2>
               <p className="mt-4 text-white/70 leading-relaxed">
@@ -221,7 +236,7 @@ export default async function HomePage() {
               </ul>
               <Link
                 href="/registrer-klubb"
-                className="mt-8 inline-flex items-center justify-center rounded-full bg-amber px-7 py-3 text-sm font-semibold text-white hover:bg-amber-light transition-colors"
+                className="mt-8 inline-flex items-center justify-center rounded-lg bg-amber px-7 py-3 text-sm font-medium text-white hover:brightness-92 transition-all duration-[120ms]"
               >
                 Registrer din klubb gratis
               </Link>
@@ -229,14 +244,14 @@ export default async function HomePage() {
 
             <div className="relative">
               <div className="rounded-xl bg-white/10 backdrop-blur-sm p-6 border border-white/10">
-                <div className="bg-white rounded-lg overflow-hidden shadow-xl">
-                  <div className="bg-forest-dark p-4">
+                <div className="bg-white rounded-xl overflow-hidden shadow-xl">
+                  <div className="bg-forest p-4">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold">
                         BSK
                       </div>
                       <div>
-                        <div className="text-white font-semibold text-sm">Bergen Skiklubb</div>
+                        <div className="text-white font-medium text-sm">Bergen Skiklubb</div>
                         <div className="text-white/60 text-xs">847 medlemmer</div>
                       </div>
                     </div>
@@ -246,7 +261,7 @@ export default async function HomePage() {
                       {["Alle", "Alpint", "Topptur"].map((c) => (
                         <span
                           key={c}
-                          className={`px-3 py-1 rounded-full text-xs ${c === "Alle" ? "bg-forest text-white" : "bg-cream text-ink-light"}`}
+                          className={`px-3 py-1 rounded-[20px] text-[13px] font-medium ${c === "Alle" ? "bg-forest text-white" : "bg-forest-light text-forest"}`}
                         >
                           {c}
                         </span>

@@ -1,6 +1,10 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
-// TODO MVP: Replace with dynamic pricing from Stripe Products API
+export const metadata: Metadata = {
+  title: "Priser",
+  description: "Se prisene for Sportsbyttet — gratis for enkeltselgere, rimelige planer for klubber med avanserte funksjoner.",
+};
 
 export default function PricingPage() {
   return (
@@ -9,10 +13,10 @@ export default function PricingPage() {
         <span className="text-xs font-bold text-amber uppercase tracking-wider">
           Priser
         </span>
-        <h1 className="mt-2 font-display text-3xl sm:text-4xl font-semibold text-ink">
+        <h1 className="mt-2 font-display text-3xl sm:text-4xl font-bold text-ink">
           Enkle, rettferdige priser
         </h1>
-        <p className="mt-3 text-ink-light max-w-lg mx-auto">
+        <p className="mt-3 text-ink-mid max-w-lg mx-auto">
           Gratis for individuelle selgere. Klubber betaler kun for
           premium-funksjoner — og kan starte gratis.
         </p>
@@ -21,13 +25,13 @@ export default function PricingPage() {
       {/* Pricing cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Free - Individual */}
-        <div className="bg-white rounded-2xl p-7 shadow-sm border border-cream-dark">
+        <div className="bg-white rounded-2xl p-7 border border-border">
           <h3 className="font-display text-lg font-semibold text-ink">Selger</h3>
-          <p className="text-sm text-ink-muted mt-1">For individuelle brukere</p>
+          <p className="text-sm text-ink-light mt-1">For individuelle brukere</p>
           <div className="mt-5 flex items-baseline gap-1">
             <span className="text-4xl font-bold font-display text-ink">Gratis</span>
           </div>
-          <p className="mt-1 text-xs text-ink-muted">8% transaksjonsgebyr ved salg</p>
+          <p className="mt-1 text-xs text-ink-light">8% transaksjonsgebyr ved salg</p>
 
           <ul className="mt-6 space-y-3">
             {[
@@ -49,7 +53,7 @@ export default function PricingPage() {
 
           <Link
             href="/selg"
-            className="mt-8 block w-full rounded-full border-2 border-forest py-2.5 text-center text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors"
+            className="mt-8 block w-full rounded-lg border-2 border-forest py-2.5 text-center text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors duration-[120ms]"
           >
             Start å selge
           </Link>
@@ -63,12 +67,12 @@ export default function PricingPage() {
             </span>
           </div>
           <h3 className="font-display text-lg font-semibold text-ink">Klubb</h3>
-          <p className="text-sm text-ink-muted mt-1">For idrettslag og klubber</p>
+          <p className="text-sm text-ink-light mt-1">For idrettslag og klubber</p>
           <div className="mt-5 flex items-baseline gap-1">
             <span className="text-4xl font-bold font-display text-ink">299</span>
-            <span className="text-ink-muted">kr/mnd</span>
+            <span className="text-ink-light">kr/mnd</span>
           </div>
-          <p className="mt-1 text-xs text-ink-muted">6% transaksjonsgebyr ved salg</p>
+          <p className="mt-1 text-xs text-ink-light">6% transaksjonsgebyr ved salg</p>
 
           <ul className="mt-6 space-y-3">
             {[
@@ -91,22 +95,22 @@ export default function PricingPage() {
 
           <Link
             href="/registrer-klubb"
-            className="mt-8 block w-full rounded-full bg-forest py-2.5 text-center text-sm font-semibold text-white hover:bg-forest-light transition-colors"
+            className="mt-8 block w-full rounded-lg bg-forest py-2.5 text-center text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
           >
             Start gratis prøveperiode
           </Link>
-          <p className="mt-2 text-center text-xs text-ink-muted">30 dager gratis, ingen binding</p>
+          <p className="mt-2 text-center text-xs text-ink-light">30 dager gratis, ingen binding</p>
         </div>
 
         {/* Club Pro */}
-        <div className="bg-white rounded-2xl p-7 shadow-sm border border-cream-dark">
+        <div className="bg-white rounded-2xl p-7 border border-border">
           <h3 className="font-display text-lg font-semibold text-ink">Klubb Pro</h3>
-          <p className="text-sm text-ink-muted mt-1">For store klubber med mange medlemmer</p>
+          <p className="text-sm text-ink-light mt-1">For store klubber med mange medlemmer</p>
           <div className="mt-5 flex items-baseline gap-1">
             <span className="text-4xl font-bold font-display text-ink">799</span>
-            <span className="text-ink-muted">kr/mnd</span>
+            <span className="text-ink-light">kr/mnd</span>
           </div>
-          <p className="mt-1 text-xs text-ink-muted">4% transaksjonsgebyr ved salg</p>
+          <p className="mt-1 text-xs text-ink-light">4% transaksjonsgebyr ved salg</p>
 
           <ul className="mt-6 space-y-3">
             {[
@@ -129,7 +133,7 @@ export default function PricingPage() {
 
           <Link
             href="/kontakt"
-            className="mt-8 block w-full rounded-full border-2 border-forest py-2.5 text-center text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors"
+            className="mt-8 block w-full rounded-lg border-2 border-forest py-2.5 text-center text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors duration-[120ms]"
           >
             Kontakt oss
           </Link>
@@ -162,7 +166,7 @@ export default function PricingPage() {
           ].map((faq) => (
             <div key={faq.q} className="bg-white rounded-xl p-5">
               <h3 className="font-medium text-ink text-sm">{faq.q}</h3>
-              <p className="mt-2 text-sm text-ink-light">{faq.a}</p>
+              <p className="mt-2 text-sm text-ink-mid">{faq.a}</p>
             </div>
           ))}
         </div>
