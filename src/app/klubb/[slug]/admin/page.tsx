@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ChangeEvent } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { updateMembershipStatus } from "@/lib/queries";
@@ -17,6 +17,222 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "medlemmer", label: "Medlemmer" },
   { id: "utseende", label: "Utseende" },
 ];
+
+// ── Invite Link Section ──────────────────────────────────
+function InviteLinkSection({
+  club,
+  onRegenerate,
+}: {
+  club: Club;
+  onRegenerate: () => Promise<void>;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const inviteUrl =
+    club.invite_token && typeof window !== "undefined"
+      ? `${window.location.origin}/join/${club.invite_token}`
+      : null;
+
+  async function handleCopy() {
+    if (!inviteUrl) return;
+    await navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleRegenerate() {
+    if (!confirm("Er du sikker? Den gamle lenken vil slutte å fungere.")) return;
+    setRegenerating(true);
+    await onRegenerate();
+    setRegenerating(false);
+  }
+
+  return (
+    <div>
+      <div className="mb-5">
+        <h2 className="font-display text-xl font-semibold text-ink">Invitasjonslenke</h2>
+        <p className="text-sm text-ink-light mt-1">
+          Del denne lenken med klubbmedlemmer. Alle som klikker den blir automatisk godkjent.
+        </p>
+      </div>
+      <div className="bg-white rounded-xl border border-border p-6">
+        {inviteUrl ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <input
+                readOnly
+                value={inviteUrl}
+                className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm text-ink-mid font-mono bg-cream focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="flex-shrink-0 px-4 py-2.5 rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
+              >
+                {copied ? "Kopiert ✓" : "Kopier"}
+              </button>
+            </div>
+            <p className="text-xs text-ink-light">
+              Del via WhatsApp, Spond, e-post eller SMS. Lenken gjelder til du regenererer den.
+            </p>
+            <div className="pt-3 border-t border-border">
+              <button
+                type="button"
+                onClick={handleRegenerate}
+                disabled={regenerating}
+                className="text-xs text-ink-light hover:text-red-500 transition-colors duration-[120ms] disabled:opacity-50"
+              >
+                {regenerating ? "Regenererer..." : "Generer ny lenke (ugyldiggjør den gamle)"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-ink-light">Ingen invitasjonstoken funnet. Kjør migration 003 i Supabase.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── CSV Import Section ────────────────────────────────────
+function CsvImportSection({
+  club,
+  onImported,
+}: {
+  club: Club;
+  onImported: () => Promise<void>;
+}) {
+  const [rows, setRows] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importDone, setImportDone] = useState(false);
+  const [importError, setImportError] = useState("");
+
+  function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) return;
+      const header = lines[0].toLowerCase().split(/[,;]/).map((s) => s.trim().replace(/^"|"$/g, ""));
+      const nameIdx = header.indexOf("name") !== -1
+        ? header.indexOf("name")
+        : header.indexOf("navn") !== -1
+        ? header.indexOf("navn")
+        : 0;
+      const names = lines
+        .slice(1)
+        .map((line) => line.split(/[,;]/).map((s) => s.trim().replace(/^"|"$/g, ""))[nameIdx])
+        .filter(Boolean);
+      setRows(names);
+      setImportDone(false);
+      setImportError("");
+    };
+    reader.readAsText(file);
+  }
+
+  async function handleImport() {
+    if (rows.length === 0) return;
+    setImporting(true);
+    setImportError("");
+    try {
+      for (const name of rows) {
+        let profileId: number;
+        const { data: existing } = await supabase
+          .from("profiles")
+          .select("id")
+          .ilike("name", name)
+          .limit(1)
+          .maybeSingle();
+
+        if (existing) {
+          profileId = existing.id;
+        } else {
+          const slug =
+            name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") +
+            "-" +
+            Date.now();
+          const { data: newProfile, error } = await supabase
+            .from("profiles")
+            .insert({ name, slug, avatar: name.slice(0, 2).toUpperCase(), club_id: club.id })
+            .select("id")
+            .single();
+          if (error) throw error;
+          profileId = newProfile.id;
+        }
+
+        await supabase.from("memberships").upsert({
+          club_id: club.id,
+          profile_id: profileId,
+          status: "approved",
+        });
+      }
+      setImportDone(true);
+      setRows([]);
+      await onImported();
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Import feilet.");
+    }
+    setImporting(false);
+  }
+
+  return (
+    <div>
+      <div className="mb-5">
+        <h2 className="font-display text-xl font-semibold text-ink">Importer fra CSV</h2>
+        <p className="text-sm text-ink-light mt-1">
+          Last opp en CSV-fil med medlemsnavn for å legge til mange på én gang.
+        </p>
+      </div>
+      <div className="bg-white rounded-xl border border-border p-6 space-y-4">
+        <div className="rounded-lg border-2 border-dashed border-border p-6 text-center">
+          <p className="text-sm text-ink-light mb-3">
+            Filen bør ha en kolonne kalt{" "}
+            <code className="text-xs bg-cream px-1.5 py-0.5 rounded">name</code> eller{" "}
+            <code className="text-xs bg-cream px-1.5 py-0.5 rounded">navn</code>
+          </p>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleFile}
+            className="text-sm text-ink file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-forest-light file:text-forest hover:file:bg-forest/10 cursor-pointer"
+          />
+        </div>
+
+        {rows.length > 0 && (
+          <div>
+            <p className="text-sm font-medium text-ink mb-2">{rows.length} navn funnet:</p>
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-border bg-cream p-3 space-y-1">
+              {rows.map((name, i) => (
+                <p key={i} className="text-sm text-ink-mid">{name}</p>
+              ))}
+            </div>
+            {importError && <p className="text-xs text-red-600 mt-2">{importError}</p>}
+            <button
+              type="button"
+              onClick={handleImport}
+              disabled={importing}
+              className="mt-4 px-5 py-2.5 rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] disabled:opacity-50"
+            >
+              {importing ? "Importerer..." : `Importer ${rows.length} medlemmer`}
+            </button>
+          </div>
+        )}
+
+        {importDone && (
+          <p className="text-sm font-medium text-forest">Import fullført ✓</p>
+        )}
+
+        <p className="text-xs text-ink-light border-t border-border pt-4">
+          Eksempelformat:{" "}
+          <code className="bg-cream px-1 py-0.5 rounded">name,email</code> — én person per linje.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function ClubAdminPage({
   params,
@@ -435,72 +651,92 @@ export default function ClubAdminPage({
 
       {/* ── Tab: Medlemmer ── */}
       {activeTab === "medlemmer" && (
-        <div>
-          <div className="mb-6">
-            <h2 className="font-display text-xl font-semibold text-ink">Medlemsforespørsler</h2>
-            <p className="text-sm text-ink-light mt-1">
-              Godkjenn eller avvis forespørsler om å bli med i {club.name}.
-            </p>
-          </div>
+        <div className="space-y-10">
 
-          {memberships.length === 0 && (
-            <div className="rounded-xl bg-white border border-border px-6 py-12 text-center">
-              <p className="text-sm text-ink-light">Ingen forespørsler ennå.</p>
+          {/* Invite link */}
+          <InviteLinkSection
+            club={club}
+            onRegenerate={async () => {
+              const newToken = crypto.randomUUID();
+              await supabase.from("clubs").update({ invite_token: newToken }).eq("id", club.id);
+              setClub({ ...club, invite_token: newToken });
+            }}
+          />
+
+          {/* CSV import */}
+          <CsvImportSection
+            club={club}
+            onImported={async () => { if (club) await fetchMemberships(club.id); }}
+          />
+
+          {/* Membership requests */}
+          <div>
+            <div className="mb-5">
+              <h2 className="font-display text-xl font-semibold text-ink">Medlemsforespørsler</h2>
+              <p className="text-sm text-ink-light mt-1">
+                Godkjenn eller avvis forespørsler om å bli med i {club.name}.
+              </p>
             </div>
-          )}
 
-          <div className="space-y-3">
-            {(["pending", "approved", "rejected"] as const).map((status) => {
-              const group = memberships.filter((m) => m.status === status);
-              if (group.length === 0) return null;
-              const labels = { pending: "Venter", approved: "Godkjent", rejected: "Avvist" };
-              const colors = {
-                pending: "text-amber bg-amber-light border-amber/30",
-                approved: "text-forest bg-forest-light border-forest/20",
-                rejected: "text-ink-light bg-cream border-border",
-              };
-              return (
-                <div key={status}>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-ink-light mb-3">
-                    {labels[status]} ({group.length})
-                  </h3>
-                  <div className="bg-white rounded-xl border border-border divide-y divide-border">
-                    {group.map((m) => (
-                      <div key={m.id} className="px-6 py-4 flex items-start gap-4">
-                        <div className="h-9 w-9 rounded-full bg-forest-light flex items-center justify-center text-forest text-xs font-bold flex-shrink-0">
-                          {m.profiles?.avatar ?? "?"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-ink">{m.profiles?.name ?? "Ukjent"}</p>
-                          {m.message && (
-                            <p className="text-xs text-ink-light mt-0.5 line-clamp-2">{m.message}</p>
-                          )}
-                          <span className={`mt-1 inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${colors[status]}`}>
-                            {labels[status]}
-                          </span>
-                        </div>
-                        {status === "pending" && (
-                          <div className="flex gap-2 flex-shrink-0">
-                            <button
-                              onClick={() => handleMembershipAction(m.id, "approved")}
-                              className="px-3 py-1.5 rounded-lg bg-forest text-xs font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
-                            >
-                              Godkjenn
-                            </button>
-                            <button
-                              onClick={() => handleMembershipAction(m.id, "rejected")}
-                              className="px-3 py-1.5 rounded-lg bg-cream text-xs font-medium text-ink-mid hover:bg-border transition-colors duration-[120ms]"
-                            >
-                              Avvis
-                            </button>
+            {memberships.length === 0 && (
+              <div className="rounded-xl bg-white border border-border px-6 py-12 text-center">
+                <p className="text-sm text-ink-light">Ingen forespørsler ennå.</p>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {(["pending", "approved", "rejected"] as const).map((status) => {
+                const group = memberships.filter((m) => m.status === status);
+                if (group.length === 0) return null;
+                const labels = { pending: "Venter", approved: "Godkjent", rejected: "Avvist" };
+                const colors = {
+                  pending: "text-amber bg-amber-light border-amber/30",
+                  approved: "text-forest bg-forest-light border-forest/20",
+                  rejected: "text-ink-light bg-cream border-border",
+                };
+                return (
+                  <div key={status}>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-ink-light mb-3">
+                      {labels[status]} ({group.length})
+                    </h3>
+                    <div className="bg-white rounded-xl border border-border divide-y divide-border">
+                      {group.map((m) => (
+                        <div key={m.id} className="px-6 py-4 flex items-start gap-4">
+                          <div className="h-9 w-9 rounded-full bg-forest-light flex items-center justify-center text-forest text-xs font-bold flex-shrink-0">
+                            {m.profiles?.avatar ?? "?"}
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-ink">{m.profiles?.name ?? "Ukjent"}</p>
+                            {m.message && (
+                              <p className="text-xs text-ink-light mt-0.5 line-clamp-2">{m.message}</p>
+                            )}
+                            <span className={`mt-1 inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${colors[status]}`}>
+                              {labels[status]}
+                            </span>
+                          </div>
+                          {status === "pending" && (
+                            <div className="flex gap-2 flex-shrink-0">
+                              <button
+                                onClick={() => handleMembershipAction(m.id, "approved")}
+                                className="px-3 py-1.5 rounded-lg bg-forest text-xs font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
+                              >
+                                Godkjenn
+                              </button>
+                              <button
+                                onClick={() => handleMembershipAction(m.id, "rejected")}
+                                className="px-3 py-1.5 rounded-lg bg-cream text-xs font-medium text-ink-mid hover:bg-border transition-colors duration-[120ms]"
+                              >
+                                Avvis
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
