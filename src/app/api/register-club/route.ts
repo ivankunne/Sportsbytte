@@ -42,6 +42,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
 
+  const adminUrl = `${req.nextUrl.origin}/admin/registreringer`;
+
   // Then send email notification
   const { error } = await resend.emails.send({
     from: "Sportsbyttet <onboarding@resend.dev>",
@@ -102,6 +104,12 @@ export async function POST(req: NextRequest) {
               <td style="padding: 8px 0; font-size: 14px;">${description || "—"}</td>
             </tr>
           </table>
+
+          <div style="text-align: center; margin-bottom: 24px;">
+            <a href="${adminUrl}" style="display: inline-block; background: #1a3c2e; color: white; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 28px; border-radius: 8px;">
+              Se søknaden i innboksen →
+            </a>
+          </div>
 
           <p style="font-size: 12px; color: #aaa; margin: 0;">Sendt fra sportsbyttet.no · ${new Date().toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })}</p>
         </div>
