@@ -53,6 +53,66 @@ export type Database = {
           },
         ]
       }
+      club_registrations: {
+        Row: {
+          id: number
+          created_at: string
+          status: string
+          club_name: string
+          sport: string | null
+          location: string | null
+          member_count: string | null
+          org_number: string | null
+          first_name: string
+          last_name: string
+          email: string
+          phone: string | null
+          role: string | null
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          description: string | null
+        }
+        Insert: {
+          id?: never
+          created_at?: string
+          status?: string
+          club_name: string
+          sport?: string | null
+          location?: string | null
+          member_count?: string | null
+          org_number?: string | null
+          first_name: string
+          last_name: string
+          email: string
+          phone?: string | null
+          role?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          description?: string | null
+        }
+        Update: {
+          id?: never
+          created_at?: string
+          status?: string
+          club_name?: string
+          sport?: string | null
+          location?: string | null
+          member_count?: string | null
+          org_number?: string | null
+          first_name?: string
+          last_name?: string
+          email?: string
+          phone?: string | null
+          role?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          description?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           emoji: string

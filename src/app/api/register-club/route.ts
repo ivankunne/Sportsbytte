@@ -1,7 +1,15 @@
 import { Resend } from "resend";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/database.types";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Use service role if available, fall back to anon for local dev
+const supabase = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -12,6 +20,29 @@ export async function POST(req: NextRequest) {
     logoUrl, primaryColor, secondaryColor, description,
   } = body;
 
+  // Save to Supabase first
+  const { error: dbError } = await supabase.from("club_registrations").insert({
+    club_name: clubName,
+    sport: sport || null,
+    location: location || null,
+    member_count: memberCount || null,
+    org_number: orgNumber || null,
+    first_name: firstName,
+    last_name: lastName,
+    email,
+    phone: phone || null,
+    role: role || null,
+    logo_url: logoUrl || null,
+    primary_color: primaryColor || null,
+    secondary_color: secondaryColor || null,
+    description: description || null,
+  });
+
+  if (dbError) {
+    return NextResponse.json({ error: dbError.message }, { status: 500 });
+  }
+
+  // Then send email notification
   const { error } = await resend.emails.send({
     from: "Sportsbyttet <onboarding@resend.dev>",
     to: "ivan@frameflow.no",
