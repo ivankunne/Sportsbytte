@@ -129,6 +129,12 @@ export default function ClubAdminPage({
       return;
     }
     setClub({ ...club, ...branding, secondary_color: branding.secondary_color || null, description: branding.description || null, logo_url: branding.logo_url || null });
+    // Revalidate the public club page so changes appear immediately
+    await fetch("/api/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: `/klubb/${slug}` }),
+    });
     setBrandingSaved(true);
     setTimeout(() => setBrandingSaved(false), 3000);
   }
