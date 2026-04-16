@@ -2,17 +2,28 @@
 
 import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import type { ListingWithRelations, Category } from "@/lib/queries";
 import { ListingCard } from "@/components/ListingCard";
+import { ListingCardSkeleton } from "@/components/Skeleton";
+
+const CONDITIONS = [
+  { value: "", label: "Alle" },
+  { value: "ny", label: "Ny" },
+  { value: "pent brukt", label: "Pent brukt" },
+  { value: "brukt", label: "Brukt" },
+];
 
 export default function ExplorePageWrapper() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-7xl px-4 py-20 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-forest border-r-transparent" />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+          <div className="h-10 w-48 rounded-lg bg-cream animate-pulse mb-2" />
+          <div className="h-4 w-32 rounded bg-cream animate-pulse mb-8" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />)}
+          </div>
         </div>
       }
     >
@@ -35,6 +46,9 @@ function ExplorePage() {
   const [query, setQuery] = useState(initialQuery);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [sort, setSort] = useState(initialSort);
+  const [condition, setCondition] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
 
   // Load categories once
   useEffect(() => {
@@ -64,6 +78,10 @@ function ExplorePage() {
       if (cat) q = q.eq("category", cat.name);
     }
 
+    if (condition) q = q.ilike("condition", condition);
+    if (minPrice) q = q.gte("price", parseInt(minPrice));
+    if (maxPrice) q = q.lte("price", parseInt(maxPrice));
+
     switch (sort) {
       case "pris-lav":
         q = q.order("price", { ascending: true });
@@ -78,7 +96,7 @@ function ExplorePage() {
     const { data } = await q;
     setListings((data ?? []) as ListingWithRelations[]);
     setLoading(false);
-  }, [query, activeCategory, sort, categories]);
+  }, [query, activeCategory, sort, condition, minPrice, maxPrice, categories]);
 
   // Debounce search query
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -89,7 +107,7 @@ function ExplorePage() {
 
   useEffect(() => {
     if (categories.length > 0) fetchListings();
-  }, [debouncedQuery, activeCategory, sort, categories, fetchListings]);
+  }, [debouncedQuery, activeCategory, sort, condition, minPrice, maxPrice, categories, fetchListings]);
 
   // Sync URL
   useEffect(() => {
@@ -148,7 +166,8 @@ function ExplorePage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-8">
+      {/* Category pills */}
+      <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={() => setActiveCategory("")}
           className={`rounded-[20px] px-4 py-1.5 text-sm font-medium transition-colors duration-[120ms] ${
@@ -176,9 +195,46 @@ function ExplorePage() {
         ))}
       </div>
 
+      {/* Condition + price filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-8 pt-4 border-t border-border">
+        <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">Tilstand:</span>
+        {CONDITIONS.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setCondition(condition === value ? "" : value)}
+            className={`rounded-[20px] px-3 py-1 text-xs font-medium transition-colors duration-[120ms] ${
+              condition === value
+                ? "bg-ink text-white"
+                : "bg-cream text-ink-mid hover:bg-border"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">Pris:</span>
+          <input
+            type="number"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            placeholder="Fra"
+            className="w-20 rounded-lg border border-border bg-white px-3 py-1.5 text-xs text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20"
+          />
+          <span className="text-xs text-ink-light">–</span>
+          <input
+            type="number"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            placeholder="Til"
+            className="w-20 rounded-lg border border-border bg-white px-3 py-1.5 text-xs text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20"
+          />
+          <span className="text-xs text-ink-light">kr</span>
+        </div>
+      </div>
+
       {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-forest border-r-transparent" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />)}
         </div>
       ) : listings.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -200,6 +256,9 @@ function ExplorePage() {
               setQuery("");
               setActiveCategory("");
               setSort("nyeste");
+              setCondition("");
+              setMinPrice("");
+              setMaxPrice("");
             }}
             className="mt-4 text-sm font-medium text-forest hover:text-forest-mid transition-colors duration-[120ms]"
           >

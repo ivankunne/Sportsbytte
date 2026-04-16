@@ -6,16 +6,28 @@ import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/lib/supabase";
 import { updateMembershipStatus } from "@/lib/queries";
 import { ClubAnnouncements } from "@/components/ClubAnnouncements";
+import { showSuccess, showError } from "@/components/Toaster";
 import type { Club, ListingWithRelations, Profile } from "@/lib/queries";
 import type { MembershipWithProfile } from "@/lib/queries";
 
-type Tab = "oversikt" | "oppslag" | "annonser" | "medlemmer" | "utseende";
+type Tab = "oversikt" | "oppslag" | "annonser" | "medlemmer" | "foresporsler" | "utseende";
+
+type Inquiry = {
+  id: number;
+  created_at: string;
+  message: string;
+  buyer_name: string;
+  buyer_email: string;
+  listing_id: number;
+  listing?: { title: string; id: number } | null;
+};
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "oversikt", label: "Oversikt" },
   { id: "oppslag", label: "Oppslag" },
   { id: "annonser", label: "Annonser" },
   { id: "medlemmer", label: "Medlemmer" },
+  { id: "foresporsler", label: "Forespørsler" },
   { id: "utseende", label: "Utseende" },
 ];
 
@@ -294,7 +306,7 @@ export default function ClubAdminPage({
     member_email_domain: "",
   });
   const [brandingSaving, setBrandingSaving] = useState(false);
-  const [brandingSaved, setBrandingSaved] = useState(false);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
 
   const fetchMemberships = useCallback(async (clubId: number) => {
     const { data } = await supabase
@@ -343,6 +355,18 @@ export default function ClubAdminPage({
       setListings((listingsData ?? []) as ListingWithRelations[]);
       setSellers(sellersData ?? []);
       await fetchMemberships(clubData.id);
+
+      // Fetch inquiries for this club's listings
+      const { data: inquiriesData } = await supabase
+        .from("inquiries")
+        .select("*, listing:listing_id(id, title)")
+        .in(
+          "listing_id",
+          ((listingsData ?? []) as ListingWithRelations[]).map((l) => l.id)
+        )
+        .order("created_at", { ascending: false });
+      setInquiries((inquiriesData ?? []) as Inquiry[]);
+
       setLoading(false);
     });
   }, [params, fetchMemberships]);
@@ -366,7 +390,6 @@ export default function ClubAdminPage({
     e.preventDefault();
     if (!club) return;
     setBrandingSaving(true);
-    setBrandingSaved(false);
     const { error } = await supabase.from("clubs").update({
       color: branding.color,
       secondary_color: branding.secondary_color || null,
@@ -378,18 +401,16 @@ export default function ClubAdminPage({
     }).eq("id", club.id);
     setBrandingSaving(false);
     if (error) {
-      alert(`Kunne ikke lagre: ${error.message}`);
+      showError(`Kunne ikke lagre: ${error.message}`);
       return;
     }
     setClub({ ...club, ...branding, secondary_color: branding.secondary_color || null, description: branding.description || null, logo_url: branding.logo_url || null, member_email_domain: branding.member_email_domain || null });
-    // Revalidate the public club page so changes appear immediately
     await fetch("/api/revalidate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ path: `/klubb/${slug}` }),
     });
-    setBrandingSaved(true);
-    setTimeout(() => setBrandingSaved(false), 3000);
+    showSuccess("Endringer lagret");
   }
 
   async function handleMarkSold(listingId: number) {
@@ -458,6 +479,7 @@ export default function ClubAdminPage({
   }
 
   const pendingCount = memberships.filter((m) => m.status === "pending").length;
+  const inquiryCount = inquiries.length;
   const activeListings = listings.filter((l) => !l.is_sold);
   const soldListings = listings.filter((l) => l.is_sold);
 
@@ -503,6 +525,11 @@ export default function ClubAdminPage({
             {tab.id === "medlemmer" && pendingCount > 0 && (
               <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber text-[10px] font-bold text-white">
                 {pendingCount}
+              </span>
+            )}
+            {tab.id === "foresporsler" && inquiryCount > 0 && (
+              <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-forest text-[10px] font-bold text-white">
+                {inquiryCount}
               </span>
             )}
           </button>
@@ -778,6 +805,71 @@ export default function ClubAdminPage({
         </div>
       )}
 
+      {/* ── Tab: Forespørsler ── */}
+      {activeTab === "foresporsler" && (
+        <div>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-ink">Forespørsler</h2>
+              <p className="text-sm text-ink-light mt-1">Meldinger sendt via kontaktskjema på annonsene dine.</p>
+            </div>
+            <span className="text-sm text-ink-light">{inquiries.length} totalt</span>
+          </div>
+
+          {inquiries.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border px-6 py-16 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-cream">
+                <svg className="h-7 w-7 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                </svg>
+              </div>
+              <p className="font-display text-base font-semibold text-ink">Ingen forespørsler ennå</p>
+              <p className="mt-1 text-sm text-ink-light">Når noen kontakter deg via en annonse vises meldingen her.</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-border divide-y divide-border">
+              {inquiries.map((inq) => (
+                <div key={inq.id} className="px-6 py-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-forest-light flex items-center justify-center text-forest text-xs font-bold flex-shrink-0">
+                        {inq.buyer_name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-ink">{inq.buyer_name}</p>
+                        <a href={`mailto:${inq.buyer_email}`} className="text-xs text-forest hover:underline">
+                          {inq.buyer_email}
+                        </a>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      {inq.listing && (
+                        <Link href={`/annonse/${inq.listing.id}`} className="text-xs text-forest hover:underline block">
+                          {inq.listing.title}
+                        </Link>
+                      )}
+                      <p className="text-xs text-ink-light mt-0.5">
+                        {new Date(inq.created_at).toLocaleDateString("nb-NO", { day: "numeric", month: "short", year: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm text-ink-mid bg-cream rounded-lg px-4 py-3">{inq.message}</p>
+                  <a
+                    href={`mailto:${inq.buyer_email}?subject=Re: ${inq.listing?.title ?? "din forespørsel"}`}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-forest hover:text-forest-mid transition-colors"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                    Svar via e-post
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Tab: Utseende ── */}
       {activeTab === "utseende" && (
         <div className="max-w-2xl">
@@ -943,9 +1035,6 @@ export default function ClubAdminPage({
               >
                 {brandingSaving ? "Lagrer..." : "Lagre endringer"}
               </button>
-              {brandingSaved && (
-                <span className="text-sm text-forest font-medium">Endringer lagret ✓</span>
-              )}
             </div>
           </form>
         </div>

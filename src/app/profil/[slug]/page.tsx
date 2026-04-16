@@ -9,7 +9,6 @@ import {
 } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { ListingCard } from "@/components/ListingCard";
-import { ComingSoonButton } from "@/components/ComingSoonButton";
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -92,12 +91,12 @@ export default async function ProfilePage({ params }: Props) {
             </div>
           </div>
 
-          <ComingSoonButton
-            feature="Meldinger"
+          <Link
+            href={`/kontakt`}
             className="rounded-lg border-2 border-forest px-6 py-2 text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors duration-[120ms]"
           >
             Send melding
-          </ComingSoonButton>
+          </Link>
         </div>
 
         {seller.clubs && (
@@ -150,8 +149,18 @@ export default async function ProfilePage({ params }: Props) {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl p-10 text-center">
-            <p className="text-ink-light">Ingen aktive annonser for øyeblikket.</p>
+          <div className="bg-white rounded-xl p-12 text-center border border-border">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-cream">
+              <svg className="h-7 w-7 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+              </svg>
+            </div>
+            <p className="font-display text-base font-semibold text-ink">Ingen aktive annonser</p>
+            <p className="mt-1 text-sm text-ink-light">{seller.name} har ingen aktive annonser for øyeblikket.</p>
+            <Link href="/utforsk" className="mt-4 inline-block text-sm font-medium text-forest hover:underline">
+              Utforsk andre annonser →
+            </Link>
           </div>
         )}
       </div>

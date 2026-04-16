@@ -400,33 +400,57 @@ export function Header() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-border bg-white">
-          <div className="px-4 py-4 space-y-3">
-            <Link
-              href="/utforsk"
-              className="block text-sm font-medium text-ink-mid hover:text-forest"
-              onClick={() => setMenuOpen(false)}
-            >
-              Utforsk utstyr
-            </Link>
-            <Link
-              href="/klubber"
-              className="block text-sm font-medium text-ink-mid hover:text-forest"
-              onClick={() => setMenuOpen(false)}
-            >
-              Klubber
-            </Link>
-            <Link
-              href="/selg"
-              className="block text-sm font-medium text-ink-mid hover:text-forest"
-              onClick={() => setMenuOpen(false)}
-            >
-              Selg utstyr
-            </Link>
+          <nav className="px-4 py-3">
+            {[
+              {
+                href: "/utforsk",
+                label: "Utforsk utstyr",
+                icon: (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+                  </svg>
+                ),
+              },
+              {
+                href: "/klubber",
+                label: "Klubber",
+                icon: (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  </svg>
+                ),
+              },
+              {
+                href: "/selg",
+                label: "Selg utstyr",
+                icon: (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                ),
+              },
+            ].map(({ href, label, icon }) => (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-ink-mid hover:bg-cream hover:text-forest transition-colors duration-[120ms]"
+              >
+                <span className="text-ink-light">{icon}</span>
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <div className="px-4 pb-4 pt-1 border-t border-border">
             <Link
               href="/registrer-klubb"
-              className="block w-full text-center rounded-lg bg-forest px-5 py-2.5 text-sm font-medium text-white"
+              className="flex items-center justify-center gap-2 w-full rounded-lg bg-forest px-5 py-3 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
               onClick={() => setMenuOpen(false)}
             >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
               Registrer din klubb
             </Link>
           </div>
