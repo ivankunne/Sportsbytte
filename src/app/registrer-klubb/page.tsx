@@ -2,15 +2,55 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { showComingSoon } from "@/components/Toaster";
-
-// TODO MVP: Replace with:
-// 1. Auth check — user must be logged in
-// 2. await supabase.from('clubs').insert({...formData})
-// 3. Stripe subscription creation for club plan
 
 export default function RegisterClubPage() {
   const [step, setStep] = useState(1);
+  const [submitted, setSubmitted] = useState(false);
+
+  if (submitted) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-24 text-center">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-forest-light">
+          <svg className="h-10 w-10 text-forest" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h1 className="font-display text-3xl font-bold text-ink">Søknad mottatt!</h1>
+        <p className="mt-3 text-ink-mid leading-relaxed">
+          Takk for at du vil registrere klubben din på Sportsbyttet. Vi setter opp siden
+          og tar kontakt innen <strong>24 timer</strong> på e-posten du oppgav.
+        </p>
+        <div className="mt-8 rounded-2xl bg-forest-light border border-forest/10 p-6 text-left space-y-3">
+          {[
+            "Klubbsiden settes opp og tilpasses",
+            "Du får tilgang til admin-panelet",
+            "Vi hjelper deg med å invitere de første medlemmene",
+          ].map((item) => (
+            <div key={item} className="flex items-center gap-3">
+              <svg className="h-5 w-5 text-forest flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+              </svg>
+              <span className="text-sm text-ink">{item}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 flex flex-col gap-3">
+          <Link
+            href="/"
+            className="rounded-lg bg-forest px-6 py-3 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] text-center"
+          >
+            Tilbake til forsiden
+          </Link>
+          <Link
+            href="/utforsk"
+            className="rounded-lg border border-border px-6 py-3 text-sm font-medium text-ink hover:bg-cream transition-colors duration-[120ms] text-center"
+          >
+            Utforsk annonser mens du venter
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
@@ -254,7 +294,7 @@ export default function RegisterClubPage() {
           ) : (
             <button
               type="button"
-              onClick={() => showComingSoon("Klubbregistrering")}
+              onClick={() => setSubmitted(true)}
               className="rounded-lg bg-amber px-7 py-2.5 text-sm font-bold text-white hover:brightness-92 transition-colors duration-[120ms]"
             >
               Registrer klubben

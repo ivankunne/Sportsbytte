@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { showComingSoon } from "@/components/Toaster";
 
 export function ContactForm() {
   const [sent, setSent] = useState(false);
