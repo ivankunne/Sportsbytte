@@ -29,6 +29,7 @@ function InviteLinkSection({
 }) {
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [confirmRegen, setConfirmRegen] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,8 +46,8 @@ function InviteLinkSection({
   }
 
   async function handleRegenerate() {
-    if (!confirm("Er du sikker? Den gamle lenken vil slutte å fungere.")) return;
     setRegenerating(true);
+    setConfirmRegen(false);
     await onRegenerate();
     setRegenerating(false);
   }
@@ -87,14 +88,37 @@ function InviteLinkSection({
             </div>
 
             <div className="pt-3 border-t border-border">
-              <button
-                type="button"
-                onClick={handleRegenerate}
-                disabled={regenerating}
-                className="text-xs text-ink-light hover:text-red-500 transition-colors duration-[120ms] disabled:opacity-50"
-              >
-                {regenerating ? "Regenererer..." : "Generer ny lenke (ugyldiggjør den gamle)"}
-              </button>
+              {!confirmRegen ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmRegen(true)}
+                  disabled={regenerating}
+                  className="text-xs text-ink-light hover:text-red-500 transition-colors duration-[120ms] disabled:opacity-50"
+                >
+                  Generer ny lenke (ugyldiggjør den gamle)
+                </button>
+              ) : (
+                <div className="flex items-center gap-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+                  <p className="text-xs text-red-700 flex-1">
+                    Den gamle lenken vil slutte å fungere. Er du sikker?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRegenerate}
+                    disabled={regenerating}
+                    className="text-xs font-semibold text-red-600 hover:text-red-800 transition-colors disabled:opacity-50"
+                  >
+                    {regenerating ? "Regenererer..." : "Ja, generer ny"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRegen(false)}
+                    className="text-xs text-ink-light hover:text-ink transition-colors"
+                  >
+                    Avbryt
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ) : (
