@@ -18,7 +18,7 @@ export default function JoinViaInvitePage({
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ name: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", message: "" });
 
   useEffect(() => {
     params.then(async ({ token }) => {
@@ -75,7 +75,7 @@ export default function JoinViaInvitePage({
         profileId = newProfile.id;
       }
 
-      // Upsert membership — invite link = auto-approved
+      // Invite link always auto-approves
       const { error: memberErr } = await supabase.from("memberships").upsert({
         club_id: club.id,
         profile_id: profileId,
@@ -179,6 +179,16 @@ export default function JoinViaInvitePage({
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Fullt navn"
+              className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1.5">E-post (valgfritt)</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="din@epost.no"
               className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
             />
           </div>

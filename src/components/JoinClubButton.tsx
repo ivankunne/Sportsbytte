@@ -7,14 +7,22 @@ type Props = {
   clubId: number;
   clubName: string;
   isMembershipGated: boolean;
+  memberEmailDomain?: string | null;
 };
 
-export function JoinClubButton({ clubId, clubName, isMembershipGated }: Props) {
+export function JoinClubButton({ clubId, clubName, isMembershipGated, memberEmailDomain }: Props) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [error, setError] = useState("");
+
+  const normalizedDomain = memberEmailDomain?.replace(/^@/, "").toLowerCase();
+
+  function resolveStatus(): "pending" | "approved" {
+    if (!normalizedDomain) return "pending";
+    return form.email.toLowerCase().endsWith(`@${normalizedDomain}`) ? "approved" : "pending";
+  }
 
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault();
@@ -22,7 +30,7 @@ export function JoinClubButton({ clubId, clubName, isMembershipGated }: Props) {
     setSubmitting(true);
     setError("");
     try {
-      await createMembershipRequest(clubId, form.name, form.message || undefined);
+      await createMembershipRequest(clubId, form.name, form.message || undefined, resolveStatus());
       setSubmitted(true);
       setOpen(false);
     } catch {
@@ -34,7 +42,7 @@ export function JoinClubButton({ clubId, clubName, isMembershipGated }: Props) {
   if (submitted) {
     return (
       <div className="rounded-lg bg-white/20 px-5 py-2 text-sm font-medium text-white backdrop-blur-sm">
-        Søknad sendt ✓
+        {resolveStatus() === "approved" ? "Velkommen! ✓" : "Søknad sendt ✓"}
       </div>
     );
   }
@@ -75,6 +83,21 @@ export function JoinClubButton({ clubId, clubName, isMembershipGated }: Props) {
                   className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
                 />
               </div>
+              {normalizedDomain && (
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">
+                    E-post{" "}
+                    <span className="text-ink-light font-normal">(automatisk godkjenning med @{normalizedDomain})</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder={`navn@${normalizedDomain}`}
+                    className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-ink mb-1.5">
                   Melding til admin (valgfritt)

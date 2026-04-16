@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, type ChangeEvent } from "react";
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/lib/supabase";
 import { updateMembershipStatus } from "@/lib/queries";
 import { ClubAnnouncements } from "@/components/ClubAnnouncements";
@@ -78,6 +79,13 @@ function InviteLinkSection({
             <p className="text-xs text-ink-light">
               Del via WhatsApp, Spond, e-post eller SMS. Lenken gjelder til du regenererer den.
             </p>
+            <div className="flex flex-col items-center gap-2 pt-4 border-t border-border">
+              <QRCodeSVG value={inviteUrl} size={160} level="M" />
+              <p className="text-xs text-ink-light text-center">
+                Skriv ut eller ta skjermbilde for å dele QR-koden på oppslagstavla
+              </p>
+            </div>
+
             <div className="pt-3 border-t border-border">
               <button
                 type="button"
@@ -259,6 +267,7 @@ export default function ClubAdminPage({
     description: "",
     logo_url: "",
     is_membership_gated: false,
+    member_email_domain: "",
   });
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [brandingSaved, setBrandingSaved] = useState(false);
@@ -290,6 +299,7 @@ export default function ClubAdminPage({
         description: clubData.description ?? "",
         logo_url: clubData.logo_url ?? "",
         is_membership_gated: clubData.is_membership_gated ?? false,
+        member_email_domain: clubData.member_email_domain ?? "",
       });
 
       const [{ data: listingsData }, { data: sellersData }] = await Promise.all([
@@ -339,6 +349,7 @@ export default function ClubAdminPage({
       description: branding.description || null,
       logo_url: branding.logo_url || null,
       is_membership_gated: branding.is_membership_gated,
+      member_email_domain: branding.member_email_domain || null,
       updated_at: new Date().toISOString(),
     }).eq("id", club.id);
     setBrandingSaving(false);
@@ -346,7 +357,7 @@ export default function ClubAdminPage({
       alert(`Kunne ikke lagre: ${error.message}`);
       return;
     }
-    setClub({ ...club, ...branding, secondary_color: branding.secondary_color || null, description: branding.description || null, logo_url: branding.logo_url || null });
+    setClub({ ...club, ...branding, secondary_color: branding.secondary_color || null, description: branding.description || null, logo_url: branding.logo_url || null, member_email_domain: branding.member_email_domain || null });
     // Revalidate the public club page so changes appear immediately
     await fetch("/api/revalidate", {
       method: "POST",
@@ -854,6 +865,26 @@ export default function ClubAdminPage({
                   placeholder="Kort beskrivelse av klubben som vises på profilen..."
                   className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
                 />
+              </div>
+            </div>
+
+            {/* Email domain gating */}
+            <div className="bg-white rounded-xl border border-border p-6 space-y-4">
+              <h3 className="font-display text-base font-semibold text-ink">E-postdomene</h3>
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1.5">
+                  Automatisk godkjenning ved e-postdomene
+                </label>
+                <input
+                  type="text"
+                  value={branding.member_email_domain}
+                  onChange={(e) => setBranding({ ...branding, member_email_domain: e.target.value })}
+                  placeholder="brannsk.no"
+                  className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                />
+                <p className="text-xs text-ink-light mt-1.5">
+                  Brukere som oppgir en e-post med dette domenet blir automatisk godkjent som medlemmer. Skriv uten @, f.eks. <span className="font-mono">brannsk.no</span>
+                </p>
               </div>
             </div>
 

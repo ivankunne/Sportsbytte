@@ -297,7 +297,8 @@ export async function getMembershipsByClub(
 export async function createMembershipRequest(
   clubId: number,
   name: string,
-  message?: string
+  message?: string,
+  status: "pending" | "approved" = "pending"
 ): Promise<void> {
   // Find or create a profile by name for MVP (no real auth yet)
   let { data: profile } = await supabase
@@ -322,7 +323,7 @@ export async function createMembershipRequest(
     club_id: clubId,
     profile_id: profile.id,
     message: message ?? null,
-    status: "pending",
+    status,
   });
   if (error) throw error;
 }

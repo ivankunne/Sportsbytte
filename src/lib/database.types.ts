@@ -85,6 +85,7 @@ export type Database = {
           invite_token: string | null
           is_membership_gated: boolean
           logo_url: string | null
+          member_email_domain: string | null
           members: number
           name: string
           rating: number
@@ -103,6 +104,7 @@ export type Database = {
           invite_token?: string | null
           is_membership_gated?: boolean
           logo_url?: string | null
+          member_email_domain?: string | null
           members?: number
           name: string
           rating?: number
@@ -121,6 +123,7 @@ export type Database = {
           invite_token?: string | null
           is_membership_gated?: boolean
           logo_url?: string | null
+          member_email_domain?: string | null
           members?: number
           name?: string
           rating?: number
@@ -338,6 +341,41 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inquiries: {
+        Row: {
+          buyer_email: string
+          buyer_name: string
+          created_at: string
+          id: number
+          listing_id: number
+          message: string
+        }
+        Insert: {
+          buyer_email: string
+          buyer_name: string
+          created_at?: string
+          id?: never
+          listing_id: number
+          message: string
+        }
+        Update: {
+          buyer_email?: string
+          buyer_name?: string
+          created_at?: string
+          id?: never
+          listing_id?: number
+          message?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquiries_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
             referencedColumns: ["id"]
           },
         ]

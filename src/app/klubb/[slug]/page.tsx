@@ -91,6 +91,7 @@ export default async function ClubPage({ params }: Props) {
                 clubId={club.id}
                 clubName={club.name}
                 isMembershipGated={club.is_membership_gated}
+                memberEmailDomain={club.member_email_domain}
               />
             </div>
           </div>

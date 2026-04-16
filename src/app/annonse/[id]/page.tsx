@@ -9,7 +9,6 @@ import { formatDaysAgo } from "@/lib/queries";
 import { ConditionBadge } from "@/components/ConditionBadge";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { ListingCard } from "@/components/ListingCard";
-import { ComingSoonButton } from "@/components/ComingSoonButton";
 
 export default function ListingDetailPage({
   params,
@@ -21,6 +20,11 @@ export default function ListingDetailPage({
   const [sellerListings, setSellerListings] = useState<ListingWithRelations[]>([]);
   const [activeImage, setActiveImage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isSold, setIsSold] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [contactSent, setContactSent] = useState(false);
+  const [contactError, setContactError] = useState("");
+  const [contact, setContact] = useState({ name: "", email: "", message: "" });
 
   useEffect(() => {
     params.then(async ({ id }) => {
@@ -37,6 +41,7 @@ export default function ListingDetailPage({
 
       const l = data as ListingWithRelations;
       setListing(l);
+      setIsSold(l.is_sold);
 
       const [{ data: club }, { data: seller }] = await Promise.all([
         supabase
@@ -78,6 +83,30 @@ export default function ListingDetailPage({
         </Link>
       </div>
     );
+  }
+
+  async function handleMarkSold() {
+    if (!listing || !confirm("Merk denne annonsen som solgt?")) return;
+    await supabase.from("listings").update({ is_sold: true }).eq("id", listing.id);
+    setIsSold(true);
+  }
+
+  async function handleContact(e: { preventDefault(): void }) {
+    e.preventDefault();
+    if (!listing) return;
+    if (!contact.name.trim() || !contact.email.trim() || !contact.message.trim()) {
+      setContactError("Fyll inn alle feltene");
+      return;
+    }
+    setContactError("");
+    const { error } = await supabase.from("inquiries").insert({
+      listing_id: listing.id,
+      buyer_name: contact.name.trim(),
+      buyer_email: contact.email.trim(),
+      message: contact.message.trim(),
+    });
+    if (error) { setContactError("Noe gikk galt. Prøv igjen."); return; }
+    setContactSent(true);
   }
 
   const images = listing.images.length > 0 ? listing.images : ["https://picsum.photos/seed/default/800/600"];
@@ -171,20 +200,88 @@ export default function ListingDetailPage({
                 <span className="text-lg text-ink-mid">kr</span>
               </div>
 
-              <div className="space-y-3 mb-6">
-                <ComingSoonButton
-                  feature="Vipps-betaling"
-                  className="w-full rounded-lg bg-amber py-3.5 text-sm font-bold text-white hover:brightness-92 transition-colors duration-[120ms]"
-                >
-                  Kjøp nå
-                </ComingSoonButton>
-                <ComingSoonButton
-                  feature="Meldinger"
-                  className="w-full rounded-lg border-2 border-forest py-3 text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors duration-[120ms]"
-                >
-                  Send melding til selger
-                </ComingSoonButton>
-              </div>
+              {isSold ? (
+                <div className="mb-6 rounded-lg bg-ink-light/10 py-3.5 text-sm font-semibold text-ink-light text-center">
+                  Solgt
+                </div>
+              ) : (
+                <div className="space-y-3 mb-6">
+                  <button
+                    disabled
+                    className="w-full rounded-lg bg-amber py-3.5 text-sm font-bold text-white opacity-60 cursor-not-allowed"
+                  >
+                    Kjøp nå — kommer snart
+                  </button>
+
+                  {/* Contact seller */}
+                  {!contactOpen ? (
+                    <button
+                      onClick={() => setContactOpen(true)}
+                      className="w-full rounded-lg border-2 border-forest py-3 text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors duration-[120ms]"
+                    >
+                      Send melding til selger
+                    </button>
+                  ) : (
+                    <div className="rounded-xl border border-border p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-ink">Send melding</h3>
+                        <button
+                          onClick={() => { setContactOpen(false); setContactSent(false); setContactError(""); }}
+                          className="text-ink-light hover:text-ink transition-colors"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      {contactSent ? (
+                        <p className="text-sm text-forest text-center py-3">Melding sendt! Selgeren vil kontakte deg. ✓</p>
+                      ) : (
+                        <form onSubmit={handleContact} className="space-y-2">
+                          <input
+                            type="text"
+                            required
+                            value={contact.name}
+                            onChange={(e) => setContact({ ...contact, name: e.target.value })}
+                            placeholder="Ditt navn"
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                          />
+                          <input
+                            type="email"
+                            required
+                            value={contact.email}
+                            onChange={(e) => setContact({ ...contact, email: e.target.value })}
+                            placeholder="Din e-post"
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                          />
+                          <textarea
+                            required
+                            rows={3}
+                            value={contact.message}
+                            onChange={(e) => setContact({ ...contact, message: e.target.value })}
+                            placeholder="Din melding til selger..."
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
+                          />
+                          {contactError && <p className="text-xs text-red-600">{contactError}</p>}
+                          <button
+                            type="submit"
+                            className="w-full rounded-lg bg-forest py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
+                          >
+                            Send melding
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleMarkSold}
+                    className="w-full rounded-lg border border-border py-2 text-xs font-medium text-ink-light hover:bg-cream transition-colors duration-[120ms]"
+                  >
+                    Er du selgeren? Merk som solgt
+                  </button>
+                </div>
+              )}
 
               <div className="flex items-start gap-3 p-4 rounded-xl bg-cream text-sm">
                 <svg className="h-5 w-5 text-forest flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

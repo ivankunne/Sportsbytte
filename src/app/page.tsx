@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getFeaturedListings, getAllCategories, getAllClubs } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { ListingCard } from "@/components/ListingCard";
+import { ClubSearch } from "@/components/ClubSearch";
 
 export const revalidate = 60;
 
@@ -20,9 +21,10 @@ async function getPlatformStats() {
 }
 
 export default async function HomePage() {
-  const [featured, categories, stats] = await Promise.all([
+  const [featured, categories, clubs, stats] = await Promise.all([
     getFeaturedListings(6),
     getAllCategories(),
+    getAllClubs(),
     getPlatformStats(),
   ]);
 
@@ -142,6 +144,23 @@ export default async function HomePage() {
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Club search */}
+      <section className="bg-white border-y border-border">
+        <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-12 sm:py-16">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <h2 className="font-display text-2xl sm:text-3xl font-semibold text-ink">
+                Finn din klubb
+              </h2>
+              <p className="mt-1 text-sm text-ink-mid">
+                {clubs.length} klubber på Sportsbyttet
+              </p>
+            </div>
+          </div>
+          <ClubSearch clubs={clubs} />
         </div>
       </section>
 
