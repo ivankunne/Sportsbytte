@@ -92,6 +92,7 @@ export default async function ClubPage({ params }: Props) {
                 clubName={club.name}
                 isMembershipGated={club.is_membership_gated}
                 memberEmailDomain={club.member_email_domain}
+                accentColor={club.secondary_color}
               />
             </div>
           </div>
@@ -145,7 +146,10 @@ export default async function ClubPage({ params }: Props) {
         <ClubListings clubId={club.id} clubName={club.name} initialListings={listings} />
 
         {/* Byttemarked banner */}
-        <div className="mt-12 rounded-2xl bg-amber p-8 sm:p-10 text-center grain-overlay">
+        <div
+          className="mt-12 rounded-2xl p-8 sm:p-10 text-center grain-overlay"
+          style={{ backgroundColor: club.secondary_color || club.color }}
+        >
           <h3 className="font-display text-2xl sm:text-3xl font-semibold text-white">
             {club.name} Digitalt Byttemarked
           </h3>
@@ -155,7 +159,8 @@ export default async function ClubPage({ params }: Props) {
           </p>
           <Link
             href="/selg"
-            className="mt-6 inline-flex items-center justify-center rounded-lg bg-white px-7 py-3 text-sm font-semibold text-amber hover:bg-cream transition-colors duration-[120ms]"
+            className="mt-6 inline-flex items-center justify-center rounded-lg bg-white px-7 py-3 text-sm font-semibold hover:bg-cream transition-colors duration-[120ms]"
+            style={{ color: club.secondary_color || club.color }}
           >
             Legg ut annonse
           </Link>

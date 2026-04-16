@@ -8,9 +8,10 @@ type Props = {
   clubName: string;
   isMembershipGated: boolean;
   memberEmailDomain?: string | null;
+  accentColor?: string | null;
 };
 
-export function JoinClubButton({ clubId, clubName, isMembershipGated, memberEmailDomain }: Props) {
+export function JoinClubButton({ clubId, clubName, isMembershipGated, memberEmailDomain, accentColor }: Props) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -51,7 +52,8 @@ export function JoinClubButton({ clubId, clubName, isMembershipGated, memberEmai
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-amber px-5 py-2 text-sm font-semibold text-white hover:brightness-92 transition-colors duration-[120ms]"
+        className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:brightness-92 transition-all duration-[120ms]"
+        style={{ backgroundColor: accentColor || "#e8843a" }}
       >
         {isMembershipGated ? "Søk om medlemskap" : "Bli med i klubben"}
       </button>
