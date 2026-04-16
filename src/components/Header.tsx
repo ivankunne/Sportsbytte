@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Logo } from "./Logo";
+import { LoginModal } from "./LoginModal";
 import type {
   ListingWithRelations,
   Club,
@@ -24,6 +25,7 @@ type QuickResult = {
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<QuickResult[]>([]);
@@ -316,6 +318,12 @@ export function Header() {
             >
               Selg
             </Link>
+            <button
+              onClick={() => setLoginOpen(true)}
+              className="text-sm font-medium text-ink-mid hover:text-forest transition-colors duration-[120ms]"
+            >
+              Logg inn
+            </button>
             <Link
               href="/registrer-klubb"
               className="rounded-lg bg-forest px-5 py-2 text-sm font-medium text-white hover:bg-forest-mid transition-colors duration-[120ms]"
@@ -397,6 +405,9 @@ export function Header() {
         </div>
       )}
 
+      {/* Login modal */}
+      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
+
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-border bg-white">
@@ -442,7 +453,16 @@ export function Header() {
               </Link>
             ))}
           </nav>
-          <div className="px-4 pb-4 pt-1 border-t border-border">
+          <div className="px-4 pb-4 pt-1 border-t border-border space-y-2">
+            <button
+              onClick={() => { setMenuOpen(false); setLoginOpen(true); }}
+              className="flex items-center justify-center gap-2 w-full rounded-lg border border-border px-5 py-3 text-sm font-semibold text-ink-mid hover:bg-cream transition-colors duration-[120ms]"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+              </svg>
+              Logg inn
+            </button>
             <Link
               href="/registrer-klubb"
               className="flex items-center justify-center gap-2 w-full rounded-lg bg-forest px-5 py-3 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
