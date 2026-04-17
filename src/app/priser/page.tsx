@@ -63,16 +63,15 @@ export default function PricingPage() {
         <div className="bg-white rounded-2xl p-7 shadow-md border-2 border-forest relative">
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
             <span className="rounded-full bg-amber px-4 py-1 text-xs font-bold text-white">
-              Mest populær
+              For klubber
             </span>
           </div>
           <h3 className="font-display text-lg font-semibold text-ink">Klubb</h3>
           <p className="text-sm text-ink-light mt-1">For idrettslag og klubber</p>
           <div className="mt-5 flex items-baseline gap-1">
-            <span className="text-4xl font-bold font-display text-ink">299</span>
-            <span className="text-ink-light">kr/mnd</span>
+            <span className="text-4xl font-bold font-display text-ink">Gratis</span>
           </div>
-          <p className="mt-1 text-xs text-ink-light">6% transaksjonsgebyr ved salg</p>
+          <p className="mt-1 text-xs text-ink-light">Lav % transaksjonsgebyr kun ved gjennomført salg</p>
 
           <ul className="mt-6 space-y-3">
             {[
@@ -97,9 +96,9 @@ export default function PricingPage() {
             href="/registrer-klubb"
             className="mt-8 block w-full rounded-lg bg-forest py-2.5 text-center text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
           >
-            Start gratis prøveperiode
+            Registrer klubben gratis
           </Link>
-          <p className="mt-2 text-center text-xs text-ink-light">30 dager gratis, ingen binding</p>
+          <p className="mt-2 text-center text-xs text-ink-light">Ingen binding · Eksakt sats kunngjøres ved lansering</p>
         </div>
 
       </div>

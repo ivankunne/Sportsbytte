@@ -27,6 +27,7 @@ export default function ListingDetailPage({
   const [contactSent, setContactSent] = useState(false);
   const [contactError, setContactError] = useState("");
   const [contact, setContact] = useState({ name: "", email: "", message: "" });
+  const [buyModalOpen, setBuyModalOpen] = useState(false);
 
   useEffect(() => {
     params.then(async ({ id }) => {
@@ -104,13 +105,19 @@ export default function ListingDetailPage({
       return;
     }
     setContactError("");
-    const { error } = await supabase.from("inquiries").insert({
-      listing_id: listing.id,
-      buyer_name: contact.name.trim(),
-      buyer_email: contact.email.trim(),
-      message: contact.message.trim(),
+    const res = await fetch("/api/inquiry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        listing_id: listing.id,
+        buyer_name: contact.name.trim(),
+        buyer_email: contact.email.trim(),
+        message: contact.message.trim(),
+        listing_title: listing.title,
+        seller_name: listing.profiles?.name ?? "",
+      }),
     });
-    if (error) { setContactError("Noe gikk galt. Prøv igjen."); return; }
+    if (!res.ok) { setContactError("Noe gikk galt. Prøv igjen."); return; }
     setContactSent(true);
   }
 
@@ -209,13 +216,17 @@ export default function ListingDetailPage({
                 <div className="mb-6 rounded-lg bg-ink-light/10 py-3.5 text-sm font-semibold text-ink-light text-center">
                   Solgt
                 </div>
+              ) : listing.listing_type === "iso" ? (
+                <div className="mb-6 rounded-lg bg-amber-light border border-amber/30 py-3.5 px-4 text-sm text-amber-dark text-center font-medium">
+                  Dette er et ettersøk — personen ønsker å kjøpe dette utstyret
+                </div>
               ) : (
                 <div className="space-y-3 mb-6">
                   <button
-                    disabled
-                    className="w-full rounded-lg bg-amber py-3.5 text-sm font-bold text-white opacity-60 cursor-not-allowed"
+                    onClick={() => setBuyModalOpen(true)}
+                    className="w-full rounded-lg bg-amber py-3.5 text-sm font-bold text-white hover:brightness-95 transition-all duration-[120ms]"
                   >
-                    Kjøp nå — kommer snart
+                    Kjøp nå via Vipps
                   </button>
 
                   {/* Contact seller */}
@@ -308,25 +319,29 @@ export default function ListingDetailPage({
                 </div>
               )}
 
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-cream text-sm">
-                <svg className="h-5 w-5 text-forest flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21M3.375 14.25V3.375c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v1.5m0 0h3.375c.621 0 1.125.504 1.125 1.125v1.5M15.375 6v11.25" />
-                </svg>
-                <div>
-                  <p className="font-medium text-ink">Frakt med Bring fra 99 kr</p>
-                  <p className="text-ink-mid mt-0.5">Label genereres automatisk</p>
-                </div>
-              </div>
+              {listing.listing_type !== "iso" && (
+                <>
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-cream text-sm">
+                    <svg className="h-5 w-5 text-forest flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21M3.375 14.25V3.375c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v1.5m0 0h3.375c.621 0 1.125.504 1.125 1.125v1.5M15.375 6v11.25" />
+                    </svg>
+                    <div>
+                      <p className="font-medium text-ink">Frakt med Bring fra 99 kr</p>
+                      <p className="text-ink-mid mt-0.5">Fraktlabel genereres automatisk etter kjøp</p>
+                    </div>
+                  </div>
 
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-forest-light text-sm mt-3">
-                <svg className="h-5 w-5 text-forest flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                </svg>
-                <div>
-                  <p className="font-medium text-forest">Kjøperbeskyttelse inkludert</p>
-                  <p className="text-forest-mid mt-0.5">Betaling via Vipps</p>
-                </div>
-              </div>
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-forest-light text-sm mt-3">
+                    <svg className="h-5 w-5 text-forest flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    </svg>
+                    <div>
+                      <p className="font-medium text-forest">Kjøperbeskyttelse inkludert</p>
+                      <p className="text-forest-mid mt-0.5">Trygg betaling via Vipps</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Seller card */}
@@ -409,6 +424,67 @@ export default function ListingDetailPage({
             ))}
           </div>
         </section>
+      )}
+
+      {/* Vipps payment modal */}
+      {buyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setBuyModalOpen(false)} />
+          <div className="relative bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-forest px-6 py-5 flex items-center justify-between">
+              <div>
+                <p className="text-white/70 text-xs font-medium">Kjøp</p>
+                <h2 className="font-display text-lg font-bold text-white leading-tight">{listing.title}</h2>
+              </div>
+              <button onClick={() => setBuyModalOpen(false)} className="text-white/60 hover:text-white transition-colors ml-4 flex-shrink-0">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Price summary */}
+              <div className="rounded-xl bg-cream p-4 flex items-center justify-between">
+                <span className="text-sm text-ink-light">Pris</span>
+                <span className="font-display text-xl font-bold text-forest">{listing.price.toLocaleString("nb-NO")} kr</span>
+              </div>
+
+              {/* How it works */}
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-ink-light mb-3">Slik fungerer det</p>
+                <ol className="space-y-3">
+                  {[
+                    { n: "1", text: "Betal trygt med Vipps — pengene holdes av Sportsbyttet" },
+                    { n: "2", text: "Selger pakker og sender med Bring — label genereres automatisk" },
+                    { n: "3", text: "Du mottar varen og bekrefter — pengene frigjøres til selger" },
+                  ].map((step) => (
+                    <li key={step.n} className="flex items-start gap-3">
+                      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-forest text-white text-xs font-bold">
+                        {step.n}
+                      </span>
+                      <span className="text-sm text-ink-mid leading-snug pt-0.5">{step.text}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              {/* Coming soon notice */}
+              <div className="rounded-xl bg-amber-light border border-amber/20 p-4 text-center">
+                <p className="text-sm font-semibold text-ink">Betaling via Vipps lanseres snart</p>
+                <p className="text-xs text-ink-mid mt-1">I mellomtiden — ta kontakt med selger for å avtale kjøp direkte.</p>
+              </div>
+
+              <button
+                onClick={() => { setBuyModalOpen(false); setContactOpen(true); }}
+                className="w-full rounded-lg bg-forest py-3 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
+              >
+                Send melding til selger
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

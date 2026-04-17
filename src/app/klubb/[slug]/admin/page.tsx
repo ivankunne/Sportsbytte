@@ -562,11 +562,12 @@ export default function ClubAdminPage({
       {/* ── Tab: Oversikt ── */}
       {activeTab === "oversikt" && (
         <div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
             {[
               { label: "Aktive annonser", value: activeListings.length.toString() },
               { label: "Totalt solgt", value: soldListings.length.toString() },
               { label: "Medlemmer", value: club.members.toLocaleString("nb-NO") },
+              { label: "Forespørsler", value: inquiryCount.toString() },
             ].map((stat) => (
               <div key={stat.label} className="bg-white rounded-xl p-5 border border-border">
                 <p className="text-xs text-ink-light font-medium uppercase tracking-wider">{stat.label}</p>

@@ -51,11 +51,14 @@ export default async function ClubPage({ params }: Props) {
     );
   }
 
-  const [listings, sellers, announcements] = await Promise.all([
+  const [allListings, sellers, announcements] = await Promise.all([
     getListingsByClub(club.id),
     getProfilesByClub(club.id),
     getAnnouncementsByClub(club.id),
   ]);
+
+  const listings = allListings.filter((l) => l.listing_type !== "iso");
+  const isoListings = allListings.filter((l) => l.listing_type === "iso");
 
   return (
     <>
@@ -140,6 +143,36 @@ export default async function ClubPage({ params }: Props) {
         {/* Interactive listings */}
         <ClubListings clubId={club.id} clubName={club.name} initialListings={listings} />
 
+        {/* ISO / Ettersøk */}
+        {isoListings.length > 0 && (
+          <div className="mt-12">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="rounded-full bg-amber-light px-3 py-1 text-xs font-bold text-amber uppercase tracking-wider">
+                Ettersøk
+              </span>
+              <p className="text-sm text-ink-light">Medlemmer som søker etter utstyr</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {isoListings.map((iso) => (
+                <Link
+                  key={iso.id}
+                  href={`/annonse/${iso.id}`}
+                  className="flex items-start gap-4 bg-white rounded-xl p-4 border border-border hover:shadow-md transition-all hover:-translate-y-0.5"
+                >
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-light text-amber font-bold text-sm">
+                    {iso.profiles?.avatar ?? "?"}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-ink truncate">{iso.title}</p>
+                    <p className="text-xs text-ink-light mt-0.5 truncate">{iso.profiles?.name}</p>
+                    <p className="text-xs text-amber font-medium mt-1">{iso.category}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Byttemarked banner */}
         <div
           className="mt-12 rounded-2xl p-8 sm:p-10 text-center grain-overlay"
@@ -148,17 +181,24 @@ export default async function ClubPage({ params }: Props) {
           <h3 className="font-display text-2xl sm:text-3xl font-semibold text-white">
             {club.name} Digitalt Byttemarked
           </h3>
-          <p className="mt-1 text-lg text-white/90 font-display">15. november 2026</p>
           <p className="mt-3 text-white/80 text-sm max-w-lg mx-auto">
-            Alle varer fra klubbens medlemmer • Legg ut din annonse nå og nå hundrevis av klubbmedlemmer.
+            Kjøp og selg brukt utstyr direkte mellom klubbens medlemmer — trygt, enkelt og uten mellomledd.
           </p>
-          <Link
-            href="/selg"
-            className="mt-6 inline-flex items-center justify-center rounded-lg bg-white px-7 py-3 text-sm font-semibold hover:bg-cream transition-colors duration-[120ms]"
-            style={{ color: club.secondary_color || club.color }}
-          >
-            Legg ut annonse
-          </Link>
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/selg"
+              className="rounded-lg bg-white px-7 py-3 text-sm font-semibold hover:bg-cream transition-colors duration-[120ms]"
+              style={{ color: club.secondary_color || club.color }}
+            >
+              Legg ut utstyr
+            </Link>
+            <Link
+              href={`/selg?type=iso`}
+              className="rounded-lg border border-white/40 bg-white/10 px-7 py-3 text-sm font-semibold text-white hover:bg-white/20 transition-colors duration-[120ms]"
+            >
+              Jeg søker utstyr →
+            </Link>
+          </div>
         </div>
 
         {/* Active sellers */}
