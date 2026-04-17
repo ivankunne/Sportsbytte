@@ -4,7 +4,6 @@ import {
   getClubBySlug,
   getListingsByClub,
   getProfilesByClub,
-  getAnnouncementsByClub,
 } from "@/lib/queries";
 import { ClubListings } from "@/components/ClubListings";
 import { ClubAnnouncements } from "@/components/ClubAnnouncements";
@@ -51,10 +50,9 @@ export default async function ClubPage({ params }: Props) {
     );
   }
 
-  const [allListings, sellers, announcements] = await Promise.all([
+  const [allListings, sellers] = await Promise.all([
     getListingsByClub(club.id),
     getProfilesByClub(club.id),
-    getAnnouncementsByClub(club.id),
   ]);
 
   const listings = allListings.filter((l) => l.listing_type !== "iso");
@@ -136,9 +134,7 @@ export default async function ClubPage({ params }: Props) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
 
         {/* Announcements */}
-        {announcements.length > 0 && (
-          <ClubAnnouncements clubId={club.id} isAdmin={false} />
-        )}
+        <ClubAnnouncements clubId={club.id} isAdmin={false} />
 
         {/* Interactive listings */}
         <ClubListings clubId={club.id} clubName={club.name} initialListings={listings} />
