@@ -97,12 +97,16 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+          <div className="flex flex-col items-center sm:items-start gap-1">
             <p className="text-xs text-white/40">
-              © 2026 Sportsbyttet AS · Org. nr. 932 145 678
+              © 2026 Sportsbyttet · Alle rettigheter reservert.
             </p>
-            <span className="hidden sm:inline text-white/20 text-xs">·</span>
-            <p className="text-xs text-white/40">Alle rettigheter reservert.</p>
+            <p className="text-xs text-white/30">
+              Driftes av Frameflow / Ivan Kunne · Org.nr. 936 600 018 ·{" "}
+              <a href="mailto:ivan@frameflow.no" className="hover:text-white/50 transition-colors duration-[120ms]">
+                ivan@frameflow.no
+              </a>
+            </p>
           </div>
 
           <div className="flex items-center gap-3 text-xs text-white/40">
