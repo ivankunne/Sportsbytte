@@ -246,7 +246,7 @@ export function ListingDetail({ id }: { id: string }) {
                     onClick={() => setBuyModalOpen(true)}
                     className="w-full rounded-lg bg-amber py-3.5 text-sm font-bold text-white hover:brightness-95 transition-all duration-[120ms]"
                   >
-                    Kjøp nå via Vipps
+                    Se kjøpsinformasjon
                   </button>
 
                   {/* Contact seller */}
@@ -361,8 +361,8 @@ export function ListingDetail({ id }: { id: string }) {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                     </svg>
                     <div>
-                      <p className="font-medium text-forest">Kjøperbeskyttelse inkludert</p>
-                      <p className="text-forest-mid mt-0.5">Trygg betaling via Vipps</p>
+                      <p className="font-medium text-forest">Betal direkte med Vipps</p>
+                      <p className="text-forest-mid mt-0.5">Kjøper og selger avtaler direkte</p>
                     </div>
                   </div>
                 </>
@@ -543,9 +543,9 @@ export function ListingDetail({ id }: { id: string }) {
                 <p className="text-xs font-bold uppercase tracking-wider text-ink-light mb-3">Slik fungerer det</p>
                 <ol className="space-y-3">
                   {[
-                    { n: "1", text: "Betal trygt med Vipps — pengene holdes av Sportsbyttet" },
-                    { n: "2", text: "Selger pakker og sender med Bring — label genereres automatisk" },
-                    { n: "3", text: "Du mottar varen og bekrefter — pengene frigjøres til selger" },
+                    { n: "1", text: "Kontakt selger og avtal kjøp direkte" },
+                    { n: "2", text: "Betal selger direkte med Vipps" },
+                    { n: "3", text: "Selger sender varen med Bring" },
                   ].map((step) => (
                     <li key={step.n} className="flex items-start gap-3">
                       <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-forest text-white text-xs font-bold">
