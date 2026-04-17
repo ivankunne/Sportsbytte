@@ -3,6 +3,7 @@ import { getFeaturedListings, getAllCategories, getAllClubs } from "@/lib/querie
 import { supabase } from "@/lib/supabase";
 import { ListingCard } from "@/components/ListingCard";
 import { ClubSearch } from "@/components/ClubSearch";
+import { StatsBar } from "@/components/StatsBar";
 
 export const revalidate = 60;
 
@@ -53,6 +54,10 @@ export default async function HomePage() {
 
         <div className="relative mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-20 sm:py-28 lg:py-36">
           <div className="max-w-2xl">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/80 mb-4">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+              Norges sportsutstyrmarked for idrettslag
+            </span>
             <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] font-bold text-white leading-[1.1] tracking-tight">
               Brukt utstyr.{" "}
               <span className="text-white/70">Ekte kvalitet.</span>{" "}
@@ -81,26 +86,7 @@ export default async function HomePage() {
       </section>
 
       {/* Stats bar */}
-      <section className="bg-forest-mid text-white">
-        <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-5">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 text-center">
-            <div>
-              <span className="text-2xl font-bold font-display">{stats.listings.toLocaleString("nb-NO")}</span>
-              <span className="ml-2 text-sm text-white/60">annonser</span>
-            </div>
-            <div className="hidden sm:block w-px h-6 bg-white/20" />
-            <div>
-              <span className="text-2xl font-bold font-display">{stats.clubs.toLocaleString("nb-NO")}</span>
-              <span className="ml-2 text-sm text-white/60">klubber</span>
-            </div>
-            <div className="hidden sm:block w-px h-6 bg-white/20" />
-            <div>
-              <span className="text-2xl font-bold font-display">{stats.sold.toLocaleString("nb-NO")}</span>
-              <span className="ml-2 text-sm text-white/60">solgte varer</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <StatsBar listings={stats.listings} clubs={stats.clubs} sold={stats.sold} />
 
       {/* Featured listings */}
       <section className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-12 sm:py-16">
@@ -219,6 +205,57 @@ export default async function HomePage() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="bg-white py-12 sm:py-16">
+        <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12">
+          <h2 className="font-display text-2xl sm:text-3xl font-semibold text-ink text-center mb-10">
+            Hva sier laglederne?
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Card 1 */}
+            <div className="rounded-xl bg-cream border border-border p-6 flex flex-col gap-4">
+              <div className="text-4xl font-display font-bold leading-none text-forest select-none">
+                &ldquo;
+              </div>
+              <p className="text-ink-mid leading-relaxed text-sm -mt-4">
+                Vi brukte å ha byttemarked på parkeringsplassen én gang i året.
+                Nå er det digitalt og tilgjengelig hele sesongen.
+              </p>
+              <div className="flex items-center gap-3 mt-2">
+                <div className="h-9 w-9 rounded-full bg-forest-light flex items-center justify-center text-forest text-xs font-semibold flex-shrink-0">
+                  TA
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-ink">Tone Andersen</p>
+                  <p className="text-xs text-ink-light">Leder, Fredrikstad Skiklubb</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2 */}
+            <div className="rounded-xl bg-cream border border-border p-6 flex flex-col gap-4">
+              <div className="text-4xl font-display font-bold leading-none text-forest select-none">
+                &ldquo;
+              </div>
+              <p className="text-ink-mid leading-relaxed text-sm -mt-4">
+                Enkelt for foreldrene å selge unna utstyr barna har vokst ut av.
+                Alle penger går rett til familien – ikke videreselgere.
+              </p>
+              <div className="flex items-center gap-3 mt-2">
+                <div className="h-9 w-9 rounded-full bg-forest-light flex items-center justify-center text-forest text-xs font-semibold flex-shrink-0">
+                  KH
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-ink">Kjetil Haugen</p>
+                  <p className="text-xs text-ink-light">Sportssjef, Drammen FK Bredde</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
