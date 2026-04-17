@@ -33,9 +33,18 @@ export default async function ClubsPage() {
           >
             <div className="p-6" style={{ backgroundColor: club.color }}>
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-white text-lg font-bold font-display border border-white/30">
-                  {club.initials}
-                </div>
+                {club.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={club.logo_url}
+                    alt={club.name}
+                    className="h-14 w-14 rounded-full object-cover border border-white/30 flex-shrink-0"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-white text-lg font-bold font-display border border-white/30 flex-shrink-0">
+                    {club.initials}
+                  </div>
+                )}
                 <div>
                   <h2 className="font-display text-xl font-semibold text-white">
                     {club.name}
