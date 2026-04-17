@@ -191,6 +191,19 @@ function RegistreringerTab({
   const [selected, setSelected] = useState<Registration | null>(null);
   const [updating, setUpdating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const byStatus =
+    filter === "all" ? registrations : registrations.filter((r) => r.status === filter);
+
+  const filtered = search.trim()
+    ? byStatus.filter((r) =>
+        [r.club_name, r.first_name, r.last_name, r.email, r.sport]
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      )
+    : byStatus;
 
   const counts = {
     all: registrations.length,
@@ -198,9 +211,6 @@ function RegistreringerTab({
     approved: registrations.filter((r) => r.status === "approved").length,
     rejected: registrations.filter((r) => r.status === "rejected").length,
   };
-
-  const filtered =
-    filter === "all" ? registrations : registrations.filter((r) => r.status === filter);
 
   async function updateStatus(id: number, status: string) {
     setUpdating(true);
@@ -256,6 +266,20 @@ function RegistreringerTab({
 
   return (
     <div>
+      {/* Search */}
+      <div className="relative mb-4">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Søk etter klubbnavn, kontaktperson, e-post..."
+          className="w-full rounded-lg border border-border bg-white pl-9 pr-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+        />
+      </div>
+
       {/* Filter pills */}
       <div className="flex gap-1 border-b border-border mb-6">
         {(["all", "pending", "approved", "rejected"] as const).map((f) => (
@@ -533,6 +557,7 @@ function KlubberTab() {
   const [loading, setLoading] = useState(true);
   const [editClub, setEditClub] = useState<Club | null>(null);
   const [form, setForm] = useState<Partial<Club>>({});
+  const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -602,10 +627,32 @@ function KlubberTab() {
 
   if (loading) return <Spinner />;
 
+  const filteredClubs = search.trim()
+    ? clubs.filter((c) =>
+        [c.name, c.slug, c.description ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      )
+    : clubs;
+
   return (
     <div className="flex gap-6">
       {/* Table */}
       <div className="flex-1 min-w-0">
+        {/* Search */}
+        <div className="relative mb-4">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Søk etter klubb..."
+            className="w-full rounded-lg border border-border bg-white pl-9 pr-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+          />
+        </div>
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-cream">
@@ -632,7 +679,7 @@ function KlubberTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {clubs.map((club) => (
+              {filteredClubs.map((club) => (
                 <tr
                   key={club.id}
                   className={`hover:bg-cream transition-colors duration-[120ms] cursor-pointer ${
@@ -860,6 +907,7 @@ function BrukereTab() {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [loading, setLoading] = useState(true);
   const [editProfile, setEditProfile] = useState<Profile | null>(null);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState<{
     name: string;
     bio: string;
@@ -928,12 +976,34 @@ function BrukereTab() {
     }
   }
 
+  const filteredProfiles = search.trim()
+    ? profiles.filter((p) =>
+        [p.name, p.slug, p.bio, p.vipps_phone ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      )
+    : profiles;
+
   if (loading) return <Spinner />;
 
   return (
     <div className="flex gap-6">
       {/* Table */}
       <div className="flex-1 min-w-0">
+        {/* Search */}
+        <div className="relative mb-4">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Søk etter bruker, slug, Vipps-nummer..."
+            className="w-full rounded-lg border border-border bg-white pl-9 pr-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+          />
+        </div>
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-cream">
@@ -954,7 +1024,7 @@ function BrukereTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {profiles.map((profile) => (
+              {filteredProfiles.map((profile) => (
                 <tr
                   key={profile.id}
                   className={`hover:bg-cream transition-colors duration-[120ms] cursor-pointer ${
@@ -1153,6 +1223,7 @@ function AnnonsertTab() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -1195,9 +1266,32 @@ function AnnonsertTab() {
     bulk: "Bulk",
   };
 
+  const filteredListings = search.trim()
+    ? listings.filter((l) =>
+        [l.title, l.category, l.profiles?.name ?? "", l.clubs?.name ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      )
+    : listings;
+
   if (loading) return <Spinner />;
 
   return (
+    <div>
+      {/* Search */}
+      <div className="relative mb-4">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Søk etter tittel, selger, klubb..."
+          className="w-full rounded-lg border border-border bg-white pl-9 pr-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+        />
+      </div>
     <div className="bg-white rounded-xl border border-border overflow-hidden">
       <table className="w-full text-sm">
         <thead className="border-b border-border bg-cream">
@@ -1227,7 +1321,7 @@ function AnnonsertTab() {
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {listings.map((listing) => (
+          {filteredListings.map((listing) => (
             <tr key={listing.id} className="hover:bg-cream transition-colors duration-[120ms]">
               <td className="px-4 py-3">
                 <p className="font-medium text-ink truncate max-w-[180px]">{listing.title}</p>
@@ -1303,11 +1397,12 @@ function AnnonsertTab() {
           ))}
         </tbody>
       </table>
-      {listings.length === 0 && (
+      {filteredListings.length === 0 && (
         <div className="px-6 py-16 text-center">
-          <p className="text-sm text-ink-light">Ingen annonser enda.</p>
+          <p className="text-sm text-ink-light">{search ? "Ingen treff på søket." : "Ingen annonser enda."}</p>
         </div>
       )}
+    </div>
     </div>
   );
 }
@@ -1321,6 +1416,7 @@ function ForesporslerTab() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
 
   const fetchInquiries = useCallback(async () => {
     setLoading(true);
@@ -1347,9 +1443,32 @@ function ForesporslerTab() {
     }
   }
 
+  const filteredInquiries = search.trim()
+    ? inquiries.filter((i) =>
+        [i.buyer_name, i.buyer_email, i.message, i.listings?.title ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      )
+    : inquiries;
+
   if (loading) return <Spinner />;
 
   return (
+    <div>
+      {/* Search */}
+      <div className="relative mb-4">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Søk etter navn, e-post, melding..."
+          className="w-full rounded-lg border border-border bg-white pl-9 pr-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+        />
+      </div>
     <div className="bg-white rounded-xl border border-border overflow-hidden">
       <table className="w-full text-sm">
         <thead className="border-b border-border bg-cream">
@@ -1373,7 +1492,7 @@ function ForesporslerTab() {
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {inquiries.map((inquiry) => (
+          {filteredInquiries.map((inquiry) => (
             <tr key={inquiry.id} className="hover:bg-cream transition-colors duration-[120ms]">
               <td className="px-4 py-3">
                 <p className="font-medium text-ink">{inquiry.buyer_name}</p>
@@ -1450,11 +1569,12 @@ function ForesporslerTab() {
           ))}
         </tbody>
       </table>
-      {inquiries.length === 0 && (
+      {filteredInquiries.length === 0 && (
         <div className="px-6 py-16 text-center">
-          <p className="text-sm text-ink-light">Ingen forespørsler enda.</p>
+          <p className="text-sm text-ink-light">{search ? "Ingen treff på søket." : "Ingen forespørsler enda."}</p>
         </div>
       )}
+    </div>
     </div>
   );
 }

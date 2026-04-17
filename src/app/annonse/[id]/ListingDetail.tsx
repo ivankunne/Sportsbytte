@@ -562,12 +562,15 @@ export function ListingDetail({ id }: { id: string }) {
                   href={`https://qr.vipps.no/28/2/01/031/${listing.profiles.vipps_phone}?v=1`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#FF5B24] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity duration-[120ms]"
+                  className="flex w-full items-center justify-center gap-3 rounded-xl bg-[#FF5B24] py-3.5 font-semibold text-white hover:brightness-110 active:brightness-95 transition-all duration-[120ms]"
                 >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 7.5l-5 7a.75.75 0 01-1.22-.04l-2.5-3.5a.75.75 0 111.22-.88l1.87 2.62 4.41-6.17a.75.75 0 011.22.87z" />
+                  {/* Vipps logo mark */}
+                  <svg className="h-6 w-6 flex-shrink-0" viewBox="0 0 32 32" fill="none">
+                    <rect width="32" height="32" rx="8" fill="white" fillOpacity="0.25"/>
+                    <path d="M8 17c2 3 4.5 5 8 5 2.5 0 4.5-1.5 6-4l2.5-5" stroke="white" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="22.5" cy="10" r="2.2" fill="white"/>
                   </svg>
-                  Betal med Vipps
+                  <span className="text-base tracking-wide">Betal med <span className="font-black">vipps</span></span>
                 </a>
               ) : (
                 <div className="rounded-xl bg-amber-light border border-amber/20 p-4 text-center">
