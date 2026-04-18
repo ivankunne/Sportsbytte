@@ -44,6 +44,7 @@ export function ListingChat({
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
+  const [openingMsg, setOpeningMsg] = useState("");
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -54,6 +55,12 @@ export function ListingChat({
   const [bringAddress, setBringAddress] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const defaultOpeningMsg = useCallback(
+    () =>
+      `Hei! Jeg er interessert i "${listing.title}" til ${listing.price.toLocaleString("nb-NO")} kr. Er den fortsatt tilgjengelig?`,
+    [listing.title, listing.price]
+  );
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 60);
@@ -110,6 +117,7 @@ export function ListingChat({
         }
       }
 
+      setOpeningMsg(defaultOpeningMsg());
       setPhase("ready");
     }
 
@@ -209,6 +217,7 @@ export function ListingChat({
         }
       }
 
+      setOpeningMsg(defaultOpeningMsg());
       setPhase("ready");
     } catch (e: unknown) {
       setAuthError(e instanceof Error ? e.message : "Noe gikk galt");
@@ -241,7 +250,7 @@ export function ListingChat({
         conversation_id: conv.id,
         is_from_seller: false,
         type: "text",
-        content: `Hei! Jeg er interessert i "${listing.title}" til ${listing.price.toLocaleString("nb-NO")} kr. Er den fortsatt tilgjengelig?`,
+        content: openingMsg.trim() || defaultOpeningMsg(),
       });
 
       setPhase("chat");
@@ -486,13 +495,16 @@ export function ListingChat({
               </p>
             </div>
 
-            <div className="rounded-xl bg-cream border border-border p-4 mb-5">
-              <p className="text-xs text-ink-light mb-0.5">Åpningsmelding</p>
-              <p className="text-sm text-ink">
-                Hei! Jeg er interessert i &ldquo;{listing.title}&rdquo; til{" "}
-                {listing.price.toLocaleString("nb-NO")} kr. Er den fortsatt
-                tilgjengelig?
-              </p>
+            <div className="mb-5">
+              <label className="block text-xs font-medium text-ink mb-1.5">
+                Åpningsmelding
+              </label>
+              <textarea
+                value={openingMsg}
+                onChange={(e) => setOpeningMsg(e.target.value)}
+                rows={4}
+                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none bg-cream"
+              />
             </div>
 
             <button
