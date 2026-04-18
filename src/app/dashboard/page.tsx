@@ -1,0 +1,790 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+type Tab = "innboks" | "annonser" | "profil";
+
+type UserProfile = {
+  id: number;
+  name: string;
+  bio: string;
+  vipps_phone: string | null;
+  avatar: string;
+  club_id: number | null;
+  total_sold: number;
+  rating: number;
+};
+
+type ConvListing = { id: number; title: string; price: number };
+
+type Conversation = {
+  id: string;
+  listing_id: number;
+  seller_id: number;
+  buyer_name: string;
+  buyer_email: string;
+  created_at: string;
+  listings: ConvListing | null;
+  role: "seller" | "buyer";
+};
+
+type Message = {
+  id: string;
+  conversation_id: string;
+  is_from_seller: boolean;
+  type: string;
+  content: string;
+  created_at: string;
+};
+
+type MyListing = {
+  id: number;
+  title: string;
+  price: number;
+  category: string;
+  condition: string;
+  is_sold: boolean;
+  views: number;
+  images: string[];
+  created_at: string;
+};
+
+// ─── Page ────────────────────────────────────────────────
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [userEmail, setUserEmail] = useState("");
+  const [tab, setTab] = useState<Tab>("innboks");
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { router.push("/"); return; }
+      setUserEmail(session.user.email ?? "");
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("auth_user_id", session.user.id)
+        .single();
+      setProfile(p as UserProfile ?? null);
+      setLoading(false);
+    });
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-forest border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+        <p className="text-ink-light">Ingen profil funnet.</p>
+        <Link href="/" className="text-sm font-medium text-forest hover:underline">Til forsiden</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-6">
+        <h1 className="font-display text-2xl font-bold text-ink">
+          God dag, {profile.name.split(" ")[0]}
+        </h1>
+        <p className="text-sm text-ink-light mt-0.5">{userEmail}</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border mb-6 overflow-x-auto">
+        {([
+          { id: "innboks" as Tab, label: "Innboks" },
+          { id: "annonser" as Tab, label: "Mine annonser" },
+          { id: "profil" as Tab, label: "Profil" },
+        ]).map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors duration-[120ms] border-b-2 -mb-px ${
+              tab === t.id
+                ? "border-forest text-forest"
+                : "border-transparent text-ink-light hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "innboks" && (
+        <InboksTab profile={profile} userEmail={userEmail} />
+      )}
+      {tab === "annonser" && <AnnonserTab profile={profile} />}
+      {tab === "profil" && (
+        <ProfilTab
+          profile={profile}
+          onSave={(updated) => setProfile((p) => (p ? { ...p, ...updated } : p))}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Innboks ─────────────────────────────────────────────
+
+function InboksTab({
+  profile,
+  userEmail,
+}: {
+  profile: UserProfile;
+  userEmail: string;
+}) {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Conversation | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      const [{ data: sellerConvs }, { data: buyerConvs }] = await Promise.all([
+        supabase
+          .from("conversations")
+          .select("*, listings(id, title, price)")
+          .eq("seller_id", profile.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("conversations")
+          .select("*, listings(id, title, price)")
+          .eq("buyer_email", userEmail)
+          .neq("seller_id", profile.id)
+          .order("created_at", { ascending: false }),
+      ]);
+
+      const all: Conversation[] = [
+        ...((sellerConvs ?? []) as unknown as Conversation[]).map((c) => ({
+          ...c,
+          role: "seller" as const,
+        })),
+        ...((buyerConvs ?? []) as unknown as Conversation[]).map((c) => ({
+          ...c,
+          role: "buyer" as const,
+        })),
+      ].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setConversations(all);
+      setLoading(false);
+    }
+    load();
+  }, [profile.id, userEmail]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-6 w-6 rounded-full border-2 border-forest border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (conversations.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <svg className="mx-auto h-10 w-10 text-border mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+        </svg>
+        <p className="text-ink-light text-sm">Ingen samtaler ennå.</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Mobile: show conversation list unless one is selected */}
+      <div className={`md:hidden ${selected ? "hidden" : "block"} space-y-2`}>
+        {conversations.map((conv) => (
+          <ConvListItem
+            key={conv.id}
+            conv={conv}
+            selected={false}
+            onClick={() => setSelected(conv)}
+          />
+        ))}
+      </div>
+
+      {/* Mobile: selected conversation */}
+      {selected && (
+        <div className="md:hidden flex flex-col" style={{ height: "calc(100vh - 220px)" }}>
+          <button
+            onClick={() => setSelected(null)}
+            className="flex items-center gap-1.5 text-sm text-forest font-medium mb-3"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Tilbake
+          </button>
+          <div className="flex-1 bg-white rounded-xl border border-border overflow-hidden flex flex-col">
+            <ConversationView
+              key={selected.id}
+              conversation={selected}
+              isSeller={selected.role === "seller"}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Desktop: split view */}
+      <div className="hidden md:grid md:grid-cols-3 gap-4" style={{ height: 580 }}>
+        <div className="col-span-1 overflow-y-auto space-y-1.5 pr-1">
+          {conversations.map((conv) => (
+            <ConvListItem
+              key={conv.id}
+              conv={conv}
+              selected={selected?.id === conv.id}
+              onClick={() => setSelected(conv)}
+            />
+          ))}
+        </div>
+        <div className="col-span-2 bg-white rounded-xl border border-border overflow-hidden flex flex-col">
+          {selected ? (
+            <ConversationView
+              key={selected.id}
+              conversation={selected}
+              isSeller={selected.role === "seller"}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-sm text-ink-light">Velg en samtale</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ConvListItem({
+  conv,
+  selected,
+  onClick,
+}: {
+  conv: Conversation;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left rounded-xl p-3.5 transition-colors duration-[120ms] ${
+        selected
+          ? "bg-forest-light border-2 border-forest"
+          : "bg-white border-2 border-transparent hover:border-border"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold text-ink truncate">
+          {conv.listings?.title ?? "Ukjent annonse"}
+        </p>
+        <span
+          className={`text-[10px] font-bold uppercase tracking-wide flex-shrink-0 rounded-full px-2 py-0.5 ${
+            conv.role === "seller"
+              ? "bg-amber-light text-amber"
+              : "bg-forest-light text-forest"
+          }`}
+        >
+          {conv.role === "seller" ? "Selger" : "Kjøper"}
+        </span>
+      </div>
+      <p className="text-xs text-ink-light mt-1 truncate">
+        {conv.role === "seller" ? `Kjøper: ${conv.buyer_name}` : "Samtale med selger"}
+      </p>
+      <p className="text-xs font-medium text-forest mt-0.5">
+        {conv.listings?.price?.toLocaleString("nb-NO")} kr
+      </p>
+    </button>
+  );
+}
+
+function ConversationView({
+  conversation,
+  isSeller,
+}: {
+  conversation: Conversation;
+  isSeller: boolean;
+}) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    setTimeout(
+      () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }),
+      60
+    );
+  }, []);
+
+  useEffect(() => {
+    supabase
+      .from("messages")
+      .select("*")
+      .eq("conversation_id", conversation.id)
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        setMessages((data ?? []) as Message[]);
+        scrollToBottom();
+      });
+
+    const channel = supabase
+      .channel(`dash:${conversation.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversation.id}`,
+        },
+        (payload) => {
+          setMessages((prev) => {
+            if (prev.find((m) => m.id === (payload.new as Message).id))
+              return prev;
+            return [...prev, payload.new as Message];
+          });
+          scrollToBottom();
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [conversation.id, scrollToBottom]);
+
+  async function sendMessage() {
+    if (!text.trim()) return;
+    setSending(true);
+    try {
+      const { data: msg } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: conversation.id,
+          is_from_seller: isSeller,
+          type: "text",
+          content: text.trim(),
+        })
+        .select()
+        .single();
+
+      if (msg) {
+        setMessages((prev) => {
+          if (prev.find((m) => m.id === (msg as Message).id)) return prev;
+          return [...prev, msg as Message];
+        });
+        scrollToBottom();
+      }
+      setText("");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="px-4 py-3 border-b border-border flex-shrink-0 flex items-center justify-between">
+        <div>
+          <p className="font-semibold text-sm text-ink">
+            {conversation.listings?.title ?? "Ukjent annonse"}
+          </p>
+          <p className="text-xs text-ink-light">
+            {isSeller
+              ? `Kjøper: ${conversation.buyer_name}`
+              : "Samtale med selger"}
+          </p>
+        </div>
+        {conversation.listings?.id && (
+          <Link
+            href={`/annonse/${conversation.listings.id}`}
+            className="text-xs text-forest hover:underline"
+          >
+            Se annonse →
+          </Link>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+        {messages.length === 0 && (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm text-ink-light">Ingen meldinger ennå.</p>
+          </div>
+        )}
+        {messages.map((msg) => {
+          const isMe = isSeller ? msg.is_from_seller : !msg.is_from_seller;
+          const isSpecial =
+            msg.type === "vipps_request" || msg.type === "bring_request";
+          return (
+            <div
+              key={msg.id}
+              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`rounded-2xl px-4 py-2.5 max-w-[75%] text-sm leading-relaxed ${
+                  isSpecial
+                    ? "bg-cream border border-border text-ink-mid italic"
+                    : isMe
+                    ? "bg-forest text-white rounded-br-sm"
+                    : "bg-cream text-ink rounded-bl-sm"
+                }`}
+              >
+                {msg.type === "vipps_request"
+                  ? "Sendte en Vipps-betalingsforespørsel"
+                  : msg.type === "bring_request"
+                  ? "Sendte en Bring-fraktforespørsel"
+                  : msg.content}
+              </div>
+            </div>
+          );
+        })}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="px-4 py-3 border-t border-border flex gap-2 items-center flex-shrink-0">
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
+          placeholder="Skriv en melding..."
+          className="flex-1 rounded-full border border-border px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-cream"
+        />
+        <button
+          onClick={sendMessage}
+          disabled={sending || !text.trim()}
+          className="h-9 w-9 flex-shrink-0 rounded-full bg-forest flex items-center justify-center text-white hover:bg-forest-mid transition-colors disabled:opacity-40"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5" />
+          </svg>
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ─── Mine annonser ───────────────────────────────────────
+
+function AnnonserTab({ profile }: { profile: UserProfile }) {
+  const [listings, setListings] = useState<MyListing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", price: "" });
+
+  useEffect(() => {
+    supabase
+      .from("listings")
+      .select("id, title, price, category, condition, is_sold, views, images, created_at")
+      .eq("seller_id", profile.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setListings((data ?? []) as MyListing[]);
+        setLoading(false);
+      });
+  }, [profile.id]);
+
+  async function toggleSold(id: number, currentSold: boolean) {
+    await supabase
+      .from("listings")
+      .update({ is_sold: !currentSold })
+      .eq("id", id)
+      .eq("seller_id", profile.id);
+    setListings((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, is_sold: !currentSold } : l))
+    );
+  }
+
+  function startEdit(listing: MyListing) {
+    setEditing(listing.id);
+    setEditForm({ title: listing.title, price: String(listing.price) });
+  }
+
+  async function saveEdit(id: number) {
+    const price = parseInt(editForm.price || "0");
+    await supabase
+      .from("listings")
+      .update({ title: editForm.title.trim(), price })
+      .eq("id", id)
+      .eq("seller_id", profile.id);
+    setListings((prev) =>
+      prev.map((l) =>
+        l.id === id ? { ...l, title: editForm.title.trim(), price } : l
+      )
+    );
+    setEditing(null);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-6 w-6 rounded-full border-2 border-forest border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (listings.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <svg className="mx-auto h-10 w-10 text-border mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+        </svg>
+        <p className="text-ink-light text-sm mb-4">Du har ikke lagt ut noen annonser ennå.</p>
+        <Link
+          href="/selg"
+          className="rounded-lg bg-forest px-5 py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors"
+        >
+          Legg ut annonse
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-sm text-ink-light">{listings.length} annonse{listings.length !== 1 ? "r" : ""}</p>
+        <Link
+          href="/selg"
+          className="rounded-lg bg-forest px-4 py-2 text-xs font-semibold text-white hover:bg-forest-mid transition-colors"
+        >
+          + Ny annonse
+        </Link>
+      </div>
+
+      {listings.map((listing) => (
+        <div key={listing.id} className="bg-white rounded-xl border border-border overflow-hidden">
+          {editing === listing.id ? (
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-ink mb-1">Tittel</label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-ink mb-1">Pris (kr)</label>
+                <input
+                  type="number"
+                  value={editForm.price}
+                  onChange={(e) => setEditForm((f) => ({ ...f, price: e.target.value }))}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => saveEdit(listing.id)}
+                  className="rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white hover:bg-forest-mid transition-colors"
+                >
+                  Lagre
+                </button>
+                <button
+                  onClick={() => setEditing(null)}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-ink-mid hover:bg-cream transition-colors"
+                >
+                  Avbryt
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 p-4">
+              {listing.images?.[0] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={listing.images[0]}
+                  alt=""
+                  className="h-14 w-14 rounded-lg object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="h-14 w-14 rounded-lg bg-cream flex items-center justify-center flex-shrink-0">
+                  <svg className="h-6 w-6 text-border" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                  </svg>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold text-sm text-ink truncate">{listing.title}</p>
+                  <span
+                    className={`text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 ${
+                      listing.is_sold
+                        ? "bg-red-50 text-red-500"
+                        : "bg-green-50 text-green-600"
+                    }`}
+                  >
+                    {listing.is_sold ? "Solgt" : "Aktiv"}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-forest mt-0.5">
+                  {listing.price.toLocaleString("nb-NO")} kr
+                </p>
+                <p className="text-xs text-ink-light mt-0.5">
+                  {listing.category} · {listing.views} visninger
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Link
+                  href={`/annonse/${listing.id}`}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-mid hover:bg-cream transition-colors hidden sm:block"
+                >
+                  Se
+                </Link>
+                <button
+                  onClick={() => startEdit(listing)}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-mid hover:bg-cream transition-colors"
+                >
+                  Rediger
+                </button>
+                <button
+                  onClick={() => toggleSold(listing.id, listing.is_sold)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    listing.is_sold
+                      ? "bg-forest text-white hover:bg-forest-mid"
+                      : "bg-red-50 text-red-500 hover:bg-red-100"
+                  }`}
+                >
+                  {listing.is_sold ? "Reaktiver" : "Solgt"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Profil ──────────────────────────────────────────────
+
+function ProfilTab({
+  profile,
+  onSave,
+}: {
+  profile: UserProfile;
+  onSave: (updated: Partial<UserProfile>) => void;
+}) {
+  const [form, setForm] = useState({
+    name: profile.name,
+    bio: profile.bio ?? "",
+    vipps_phone: profile.vipps_phone ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  async function save() {
+    setError("");
+    setSaving(true);
+    const { error: err } = await supabase
+      .from("profiles")
+      .update({
+        name: form.name.trim(),
+        bio: form.bio.trim(),
+        vipps_phone: form.vipps_phone.trim() || null,
+      })
+      .eq("id", profile.id);
+
+    if (err) {
+      setError("Noe gikk galt. Prøv igjen.");
+    } else {
+      onSave({
+        name: form.name.trim(),
+        bio: form.bio.trim(),
+        vipps_phone: form.vipps_phone.trim() || null,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    }
+    setSaving(false);
+  }
+
+  return (
+    <div className="max-w-lg space-y-5">
+      <div className="bg-white rounded-xl p-6 space-y-4">
+        <h2 className="font-display text-base font-semibold text-ink">Rediger profil</h2>
+
+        <div>
+          <label className="block text-xs font-medium text-ink mb-1.5">Navn</label>
+          <input
+            type="text"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-ink mb-1.5">Bio</label>
+          <textarea
+            value={form.bio}
+            onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
+            rows={3}
+            placeholder="Fortell litt om deg selv..."
+            className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-ink mb-1.5">Vipps-nummer</label>
+          <input
+            type="tel"
+            value={form.vipps_phone}
+            onChange={(e) => setForm((f) => ({ ...f, vipps_phone: e.target.value }))}
+            placeholder="40012345"
+            className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+          />
+          <p className="mt-1 text-xs text-ink-light">
+            Brukes for Vipps-betaling når noen kjøper dine annonser
+          </p>
+        </div>
+
+        {error && <p className="text-xs text-red-500">{error}</p>}
+
+        <button
+          onClick={save}
+          disabled={saving || !form.name.trim()}
+          className="w-full rounded-lg bg-forest py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saving ? "Lagrer..." : saved ? "✓ Lagret!" : "Lagre endringer"}
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl p-6">
+        <h2 className="font-display text-base font-semibold text-ink mb-4">Din statistikk</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="text-center p-4 rounded-xl bg-cream">
+            <p className="text-2xl font-bold text-forest">{profile.total_sold}</p>
+            <p className="text-xs text-ink-light mt-1">Solgt totalt</p>
+          </div>
+          <div className="text-center p-4 rounded-xl bg-cream">
+            <p className="text-2xl font-bold text-forest">
+              {profile.rating > 0 ? profile.rating.toFixed(1) : "–"}
+            </p>
+            <p className="text-xs text-ink-light mt-1">Snittkarakter</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

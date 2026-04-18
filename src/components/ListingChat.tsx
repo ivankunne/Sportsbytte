@@ -104,6 +104,7 @@ export function ListingChat({
       const userEmail = session.user.email ?? "";
       setCurrentUser({ name: userName, email: userEmail });
 
+      // 1. Check localStorage (fast path)
       const stored = localStorage.getItem(storageKey(listing.id));
       if (stored) {
         try {
@@ -115,6 +116,22 @@ export function ListingChat({
         } catch {
           localStorage.removeItem(storageKey(listing.id));
         }
+      }
+
+      // 2. Check DB — restores conversation on new device / cleared browser
+      const { data: existingConv } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("listing_id", listing.id)
+        .eq("buyer_email", userEmail)
+        .maybeSingle();
+
+      if (existingConv) {
+        localStorage.setItem(storageKey(listing.id), JSON.stringify(existingConv));
+        setConversation(existingConv as Conversation);
+        setPhase("chat");
+        loadMessages(existingConv.id);
+        return;
       }
 
       setOpeningMsg(defaultOpeningMsg());
@@ -204,6 +221,7 @@ export function ListingChat({
 
       setCurrentUser({ name: userName, email: userEmail });
 
+      // Check localStorage first, then DB
       const stored = localStorage.getItem(storageKey(listing.id));
       if (stored) {
         try {
@@ -215,6 +233,21 @@ export function ListingChat({
         } catch {
           localStorage.removeItem(storageKey(listing.id));
         }
+      }
+
+      const { data: existingConv } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("listing_id", listing.id)
+        .eq("buyer_email", userEmail)
+        .maybeSingle();
+
+      if (existingConv) {
+        localStorage.setItem(storageKey(listing.id), JSON.stringify(existingConv));
+        setConversation(existingConv as Conversation);
+        setPhase("chat");
+        loadMessages(existingConv.id);
+        return;
       }
 
       setOpeningMsg(defaultOpeningMsg());
