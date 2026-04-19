@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       : record.content;
 
   const { error } = await resend.emails.send({
-    from: "Sportsbyttet <meldinger@sportsbyttet.no>",
+    from: "Sportsbyttet <onboarding@resend.dev>",
     to: toEmail,
     subject,
     html: `
