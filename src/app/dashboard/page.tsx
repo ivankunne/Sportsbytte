@@ -165,13 +165,23 @@ function InboksTab({
           .order("created_at", { ascending: false }),
       ]);
 
+      const normalize = (c: unknown): Conversation => {
+        const conv = c as Record<string, unknown>;
+        return {
+          ...(conv as unknown as Conversation),
+          listings: Array.isArray(conv.listings)
+            ? (conv.listings as ConvListing[])[0] ?? null
+            : (conv.listings as ConvListing | null),
+        };
+      };
+
       const all: Conversation[] = [
-        ...((sellerConvs ?? []) as unknown as Conversation[]).map((c) => ({
-          ...c,
+        ...((sellerConvs ?? []) as unknown[]).map((c) => ({
+          ...normalize(c),
           role: "seller" as const,
         })),
-        ...((buyerConvs ?? []) as unknown as Conversation[]).map((c) => ({
-          ...c,
+        ...((buyerConvs ?? []) as unknown[]).map((c) => ({
+          ...normalize(c),
           role: "buyer" as const,
         })),
       ].sort(
@@ -320,6 +330,9 @@ function ConversationView({
   isSeller: boolean;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [loadingMsgs, setLoadingMsgs] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [sendError, setSendError] = useState("");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -332,12 +345,20 @@ function ConversationView({
   }, []);
 
   useEffect(() => {
+    setLoadingMsgs(true);
+    setLoadError("");
+
     supabase
       .from("messages")
       .select("*")
       .eq("conversation_id", conversation.id)
       .order("created_at", { ascending: true })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        setLoadingMsgs(false);
+        if (error) {
+          setLoadError(`Kunne ikke laste meldinger: ${error.message}`);
+          return;
+        }
         setMessages((data ?? []) as Message[]);
         scrollToBottom();
       });
@@ -367,19 +388,28 @@ function ConversationView({
   }, [conversation.id, scrollToBottom]);
 
   async function sendMessage() {
-    if (!text.trim()) return;
+    if (!text.trim() || sending) return;
+    const draft = text.trim();
+    setText("");
     setSending(true);
+    setSendError("");
     try {
-      const { data: msg } = await supabase
+      const { data: msg, error } = await supabase
         .from("messages")
         .insert({
           conversation_id: conversation.id,
           is_from_seller: isSeller,
           type: "text",
-          content: text.trim(),
+          content: draft,
         })
         .select()
         .single();
+
+      if (error) {
+        setSendError(`Kunne ikke sende: ${error.message}`);
+        setText(draft);
+        return;
+      }
 
       if (msg) {
         setMessages((prev) => {
@@ -388,18 +418,24 @@ function ConversationView({
         });
         scrollToBottom();
       }
-      setText("");
+    } catch (e) {
+      setSendError("Noe gikk galt. Prøv igjen.");
+      setText(draft);
     } finally {
       setSending(false);
     }
   }
+
+  const listingObj = Array.isArray(conversation.listings)
+    ? (conversation.listings as ConvListing[])[0] ?? null
+    : conversation.listings;
 
   return (
     <>
       <div className="px-4 py-3 border-b border-border flex-shrink-0 flex items-center justify-between">
         <div>
           <p className="font-semibold text-sm text-ink">
-            {conversation.listings?.title ?? "Ukjent annonse"}
+            {listingObj?.title ?? "Ukjent annonse"}
           </p>
           <p className="text-xs text-ink-light">
             {isSeller
@@ -407,9 +443,9 @@ function ConversationView({
               : "Samtale med selger"}
           </p>
         </div>
-        {conversation.listings?.id && (
+        {listingObj?.id && (
           <Link
-            href={`/annonse/${conversation.listings.id}`}
+            href={`/annonse/${listingObj.id}`}
             className="text-xs text-forest hover:underline"
           >
             Se annonse →
@@ -418,7 +454,17 @@ function ConversationView({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
-        {messages.length === 0 && (
+        {loadingMsgs && (
+          <div className="flex items-center justify-center h-full">
+            <div className="h-5 w-5 rounded-full border-2 border-forest border-t-transparent animate-spin" />
+          </div>
+        )}
+        {loadError && (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm text-red-500 text-center px-4">{loadError}</p>
+          </div>
+        )}
+        {!loadingMsgs && !loadError && messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <p className="text-sm text-ink-light">Ingen meldinger ennå.</p>
           </div>
@@ -452,6 +498,10 @@ function ConversationView({
         })}
         <div ref={messagesEndRef} />
       </div>
+
+      {sendError && (
+        <p className="px-4 pb-1 text-xs text-red-500">{sendError}</p>
+      )}
 
       <div className="px-4 py-3 border-t border-border flex gap-2 items-center flex-shrink-0">
         <input
