@@ -4,9 +4,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import type { ListingWithRelations } from "@/lib/queries";
 import type { Json } from "@/lib/database.types";
+import { AuthForm } from "./AuthForm";
 
 type Phase = "checking" | "auth" | "ready" | "chat";
-type AuthMode = "login" | "signup";
 
 type Conversation = {
   id: string;
@@ -39,10 +39,6 @@ export function ListingChat({
   onClose: () => void;
 }) {
   const [phase, setPhase] = useState<Phase>("checking");
-  const [authMode, setAuthMode] = useState<AuthMode>("login");
-  const [authForm, setAuthForm] = useState({ email: "", password: "", name: "" });
-  const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
   const [openingMsg, setOpeningMsg] = useState("");
 
@@ -169,94 +165,39 @@ export function ListingChat({
     };
   }, [conversation, scrollToBottom]);
 
-  async function handleAuth() {
-    setAuthError("");
-    setAuthLoading(true);
-    try {
-      let userName = "";
-      let userEmail = "";
+  async function afterAuth({ name, email }: { name: string; email: string }) {
+    setCurrentUser({ name, email });
 
-      if (authMode === "login") {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: authForm.email.trim(),
-          password: authForm.password,
-        });
-        if (error) throw error;
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("name")
-          .eq("auth_user_id", data.user.id)
-          .single();
-
-        userName =
-          profile?.name ?? data.user.email?.split("@")[0] ?? "Kjøper";
-        userEmail = data.user.email ?? "";
-      } else {
-        if (!authForm.name.trim()) throw new Error("Skriv inn ditt navn");
-        const { data, error } = await supabase.auth.signUp({
-          email: authForm.email.trim(),
-          password: authForm.password,
-        });
-        if (error) throw error;
-        if (!data.user) throw new Error("Registrering feilet");
-
-        const slug =
-          authForm.name
-            .toLowerCase()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9-]/g, "") +
-          "-" +
-          Date.now().toString(36);
-
-        await supabase.from("profiles").insert({
-          auth_user_id: data.user.id,
-          name: authForm.name.trim(),
-          slug,
-        });
-
-        userName = authForm.name.trim();
-        userEmail = authForm.email.trim();
-      }
-
-      setCurrentUser({ name: userName, email: userEmail });
-
-      // Check localStorage first, then DB
-      const stored = localStorage.getItem(storageKey(listing.id));
-      if (stored) {
-        try {
-          const conv = JSON.parse(stored) as Conversation;
-          setConversation(conv);
-          setPhase("chat");
-          loadMessages(conv.id);
-          return;
-        } catch {
-          localStorage.removeItem(storageKey(listing.id));
-        }
-      }
-
-      const { data: existingConv } = await supabase
-        .from("conversations")
-        .select("*")
-        .eq("listing_id", listing.id)
-        .eq("buyer_email", userEmail)
-        .maybeSingle();
-
-      if (existingConv) {
-        localStorage.setItem(storageKey(listing.id), JSON.stringify(existingConv));
-        setConversation(existingConv as Conversation);
+    const stored = localStorage.getItem(storageKey(listing.id));
+    if (stored) {
+      try {
+        const conv = JSON.parse(stored) as Conversation;
+        setConversation(conv);
         setPhase("chat");
-        loadMessages(existingConv.id);
+        loadMessages(conv.id);
         return;
+      } catch {
+        localStorage.removeItem(storageKey(listing.id));
       }
-
-      setOpeningMsg(defaultOpeningMsg());
-      setPhase("ready");
-    } catch (e: unknown) {
-      setAuthError(e instanceof Error ? e.message : "Noe gikk galt");
-    } finally {
-      setAuthLoading(false);
     }
+
+    const { data: existingConv } = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("listing_id", listing.id)
+      .eq("buyer_email", email)
+      .maybeSingle();
+
+    if (existingConv) {
+      localStorage.setItem(storageKey(listing.id), JSON.stringify(existingConv));
+      setConversation(existingConv as Conversation);
+      setPhase("chat");
+      loadMessages(existingConv.id);
+      return;
+    }
+
+    setOpeningMsg(defaultOpeningMsg());
+    setPhase("ready");
   }
 
   async function startConversation() {
@@ -400,117 +341,16 @@ export function ListingChat({
 
         {/* ── Auth screen ── */}
         {phase === "auth" && (
-          <div className="flex-1 overflow-y-auto flex flex-col justify-center p-6">
-            <div className="mb-6">
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="mb-5">
               <h2 className="font-display text-xl font-bold text-ink">
-                {authMode === "login" ? "Logg inn" : "Opprett konto"}
+                Logg inn for å sende melding
               </h2>
               <p className="mt-1 text-sm text-ink-light">
-                {authMode === "login"
-                  ? "Logg inn for å sende melding til selgeren."
-                  : "Registrer deg gratis for å starte samtalen."}
+                Du får svar direkte i denne samtalen.
               </p>
             </div>
-
-            <div className="space-y-3">
-              {authMode === "signup" && (
-                <div>
-                  <label className="block text-xs font-medium text-ink mb-1.5">
-                    Fullt navn
-                  </label>
-                  <input
-                    type="text"
-                    value={authForm.name}
-                    onChange={(e) =>
-                      setAuthForm((f) => ({ ...f, name: e.target.value }))
-                    }
-                    placeholder="Ola Nordmann"
-                    className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                  />
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">
-                  E-post
-                </label>
-                <input
-                  type="email"
-                  value={authForm.email}
-                  onChange={(e) =>
-                    setAuthForm((f) => ({ ...f, email: e.target.value }))
-                  }
-                  onKeyDown={(e) => e.key === "Enter" && handleAuth()}
-                  placeholder="ola@example.com"
-                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">
-                  Passord
-                </label>
-                <input
-                  type="password"
-                  value={authForm.password}
-                  onChange={(e) =>
-                    setAuthForm((f) => ({ ...f, password: e.target.value }))
-                  }
-                  onKeyDown={(e) => e.key === "Enter" && handleAuth()}
-                  placeholder="••••••••"
-                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                />
-              </div>
-
-              {authError && (
-                <p className="text-xs text-red-500">{authError}</p>
-              )}
-
-              <button
-                onClick={handleAuth}
-                disabled={
-                  authLoading ||
-                  !authForm.email.trim() ||
-                  !authForm.password ||
-                  (authMode === "signup" && !authForm.name.trim())
-                }
-                className="w-full rounded-lg bg-forest py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {authLoading
-                  ? "Laster..."
-                  : authMode === "login"
-                  ? "Logg inn"
-                  : "Opprett konto"}
-              </button>
-            </div>
-
-            <p className="mt-5 text-center text-sm text-ink-light">
-              {authMode === "login" ? (
-                <>
-                  Har du ikke konto?{" "}
-                  <button
-                    onClick={() => {
-                      setAuthMode("signup");
-                      setAuthError("");
-                    }}
-                    className="font-semibold text-forest hover:underline"
-                  >
-                    Registrer deg
-                  </button>
-                </>
-              ) : (
-                <>
-                  Har du allerede konto?{" "}
-                  <button
-                    onClick={() => {
-                      setAuthMode("login");
-                      setAuthError("");
-                    }}
-                    className="font-semibold text-forest hover:underline"
-                  >
-                    Logg inn
-                  </button>
-                </>
-              )}
-            </p>
+            <AuthForm onSuccess={afterAuth} />
           </div>
         )}
 
@@ -552,8 +392,6 @@ export function ListingChat({
               onClick={async () => {
                 await supabase.auth.signOut();
                 setCurrentUser(null);
-                setAuthForm({ email: "", password: "", name: "" });
-                setAuthMode("login");
                 setPhase("auth");
               }}
               className="mt-3 text-center text-xs text-ink-light hover:text-ink transition-colors"

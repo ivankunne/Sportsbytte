@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { Category, Club, Profile } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
+import { AuthForm } from "@/components/AuthForm";
 
 type AuthPhase = "checking" | "auth" | "form";
-type AuthMode = "login" | "signup";
 
 type ListingType = "regular" | "iso" | "bulk";
 
@@ -33,10 +33,6 @@ const LISTING_TYPE_ICONS: Record<ListingType, React.ReactNode> = {
 export default function SellPage() {
   const router = useRouter();
   const [authPhase, setAuthPhase] = useState<AuthPhase>("checking");
-  const [authMode, setAuthMode] = useState<AuthMode>("login");
-  const [authForm, setAuthForm] = useState({ email: "", password: "", name: "" });
-  const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
 
   const [listingType, setListingType] = useState<ListingType>("regular");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -99,44 +95,6 @@ export default function SellPage() {
     setAuthPhase("form");
   }
 
-  async function handleAuth() {
-    setAuthError("");
-    setAuthLoading(true);
-    try {
-      let userId: string;
-      if (authMode === "login") {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: authForm.email.trim(),
-          password: authForm.password,
-        });
-        if (error) throw error;
-        userId = data.user.id;
-      } else {
-        if (!authForm.name.trim()) throw new Error("Skriv inn ditt navn");
-        const { data, error } = await supabase.auth.signUp({
-          email: authForm.email.trim(),
-          password: authForm.password,
-        });
-        if (error) throw error;
-        if (!data.user) throw new Error("Registrering feilet");
-        userId = data.user.id;
-        const slug =
-          authForm.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") +
-          "-" +
-          Date.now().toString(36);
-        await supabase.from("profiles").insert({
-          auth_user_id: userId,
-          name: authForm.name.trim(),
-          slug,
-        });
-      }
-      await prefillFromSession(userId);
-    } catch (e: unknown) {
-      setAuthError(e instanceof Error ? e.message : "Noe gikk galt");
-    } finally {
-      setAuthLoading(false);
-    }
-  }
 
   useEffect(() => {
     if (authPhase !== "form") return;
@@ -281,94 +239,13 @@ export default function SellPage() {
       <div className="mx-auto max-w-sm px-4 py-16">
         <div className="text-center mb-8">
           <h1 className="font-display text-2xl font-bold text-ink">
-            {authMode === "login" ? "Logg inn for å selge" : "Opprett konto"}
+            Logg inn for å selge
           </h1>
           <p className="mt-2 text-sm text-ink-light">
-            {authMode === "login"
-              ? "Du må være innlogget for å legge ut annonser."
-              : "Registrer deg gratis — det tar under ett minutt."}
+            Du må være innlogget for å legge ut annonser.
           </p>
         </div>
-
-        <div className="space-y-3">
-          {authMode === "signup" && (
-            <div>
-              <label className="block text-xs font-medium text-ink mb-1.5">Fullt navn</label>
-              <input
-                type="text"
-                value={authForm.name}
-                onChange={(e) => setAuthForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Ola Nordmann"
-                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-              />
-            </div>
-          )}
-          <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">E-post</label>
-            <input
-              type="email"
-              value={authForm.email}
-              onChange={(e) => setAuthForm((f) => ({ ...f, email: e.target.value }))}
-              onKeyDown={(e) => e.key === "Enter" && handleAuth()}
-              placeholder="deg@epost.no"
-              className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">Passord</label>
-            <input
-              type="password"
-              value={authForm.password}
-              onChange={(e) => setAuthForm((f) => ({ ...f, password: e.target.value }))}
-              onKeyDown={(e) => e.key === "Enter" && handleAuth()}
-              placeholder="••••••••"
-              className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-            />
-          </div>
-        </div>
-
-        {authError && <p className="mt-2 text-xs text-red-500">{authError}</p>}
-
-        <button
-          onClick={handleAuth}
-          disabled={
-            authLoading ||
-            !authForm.email.trim() ||
-            !authForm.password ||
-            (authMode === "signup" && !authForm.name.trim())
-          }
-          className="mt-5 w-full rounded-lg bg-forest py-3 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {authLoading
-            ? "Laster..."
-            : authMode === "login"
-            ? "Logg inn"
-            : "Opprett konto"}
-        </button>
-
-        <p className="mt-4 text-center text-sm text-ink-light">
-          {authMode === "login" ? (
-            <>
-              Har du ikke konto?{" "}
-              <button
-                onClick={() => { setAuthMode("signup"); setAuthError(""); }}
-                className="font-semibold text-forest hover:underline"
-              >
-                Registrer deg
-              </button>
-            </>
-          ) : (
-            <>
-              Har du allerede konto?{" "}
-              <button
-                onClick={() => { setAuthMode("login"); setAuthError(""); }}
-                className="font-semibold text-forest hover:underline"
-              >
-                Logg inn
-              </button>
-            </>
-          )}
-        </p>
+        <AuthForm onSuccess={({ authUserId }) => prefillFromSession(authUserId)} />
       </div>
     );
   }
