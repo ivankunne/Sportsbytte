@@ -69,7 +69,10 @@ export async function GET(req: NextRequest) {
   if (!bringRes.ok) {
     const text = await bringRes.text().catch(() => "");
     console.error("Bring API error", bringRes.status, text);
-    return NextResponse.json({ error: "Bring API svarte med feil" }, { status: 502 });
+    return NextResponse.json(
+      { error: bringRes.status === 401 ? "Bring-kontoen er ikke godkjent ennå. Prøv igjen om 1–2 dager." : "Bring API svarte med feil" },
+      { status: 502 }
+    );
   }
 
   const data = await bringRes.json();
