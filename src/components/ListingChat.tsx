@@ -55,6 +55,7 @@ export function ListingChat({
   const [bringLoading, setBringLoading] = useState(false);
   const [bringError, setBringError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const defaultOpeningMsg = useCallback(
@@ -64,7 +65,10 @@ export function ListingChat({
   );
 
   const scrollToBottom = useCallback(() => {
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 60);
+    setTimeout(() => {
+      const el = messagesContainerRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 60);
   }, []);
 
   const loadMessages = useCallback(
@@ -234,7 +238,7 @@ export function ListingChat({
 
       setPhase("chat");
       await loadMessages(conv.id);
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 100);
     } catch (e) {
       console.error(e);
     } finally {
@@ -445,7 +449,7 @@ export function ListingChat({
         {phase === "chat" && (
           <>
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
               {messages.length === 0 && (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-sm text-ink-light">Ingen meldinger ennå.</p>
