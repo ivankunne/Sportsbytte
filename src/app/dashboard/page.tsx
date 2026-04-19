@@ -347,6 +347,7 @@ function ConversationView({
   useEffect(() => {
     setLoadingMsgs(true);
     setLoadError("");
+    let mounted = true;
 
     supabase
       .from("messages")
@@ -354,6 +355,7 @@ function ConversationView({
       .eq("conversation_id", conversation.id)
       .order("created_at", { ascending: true })
       .then(({ data, error }) => {
+        if (!mounted) return;
         setLoadingMsgs(false);
         if (error) {
           setLoadError(`Kunne ikke laste meldinger: ${error.message}`);
@@ -363,8 +365,10 @@ function ConversationView({
         scrollToBottom();
       });
 
+    // Unique name per mount avoids the "already subscribed" error from
+    // React StrictMode double-invoking effects before cleanup completes.
     const channel = supabase
-      .channel(`dash:${conversation.id}`)
+      .channel(`dash:${conversation.id}:${Date.now()}`)
       .on(
         "postgres_changes",
         {
@@ -374,6 +378,7 @@ function ConversationView({
           filter: `conversation_id=eq.${conversation.id}`,
         },
         (payload) => {
+          if (!mounted) return;
           setMessages((prev) => {
             if (prev.find((m) => m.id === (payload.new as Message).id))
               return prev;
@@ -384,7 +389,10 @@ function ConversationView({
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
   }, [conversation.id, scrollToBottom]);
 
   async function sendMessage() {
