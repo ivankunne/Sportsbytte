@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -22,6 +22,34 @@ export function ListingDetail({ id }: { id: string }) {
   const [confirmSold, setConfirmSold] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [ratingName, setRatingName] = useState("");
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
+
+  // Check localStorage to see if user already submitted a review for this listing
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const key = `reviewed_listing_${id}`;
+      if (localStorage.getItem(key) === "1") setRatingSubmitted(true);
+    }
+  }, [id]);
+
+  // Close share dropdown on outside click
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) {
+        setShareOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -94,19 +122,62 @@ export function ListingDetail({ id }: { id: string }) {
   const images = listing.images.length > 0 ? listing.images : ["https://picsum.photos/seed/default/800/600"];
   const specs = listing.specs as Record<string, string> | null;
 
-  async function handleShare() {
-    const url = window.location.href;
-    const title = listing!.title;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, url });
-      } catch {
-        // user cancelled
-      }
-    } else {
-      await navigator.clipboard.writeText(url);
-      showSuccess("Lenke kopiert til utklippstavle!");
+  async function copyLink() {
+    await navigator.clipboard.writeText(window.location.href);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }
+
+  function shareWhatsApp() {
+    const text = encodeURIComponent(`Sjekk denne annonsen på Sportsbyttet: ${window.location.href}`);
+    window.open(`https://wa.me/?text=${text}`, "_blank");
+    setShareOpen(false);
+  }
+
+  async function handleRate() {
+    if (!listing || ratingValue === 0 || !ratingName.trim()) return;
+    setRatingLoading(true);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profile_id: listing.profiles.id,
+          rating: ratingValue,
+          text: ratingComment,
+          author_name: ratingName,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setRatingSubmitted(true);
+      localStorage.setItem(`reviewed_listing_${id}`, "1");
+      showSuccess("Vurdering sendt! Takk for tilbakemeldingen.");
+    } catch {
+      showError("Kunne ikke sende vurdering. Prøv igjen.");
+    } finally {
+      setRatingLoading(false);
     }
+  }
+
+  function Stars({ value, interactive = false }: { value: number; interactive?: boolean }) {
+    const display = interactive ? (ratingHover || ratingValue) : value;
+    return (
+      <div className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <svg
+            key={i}
+            className={`${interactive ? "h-7 w-7 cursor-pointer" : "h-3.5 w-3.5"} ${i <= Math.round(display) ? "text-amber" : "text-border"} transition-colors`}
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            onClick={interactive ? () => setRatingValue(i) : undefined}
+            onMouseEnter={interactive ? () => setRatingHover(i) : undefined}
+            onMouseLeave={interactive ? () => setRatingHover(0) : undefined}
+          >
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+          </svg>
+        ))}
+      </div>
+    );
   }
 
   return (
@@ -206,8 +277,41 @@ export function ListingDetail({ id }: { id: string }) {
               </div>
 
               {isSold ? (
-                <div className="mb-6 rounded-lg bg-ink-light/10 py-3.5 text-sm font-semibold text-ink-light text-center">
-                  Solgt
+                <div className="mb-6 space-y-4">
+                  <div className="rounded-lg bg-ink-light/10 py-3.5 text-sm font-semibold text-ink-light text-center">
+                    Solgt
+                  </div>
+                  {ratingSubmitted ? (
+                    <div className="rounded-lg bg-forest-light border border-forest/20 px-4 py-3 text-sm text-forest text-center font-medium">
+                      Takk for vurderingen!
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-border bg-cream px-4 py-4 space-y-3">
+                      <p className="text-xs font-semibold text-ink">Var du kjøperen? Gi selgeren en vurdering</p>
+                      <Stars value={ratingValue} interactive />
+                      <input
+                        type="text"
+                        value={ratingName}
+                        onChange={(e) => setRatingName(e.target.value)}
+                        placeholder="Ditt navn"
+                        className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20"
+                      />
+                      <textarea
+                        value={ratingComment}
+                        onChange={(e) => setRatingComment(e.target.value)}
+                        placeholder="Kommentar (valgfritt)"
+                        rows={2}
+                        className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 resize-none"
+                      />
+                      <button
+                        onClick={handleRate}
+                        disabled={ratingValue === 0 || !ratingName.trim() || ratingLoading}
+                        className="w-full rounded-lg bg-forest py-2 text-xs font-semibold text-white hover:bg-forest-mid transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {ratingLoading ? "Sender..." : "Send vurdering"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : listing.listing_type === "iso" ? (
                 <div className="mb-6 rounded-lg bg-amber-light border border-amber/30 py-3.5 px-4 text-sm text-amber-dark text-center font-medium">
@@ -298,9 +402,16 @@ export function ListingDetail({ id }: { id: string }) {
                       Verifisert
                     </span>
                   </div>
-                  <p className="text-xs text-ink-light">
-                    {listing.profiles.total_sold} solgte varer
-                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {listing.profiles.rating > 0 ? (
+                      <>
+                        <Stars value={listing.profiles.rating} />
+                        <span className="text-xs text-ink-light">{listing.profiles.rating.toFixed(1)}</span>
+                      </>
+                    ) : (
+                      <p className="text-xs text-ink-light">{listing.profiles.total_sold} solgte varer</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -328,15 +439,45 @@ export function ListingDetail({ id }: { id: string }) {
                   </svg>
                   {listing.views} visninger • {formatDaysAgo(listing.created_at)}
                 </div>
-                <button
-                  onClick={handleShare}
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-mid hover:bg-cream transition-colors duration-[120ms]"
-                >
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
-                  </svg>
-                  Del
-                </button>
+                <div className="relative" ref={shareRef}>
+                  <button
+                    onClick={() => setShareOpen((o) => !o)}
+                    className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-mid hover:bg-cream transition-colors duration-[120ms]"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+                    </svg>
+                    Del
+                  </button>
+                  {shareOpen && (
+                    <div className="absolute right-0 bottom-full mb-2 w-44 rounded-xl border border-border bg-white shadow-lg py-1 z-10">
+                      <button
+                        onClick={copyLink}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-ink hover:bg-cream transition-colors"
+                      >
+                        {linkCopied ? (
+                          <svg className="h-4 w-4 text-forest" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                          </svg>
+                        ) : (
+                          <svg className="h-4 w-4 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                        {linkCopied ? "Kopiert!" : "Kopier lenke"}
+                      </button>
+                      <button
+                        onClick={shareWhatsApp}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-ink hover:bg-cream transition-colors"
+                      >
+                        <svg className="h-4 w-4 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        </svg>
+                        Del på WhatsApp
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

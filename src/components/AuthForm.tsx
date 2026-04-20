@@ -120,8 +120,29 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
     }
   }
 
+  function loginWithVipps() {
+    const returnTo = window.location.pathname + window.location.search;
+    window.location.href = `/api/auth/vipps/start?returnTo=${encodeURIComponent(returnTo)}`;
+  }
+
   return (
     <div className="space-y-3">
+      {/* Vipps Login */}
+      <button
+        onClick={loginWithVipps}
+        className="w-full flex items-center justify-center gap-2 rounded-full bg-[#FF5B24] py-2.5 text-sm font-semibold text-white hover:brightness-110 transition-all duration-[120ms]"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/vipps-white.png" alt="" className="h-4 w-auto" />
+        Logg inn med Vipps
+      </button>
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-ink-light">eller</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
       {mode === "signup" && (
         <div>
           <label className="block text-xs font-medium text-ink mb-1.5">
