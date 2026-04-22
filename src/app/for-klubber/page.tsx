@@ -590,10 +590,10 @@ export default function ForKlubberPage() {
           <p className="mt-6 text-sm text-white/60">
             Spørsmål? Ta kontakt på{" "}
             <a
-              href="mailto:hei@sportsbyttet.no"
+              href="mailto:hei@sportsbytte.no"
               className="text-white/80 underline underline-offset-2 hover:text-white transition-colors duration-[120ms]"
             >
-              hei@sportsbyttet.no
+              hei@sportsbytte.no
             </a>
           </p>
         </div>

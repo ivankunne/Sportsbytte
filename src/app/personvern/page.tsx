@@ -214,10 +214,10 @@ export default function PrivacyPage() {
           <p className="mt-5 text-sm text-ink-mid">
             Send en e-post til{" "}
             <a
-              href="mailto:personvern@sportsbyttet.no"
+              href="mailto:personvern@sportsbytte.no"
               className="text-forest underline underline-offset-2 hover:text-forest-mid transition-colors duration-[120ms]"
             >
-              personvern@sportsbyttet.no
+              personvern@sportsbytte.no
             </a>{" "}
             for å utøve en av disse rettighetene. Vi svarer innen 30 dager.
           </p>
@@ -282,10 +282,10 @@ export default function PrivacyPage() {
             </p>
             <p className="mt-1 text-sm text-ink-mid">Bergen, Norge</p>
             <a
-              href="mailto:personvern@sportsbyttet.no"
+              href="mailto:personvern@sportsbytte.no"
               className="mt-2 inline-block text-sm text-forest underline underline-offset-2 hover:text-forest-mid transition-colors duration-[120ms]"
             >
-              personvern@sportsbyttet.no
+              personvern@sportsbytte.no
             </a>
           </div>
           <p className="mt-4 text-sm text-ink-mid">

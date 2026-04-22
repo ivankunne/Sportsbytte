@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
         headers: {
           "X-MyBring-API-Uid": API_UID,
           "X-MyBring-API-Key": API_KEY,
-          "X-Bring-Client-URL": "https://sportsbyttet.no",
+          "X-Bring-Client-URL": "https://sportsbytte.no",
           Accept: "application/json",
         },
         next: { revalidate: 300 },

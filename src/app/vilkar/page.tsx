@@ -78,10 +78,10 @@ export default function TermsPage() {
               <span className="text-forest font-bold mt-0.5 flex-shrink-0">—</span>
               Mistenkelig aktivitet skal rapporteres til oss umiddelbart via{" "}
               <a
-                href="mailto:hei@sportsbyttet.no"
+                href="mailto:hei@sportsbytte.no"
                 className="text-forest underline underline-offset-2 hover:text-forest-mid transition-colors duration-[120ms]"
               >
-                hei@sportsbyttet.no
+                hei@sportsbytte.no
               </a>
               .
             </li>
@@ -245,10 +245,10 @@ export default function TermsPage() {
           </p>
           <div className="mt-4 flex flex-col sm:flex-row gap-3">
             <a
-              href="mailto:vilkar@sportsbyttet.no"
+              href="mailto:vilkar@sportsbytte.no"
               className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink hover:border-forest hover:text-forest transition-colors duration-[120ms]"
             >
-              vilkar@sportsbyttet.no
+              vilkar@sportsbytte.no
             </a>
             <Link
               href="/kontakt"

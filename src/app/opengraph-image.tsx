@@ -68,7 +68,7 @@ export default function OGImage() {
               marginTop: 8,
             }}
           >
-            sportsbyttet.no
+            sportsbytte.no
           </div>
         </div>
       </div>

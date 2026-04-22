@@ -19,17 +19,17 @@ export function Footer() {
             {/* Social / contact links */}
             <div className="mt-4 flex items-center gap-5">
               <a
-                href="mailto:hei@sportsbyttet.no"
+                href="mailto:hei@sportsbytte.no"
                 className="flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors duration-[120ms]"
               >
                 {/* Envelope icon */}
                 <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                 </svg>
-                <span>hei@sportsbyttet.no</span>
+                <span>hei@sportsbytte.no</span>
               </a>
               <a
-                href="https://instagram.com/sportsbyttet"
+                href="https://instagram.com/sportsbytte"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors duration-[120ms]"
@@ -40,7 +40,7 @@ export function Footer() {
                   <circle cx="12" cy="12" r="4" strokeLinecap="round" strokeLinejoin="round" />
                   <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
                 </svg>
-                <span>@sportsbyttet</span>
+                <span>@sportsbytte</span>
               </a>
             </div>
           </div>

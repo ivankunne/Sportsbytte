@@ -42,7 +42,7 @@ export default function ContactPage() {
                 </svg>
                 <div>
                   <p className="text-sm font-medium text-ink">E-post</p>
-                  <p className="text-sm text-ink-light">hei@sportsbyttet.no</p>
+                  <p className="text-sm text-ink-light">hei@sportsbytte.no</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">

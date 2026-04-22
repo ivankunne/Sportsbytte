@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a;">
         <div style="background: #1a3c2e; padding: 32px; border-radius: 12px 12px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 22px;">Henvendelsen din er sendt!</h1>
-          <p style="color: rgba(255,255,255,0.8); margin: 6px 0 0; font-size: 14px;">sportsbyttet.no</p>
+          <p style="color: rgba(255,255,255,0.8); margin: 6px 0 0; font-size: 14px;">sportsbytte.no</p>
         </div>
 
         <div style="background: #f9f7f4; padding: 32px; border-radius: 0 0 12px 12px; border: 1px solid #e5e0d8; border-top: none;">
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
             <strong>Sportsbytte-teamet</strong>
           </p>
 
-          <p style="font-size: 12px; color: #aaa; margin: 24px 0 0;">Sendt fra sportsbyttet.no · ${new Date().toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })}</p>
+          <p style="font-size: 12px; color: #aaa; margin: 24px 0 0;">Sendt fra sportsbytte.no · ${new Date().toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })}</p>
         </div>
       </div>
     `,
