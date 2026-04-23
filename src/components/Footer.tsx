@@ -9,7 +9,7 @@ export function Footer() {
           {/* Brand column */}
           <div className="md:col-span-2">
             <Link href="/" className="inline-block">
-              <Image src="/logo-sportsbytte-footer-removebg-preview.png" alt="Sportsbytte" width={160} height={43} className="h-10 w-auto" />
+              <Image src="/logo-sportsbytte-footer-removebg-preview.png" alt="Sportsbytte" width={160} height={43} className="h-10 w-auto brightness-0 invert" />
             </Link>
             <p className="mt-3 text-sm text-white/60 max-w-md">
               Norges markedsplass for brukt sportsutstyr. Klubbmedlemmer kjøper
