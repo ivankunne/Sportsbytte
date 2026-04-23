@@ -8,7 +8,7 @@ type Props = {
 export function Logo({ variant = "light", className = "" }: Props) {
   return (
     <Image
-      src="/Sportbytte_logo.png"
+      src="/Sportbytte_logo-removebg-preview.png"
       alt="Sportsbytte"
       width={140}
       height={38}
