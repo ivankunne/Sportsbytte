@@ -19,7 +19,6 @@ export function ListingDetail({ id }: { id: string }) {
   const [activeImage, setActiveImage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isSold, setIsSold] = useState(false);
-  const [confirmSold, setConfirmSold] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -110,19 +109,6 @@ export function ListingDetail({ id }: { id: string }) {
     );
   }
 
-  async function handleMarkSold() {
-    if (!listing) return;
-    const { error } = await supabase.from("listings").update({ is_sold: true }).eq("id", listing.id);
-    if (error) { showError("Kunne ikke merke som solgt. Prøv igjen."); return; }
-    setIsSold(true);
-    setConfirmSold(false);
-    showSuccess("Annonsen er merket som solgt!");
-    fetch("/api/notify-listing", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "sold", listing_id: listing.id }),
-    }).catch(() => {});
-  }
 
   const images = listing.images.length > 0 ? listing.images : ["https://picsum.photos/seed/default/800/600"];
   const specs = listing.specs as Record<string, string> | null;
@@ -334,32 +320,6 @@ export function ListingDetail({ id }: { id: string }) {
                     Send melding til selger
                   </button>
 
-                  {!confirmSold ? (
-                    <button
-                      onClick={() => setConfirmSold(true)}
-                      className="w-full rounded-lg border border-border py-2 text-xs font-medium text-ink-light hover:bg-cream transition-colors duration-[120ms]"
-                    >
-                      Er du selgeren? Merk som solgt
-                    </button>
-                  ) : (
-                    <div className="rounded-lg border border-amber/40 bg-amber/5 px-4 py-3 text-xs text-ink-mid">
-                      <p className="font-medium text-ink mb-2 text-center">Merk annonsen som solgt?</p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleMarkSold}
-                          className="flex-1 rounded-lg bg-forest py-1.5 text-xs font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
-                        >
-                          Bekreft
-                        </button>
-                        <button
-                          onClick={() => setConfirmSold(false)}
-                          className="flex-1 rounded-lg border border-border py-1.5 text-xs font-medium text-ink-light hover:bg-cream transition-colors duration-[120ms]"
-                        >
-                          Avbryt
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
