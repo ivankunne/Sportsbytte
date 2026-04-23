@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { getFeaturedListings, getAllCategories, getAllClubs } from "@/lib/queries";
+import { getFeaturedListings, getAllCategories, getAllClubs, thumbnailUrl } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { ListingCard } from "@/components/ListingCard";
 import { ClubSearch } from "@/components/ClubSearch";
@@ -32,55 +33,70 @@ export default async function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-forest">
-        <div className="absolute inset-0 overflow-hidden">
-          <svg
-            className="absolute -bottom-1 left-0 w-full text-white/5"
-            viewBox="0 0 1440 400"
-            preserveAspectRatio="none"
-            fill="currentColor"
-          >
-            <path d="M0,400 L0,250 Q200,100 400,200 Q600,320 800,180 Q1000,50 1200,150 Q1350,220 1440,180 L1440,400 Z" />
-          </svg>
-          <svg
-            className="absolute -bottom-1 left-0 w-full text-white/[0.03]"
-            viewBox="0 0 1440 400"
-            preserveAspectRatio="none"
-            fill="currentColor"
-          >
-            <path d="M0,400 L0,300 Q300,150 600,280 Q900,380 1100,220 Q1300,100 1440,200 L1440,400 Z" />
-          </svg>
-        </div>
+      <section className="bg-white overflow-hidden">
+        <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-16 sm:py-20 lg:py-24">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
 
-        <div className="relative mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-20 sm:py-28 lg:py-36">
-          <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/80 mb-4">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber" />
-              Norges sportsutstyrmarked for idrettslag
-            </span>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] font-bold text-white leading-[1.1] tracking-tight">
-              Brukt utstyr.{" "}
-              <span className="text-white/70">Ekte kvalitet.</span>{" "}
-              <span className="text-amber">Din klubb.</span>
-            </h1>
-            <p className="mt-6 text-lg sm:text-xl text-white/70 leading-relaxed max-w-xl">
-              Kjøp og selg brukt sportsutstyr direkte mellom klubbmedlemmer.
-              Trygg betaling, enkel frakt med Bring.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-4">
-              <Link
-                href="/utforsk"
-                className="inline-flex items-center justify-center rounded-lg bg-amber px-7 py-3 text-sm font-medium text-white hover:brightness-92 transition-all duration-[120ms]"
-              >
-                Utforsk utstyr
-              </Link>
-              <Link
-                href="/registrer-klubb"
-                className="inline-flex items-center justify-center rounded-lg border-[1.5px] border-white/40 px-7 py-3 text-sm font-medium text-white hover:bg-white/10 transition-all duration-[120ms]"
-              >
-                Registrer din klubb
-              </Link>
+            {/* Left: copy */}
+            <div>
+              <h1 className="font-display text-4xl sm:text-[46px] lg:text-[52px] font-bold text-ink leading-[1.08] tracking-tight">
+                Bytt, kjøp og selg brukt sportsutstyr{" "}
+                <span className="text-amber">– enkelt og trygt</span>
+              </h1>
+              <p className="mt-5 text-lg text-ink-mid leading-relaxed max-w-lg">
+                Gi utstyret ditt et nytt liv og finn noe nytt å elske.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link
+                  href="/utforsk"
+                  className="inline-flex items-center justify-center rounded-xl bg-amber px-7 py-3.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
+                >
+                  Utforsk utstyr
+                </Link>
+                <Link
+                  href="/selg"
+                  className="inline-flex items-center justify-center rounded-xl border border-border px-7 py-3.5 text-sm font-semibold text-ink hover:bg-cream transition-colors duration-[120ms]"
+                >
+                  Selg utstyr
+                </Link>
+              </div>
+              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3">
+                {["Enkelt å bruke", "Trygge handler", "Bra for miljøet"].map((label) => (
+                  <span key={label} className="flex items-center gap-2 text-sm text-ink-mid">
+                    <svg className="h-4 w-4 text-amber flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                    </svg>
+                    {label}
+                  </span>
+                ))}
+              </div>
             </div>
+
+            {/* Right: image collage from live listings */}
+            <div className="relative h-[320px] sm:h-[380px] lg:h-[440px]">
+              {[
+                "top-0 left-[4%] w-[46%] h-[52%] -rotate-2 z-10",
+                "top-[4%] right-0 w-[48%] h-[54%] rotate-1 z-20",
+                "bottom-0 left-0 w-[44%] h-[50%] rotate-1 z-10",
+                "bottom-[4%] right-[4%] w-[50%] h-[52%] -rotate-1 z-20",
+              ].map((pos, i) => {
+                const listing = featured[i];
+                return (
+                  <div key={i} className={`absolute rounded-2xl overflow-hidden shadow-md border border-border bg-cream ${pos}`}>
+                    {listing && (
+                      <Image
+                        src={thumbnailUrl(listing)}
+                        alt={listing.title}
+                        fill
+                        className="object-cover"
+                        sizes="25vw"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
           </div>
         </div>
       </section>
