@@ -1,5 +1,5 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Logo } from "./Logo";
 
 export function Footer() {
   return (
@@ -9,7 +9,7 @@ export function Footer() {
           {/* Brand column */}
           <div className="md:col-span-2">
             <Link href="/" className="inline-block">
-              <Logo variant="dark" className="text-2xl" />
+              <Image src="/logo-sportsbytte-footer.png" alt="Sportsbytte" width={160} height={43} className="h-10 w-auto" />
             </Link>
             <p className="mt-3 text-sm text-white/60 max-w-md">
               Norges markedsplass for brukt sportsutstyr. Klubbmedlemmer kjøper
