@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { ClubSearch } from "@/components/ClubSearch";
 import { StatsBar } from "@/components/StatsBar";
 import { HomepageListings } from "@/components/HomepageListings";
-import { ActivityTicker } from "@/components/ActivityTicker";
 import { OnboardingNudge } from "@/components/OnboardingNudge";
 
 export const revalidate = 60;
@@ -108,9 +107,6 @@ export default async function HomePage() {
 
       {/* Stats bar */}
       <StatsBar listings={stats.listings} clubs={stats.clubs} sold={stats.sold} />
-
-      {/* Activity ticker */}
-      <ActivityTicker />
 
       {/* Listings with filters */}
       <section className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-12 sm:py-16">
