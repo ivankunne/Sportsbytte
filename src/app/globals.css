@@ -1,38 +1,47 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-forest: #1a3c2e;
-  --color-forest-mid: #2d5c44;
-  --color-forest-light: #e8f2ec;
-  --color-amber: #e8843a;
-  --color-amber-light: #fdf0e6;
-  --color-cream: #f7f5f0;
-  --color-ink: #1a1a1a;
-  --color-ink-mid: #4a4a4a;
-  --color-ink-light: #8a8a8a;
-  --color-border: #e2ddd6;
+  /* Nordic Teal palette */
+  --color-forest: #134e4a;       /* teal-900 — hero, footer, dark sections */
+  --color-forest-mid: #0f766e;   /* teal-700 — stats band, hover states */
+  --color-forest-light: #ccfbf1; /* teal-100 — chip/pill backgrounds */
+  --color-amber: #0d9488;        /* teal-600 — primary buttons, CTAs, logo glyph */
+  --color-amber-light: #f0fdfa;  /* teal-50  — lightest tint, hover surfaces */
+  --color-cream: #f9fafb;        /* canvas   — page background */
+  --color-ink: #1c1917;          /* ink-900  — headings, high-emphasis text */
+  --color-ink-mid: #4b5563;      /* ink-600  — body copy */
+  --color-ink-light: #9ca3af;    /* ink-400  — placeholder, timestamps */
+  --color-border: #e5e7eb;       /* ink-200  — card/input borders */
   --color-white: #ffffff;
   --font-display: var(--font-fraunces);
   --font-sans: var(--font-dm-sans);
 }
 
 :root {
-  --forest:       #1a3c2e;
-  --forest-mid:   #2d5c44;
-  --forest-light: #e8f2ec;
-  --amber:        #e8843a;
-  --amber-light:  #fdf0e6;
-  --cream:        #f7f5f0;
-  --ink:          #1a1a1a;
-  --ink-mid:      #4a4a4a;
-  --ink-light:    #8a8a8a;
+  --forest:       #134e4a;
+  --forest-mid:   #0f766e;
+  --forest-light: #ccfbf1;
+  --amber:        #0d9488;
+  --amber-light:  #f0fdfa;
+  --cream:        #f9fafb;
+  --ink:          #1c1917;
+  --ink-mid:      #4b5563;
+  --ink-light:    #9ca3af;
   --white:        #ffffff;
-  --border:       #e2ddd6;
+  --border:       #e5e7eb;
+
+  /* Shadow scale */
+  --shadow-sm: 0 1px 2px rgba(17,24,39,0.05);
+  --shadow-md: 0 4px 12px rgba(17,24,39,0.08);
+  --shadow-lg: 0 12px 30px rgba(17,24,39,0.10);
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 3px rgba(13,148,136,0.35);
 }
 
 body {
   background-color: var(--cream);
-  color: var(--ink);
+  color: var(--ink-mid);
   font-family: var(--font-sans), 'DM Sans', system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.6;

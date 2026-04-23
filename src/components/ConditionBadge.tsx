@@ -4,14 +4,14 @@ type Props = {
 };
 
 const conditionStyles: Record<string, string> = {
-  "Som ny": "bg-[#e6f5ee] text-[#1a6b3e]",
-  "Pent brukt": "bg-[#e8f1fb] text-[#1a4a8a]",
-  "Godt brukt": "bg-[#fdf0e6] text-[#954a00]",
-  "Mye brukt": "bg-[#f2f2f2] text-[#555555]",
+  "Som ny":     "bg-[#d1fae5] text-[#059669]",
+  "Pent brukt": "bg-[#dbeafe] text-[#2563eb]",
+  "Godt brukt": "bg-[#f3f4f6] text-[#44403c]",
+  "Mye brukt":  "bg-[#fef3c7] text-[#d97706]",
 };
 
 export function ConditionBadge({ condition, size = "sm" }: Props) {
-  const style = conditionStyles[condition] ?? "bg-[#f2f2f2] text-[#555555]";
+  const style = conditionStyles[condition] ?? "bg-[#f3f4f6] text-[#44403c]";
   const sizeClass = size === "md"
     ? "px-3 py-1 text-[13px]"
     : "px-3 py-1 text-xs";
