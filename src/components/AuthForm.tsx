@@ -152,11 +152,11 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
       {/* Vipps Login */}
       <button
         onClick={loginWithVipps}
-        className="w-full flex items-center justify-center gap-2 rounded-full bg-[#FF5B24] py-2.5 text-sm font-semibold text-white hover:brightness-110 transition-all duration-[120ms]"
+        className="w-full flex items-center justify-center gap-2 rounded-full bg-[#FF5B24] py-3 text-sm font-semibold text-white hover:brightness-110 active:scale-[0.98] transition-all duration-[120ms]"
       >
+        Logg inn med
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/vipps-white.png" alt="" className="h-4 w-auto" />
-        Logg inn med Vipps
+        <img src="/vipps-white.png" alt="Vipps" className="h-[18px] w-auto" />
       </button>
 
       <div className="flex items-center gap-3">
