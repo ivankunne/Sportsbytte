@@ -12,7 +12,7 @@ export function Logo({ variant = "light", className = "" }: Props) {
       alt="Sportsbytte"
       width={140}
       height={38}
-      className={`h-8 w-auto ${className}`}
+      className={`h-10 w-auto ${className}`}
       priority
     />
   );
