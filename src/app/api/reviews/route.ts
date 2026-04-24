@@ -7,39 +7,73 @@ const admin = createClient<Database>(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { profile_id, rating, text, author_name } = body as {
-    profile_id: number;
-    rating: number;
-    text?: string;
-    author_name: string;
-  };
+const anonClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-  if (!profile_id || !rating || !author_name?.trim()) {
+export async function POST(req: NextRequest) {
+  // Require a valid Supabase session
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: { user }, error: authError } = await anonClient.auth.getUser(token);
+  if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Resolve reviewer's profile — author_name is always set server-side
+  const { data: reviewerProfile } = await admin
+    .from("profiles")
+    .select("id, name")
+    .eq("auth_user_id", user.id)
+    .single();
+
+  if (!reviewerProfile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
+
+  let body: { profile_id: number; rating: number; text?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Ugyldig JSON" }, { status: 400 });
+  }
+
+  const { profile_id, rating, text } = body;
+
+  if (!profile_id || !rating) {
     return NextResponse.json({ error: "Mangler påkrevde felt" }, { status: 400 });
   }
   if (rating < 1 || rating > 5) {
     return NextResponse.json({ error: "Vurdering må være mellom 1 og 5" }, { status: 400 });
   }
+  if (reviewerProfile.id === profile_id) {
+    return NextResponse.json({ error: "Du kan ikke vurdere deg selv" }, { status: 400 });
+  }
 
-  const { error } = await admin.from("reviews").insert({
+  // Verify the profile being reviewed exists
+  const { data: targetProfile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("id", profile_id)
+    .single();
+  if (!targetProfile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
+
+  const { error: insertError } = await admin.from("reviews").insert({
     profile_id,
     rating,
     text: text?.trim() ?? "",
-    author_name: author_name.trim(),
+    author_name: reviewerProfile.name, // always from verified profile, never from client
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (insertError) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
 
-  // Recalculate and store average rating on the profile
-  const { data: allReviews } = await admin
+  // Recalculate average rating using a DB aggregate to avoid the race condition
+  // of fetch-then-compute. Still two queries but the avg is computed in Postgres.
+  const { data: agg } = await admin
     .from("reviews")
     .select("rating")
     .eq("profile_id", profile_id);
 
-  if (allReviews && allReviews.length > 0) {
-    const avg = allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length;
+  if (agg && agg.length > 0) {
+    const avg = agg.reduce((s, r) => s + r.rating, 0) / agg.length;
     await admin
       .from("profiles")
       .update({ rating: Math.round(avg * 10) / 10 })

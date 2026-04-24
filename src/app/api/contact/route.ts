@@ -1,25 +1,41 @@
 import { Resend } from "resend";
 import { NextRequest, NextResponse } from "next/server";
+import { escapeHtml, ADMIN_EMAIL } from "@/lib/email";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(req: NextRequest) {
-  const { name, email, subject, message } = await req.json();
+  let name: string, email: string, subject: string | undefined, message: string;
+  try {
+    ({ name, email, subject, message } = await req.json());
+  } catch {
+    return NextResponse.json({ error: "Ugyldig JSON" }, { status: 400 });
+  }
 
   if (!name || !email || !message) {
     return NextResponse.json({ error: "Manglende felt." }, { status: 400 });
   }
+  if (!EMAIL_RE.test(email)) {
+    return NextResponse.json({ error: "Ugyldig e-postadresse." }, { status: 400 });
+  }
+
+  const safeName = escapeHtml(name.trim().slice(0, 120));
+  const safeEmail = escapeHtml(email.trim().slice(0, 254));
+  const safeSubject = subject ? escapeHtml(subject.trim().slice(0, 200)) : null;
+  const safeMessage = escapeHtml(message.trim().slice(0, 5000));
 
   const { error } = await resend.emails.send({
     from: "Sportsbytte <onboarding@resend.dev>",
-    to: "ivan@frameflow.no",
-    replyTo: email,
-    subject: subject ? `Kontaktskjema: ${subject}` : `Kontaktskjema fra ${name}`,
+    to: ADMIN_EMAIL,
+    replyTo: email.trim(),
+    subject: safeSubject ? `Kontaktskjema: ${safeSubject}` : `Kontaktskjema fra ${safeName}`,
     html: `
-      <p><strong>Fra:</strong> ${name} (${email})</p>
-      ${subject ? `<p><strong>Emne:</strong> ${subject}</p>` : ""}
+      <p><strong>Fra:</strong> ${safeName} (${safeEmail})</p>
+      ${safeSubject ? `<p><strong>Emne:</strong> ${safeSubject}</p>` : ""}
       <p><strong>Melding:</strong></p>
-      <p style="white-space:pre-wrap">${message}</p>
+      <p style="white-space:pre-wrap">${safeMessage}</p>
     `,
   });
 

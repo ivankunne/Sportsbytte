@@ -293,6 +293,9 @@ function CsvImportSection({
   );
 }
 
+// Module-level: never embedded in JSX or logged — cleared on page unload
+let _adminSecret = "";
+
 export default function ClubAdminPage({
   params,
 }: {
@@ -385,11 +388,20 @@ export default function ClubAdminPage({
     });
   }, [params, fetchMemberships]);
 
-  function handleLogin(e: { preventDefault(): void }) {
+  async function handleLogin(e: { preventDefault(): void }) {
     e.preventDefault();
-    if (password === "demo2026") {
+    setAuthError("");
+    const res = await fetch("/api/revalidate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-secret": password,
+      },
+      body: JSON.stringify({ path: "/" }),
+    });
+    if (res.ok) {
+      _adminSecret = password;
       setAuthenticated(true);
-      setAuthError("");
     } else {
       setAuthError("Feil passord. Kontakt Sportsbytte for tilgang.");
     }
@@ -397,11 +409,17 @@ export default function ClubAdminPage({
 
   async function handleMembershipAction(id: number, status: "approved" | "rejected") {
     await updateMembershipStatus(id, status);
-    fetch("/api/notify-membership", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: status, membership_id: id }),
-    }).catch(() => {});
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      fetch("/api/notify-membership", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ type: status, membership_id: id }),
+      }).catch(() => {});
+    }
     if (club) await fetchMemberships(club.id);
   }
 

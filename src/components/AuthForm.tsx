@@ -132,19 +132,26 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
         }
 
         // Fire welcome + membership emails (non-blocking)
+        const { data: { session: newSession } } = await supabase.auth.getSession();
         const origin = window.location.origin;
-        fetch(`${origin}/api/notify-welcome`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: form.name.trim(), email: form.email.trim() }),
-        }).catch(() => {});
-
-        if (membershipId) {
-          fetch(`${origin}/api/notify-membership`, {
+        if (newSession) {
+          const authHeaders = {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${newSession.access_token}`,
+          };
+          fetch(`${origin}/api/notify-welcome`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type: "submitted", membership_id: membershipId }),
+            headers: authHeaders,
+            body: JSON.stringify({ name: form.name.trim() }),
           }).catch(() => {});
+
+          if (membershipId) {
+            fetch(`${origin}/api/notify-membership`, {
+              method: "POST",
+              headers: authHeaders,
+              body: JSON.stringify({ type: "submitted", membership_id: membershipId }),
+            }).catch(() => {});
+          }
         }
 
         onSuccess({

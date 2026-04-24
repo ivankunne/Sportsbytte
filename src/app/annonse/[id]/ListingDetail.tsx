@@ -126,17 +126,21 @@ export function ListingDetail({ id }: { id: string }) {
   }
 
   async function handleRate() {
-    if (!listing || ratingValue === 0 || !ratingName.trim()) return;
+    if (!listing || ratingValue === 0) return;
     setRatingLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Logg inn for å gi vurdering");
       const res = await fetch("/api/reviews", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           profile_id: listing.profiles.id,
           rating: ratingValue,
           text: ratingComment,
-          author_name: ratingName,
         }),
       });
       if (!res.ok) throw new Error();

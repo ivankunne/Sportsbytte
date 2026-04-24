@@ -77,7 +77,10 @@ export async function POST(req: NextRequest) {
 
   fetch(`${SITE_URL}/api/notify-listing`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-webhook-secret": process.env.NOTIFY_WEBHOOK_SECRET ?? "",
+    },
     body: JSON.stringify({ type: "published", listing_id: data.id }),
   }).catch(() => {});
 

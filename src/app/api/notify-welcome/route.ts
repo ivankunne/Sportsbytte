@@ -1,21 +1,41 @@
 import { Resend } from "resend";
+import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import { buildEmail, p, FROM, SITE_URL } from "@/lib/email";
+import { buildEmail, p, escapeHtml, FROM, SITE_URL } from "@/lib/email";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function POST(req: NextRequest) {
-  const { name, email } = await req.json() as { name: string; email: string };
+const anonClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-  if (!name || !email) {
-    return NextResponse.json({ error: "Missing name or email" }, { status: 400 });
+export async function POST(req: NextRequest) {
+  // Require a valid Supabase session — prevents phishing relay to arbitrary addresses
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: { user }, error: authError } = await anonClient.auth.getUser(token);
+  if (authError || !user || !user.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let name: string;
+  try {
+    ({ name } = await req.json());
+  } catch {
+    return NextResponse.json({ error: "Ugyldig JSON" }, { status: 400 });
+  }
+
+  // Email address always comes from the verified session, never from the request body
+  const email = user.email;
+  const safeName = escapeHtml((name ?? email.split("@")[0]).trim().slice(0, 120));
+
   const html = buildEmail({
-    heading: `Velkommen til Sportsbytte, ${name}!`,
+    heading: `Velkommen til Sportsbytte, ${safeName}!`,
     kicker: "Konto opprettet",
     body: `
-      ${p(`Hei ${name},`)}
+      ${p(`Hei ${safeName},`)}
       ${p("Kontoen din er klar. Sportsbytte er Norges markedsplass for brukt sportsutstyr — organisert rundt idrettsklubbene dine.")}
       ${p("Her er hva du kan gjøre nå:")}
       <ul style="margin:0 0 20px;padding-left:20px;line-height:2;">
@@ -32,14 +52,11 @@ export async function POST(req: NextRequest) {
   const { error } = await resend.emails.send({
     from: FROM,
     to: email,
-    subject: `Velkommen til Sportsbytte, ${name}!`,
+    subject: `Velkommen til Sportsbytte, ${safeName}!`,
     html,
   });
 
-  if (error) {
-    console.error("notify-welcome Resend error:", error);
-    // Non-blocking — signup succeeded even if email fails
-  }
+  if (error) console.error("notify-welcome Resend error:", error);
 
   return NextResponse.json({ ok: true });
 }

@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { buildEmail, infoBox, p, FROM } from "@/lib/email";
+import { buildEmail, infoBox, p, escapeHtml, FROM } from "@/lib/email";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     previewText = `Ny melding på annonsen din: ${listingTitle}.`;
   }
 
-  const messageSnippet =
+  const rawSnippet =
     record.type === "vipps_request"
       ? "Sendte en Vipps-betalingsforespørsel"
       : record.type === "bring_request"
@@ -98,11 +98,14 @@ export async function POST(req: NextRequest) {
       ? record.content.slice(0, 197) + "..."
       : record.content;
 
+  const messageSnippet = escapeHtml(rawSnippet);
+  const safeToName = escapeHtml(toName);
+
   const html = buildEmail({
     heading: subject,
     kicker: "Ny melding",
     body: `
-      ${p(`Hei ${toName},`)}
+      ${p(`Hei ${safeToName},`)}
       ${infoBox(messageSnippet)}
     `,
     cta: { href: listingUrl, label: "Åpne samtalen" },
