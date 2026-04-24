@@ -176,7 +176,11 @@ export function ListingDetail({ id }: { id: string }) {
       if (json.url) {
         window.location.href = json.url;
       } else {
-        showError(json.error ?? "Noe gikk galt");
+        if (json.error === "seller_onboarding_incomplete") {
+          showError("Selgeren har ikke fullført betalingsoppsettet sitt ennå. Send dem en melding og be dem fullføre det.");
+        } else {
+          showError(json.error ?? "Noe gikk galt");
+        }
         setCheckingOut(false);
       }
     } catch {

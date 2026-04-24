@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   const isPro = (listing.clubs as { is_pro: boolean } | null)?.is_pro ?? false;
 
   if (!seller?.stripe_account_id || !seller.stripe_onboarding_complete) {
-    return NextResponse.json({ error: "Selgeren har ikke aktivert kortbetaling ennå" }, { status: 400 });
+    return NextResponse.json({ error: "seller_onboarding_incomplete" }, { status: 400 });
   }
 
   // Prevent seller from buying their own listing

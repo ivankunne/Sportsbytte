@@ -21,7 +21,7 @@ const BORDER = "#e5e7eb";
 const CANVAS = "#f9fafb";
 const WHITE  = "#ffffff";
 
-export const FROM = "Sportsbytte <onboarding@resend.dev>";
+export const FROM = "Sportsbytte <hei@frameflow.no>";
 export const ADMIN_EMAIL = "ivan@frameflow.no";
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sportsbytte.no";
 
