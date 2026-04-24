@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Priser",
-  description: "Se prisene for Sportsbytte — gratis å annonsere, 8 % transaksjonsgebyr ved salg. Klubbplan fra 199 kr/mnd.",
+  description: "Se prisene for Sportsbytte — gratis å annonsere, 5 % transaksjonsgebyr ved salg. Pro-plan for klubber med 2 % gebyr og utvidede funksjoner.",
 };
 
 export default function PricingPage() {
@@ -18,7 +18,7 @@ export default function PricingPage() {
         </h1>
         <p className="mt-3 text-ink-mid max-w-lg mx-auto">
           Gratis å annonsere. Du betaler kun når du selger — og klubber kan
-          velge en fast månedspris for premium-funksjoner.
+          oppgradere til Pro for lavere gebyr og utvidede funksjoner.
         </p>
       </div>
 
@@ -34,7 +34,7 @@ export default function PricingPage() {
             </div>
             <p className="text-xs text-ink-light mt-1">å annonsere · gratis å opprette konto</p>
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-light px-3 py-1.5">
-              <span className="text-sm font-bold text-amber">8 %</span>
+              <span className="text-sm font-bold text-amber">5 %</span>
               <span className="text-xs text-ink-mid">transaksjonsgebyr ved salg</span>
             </div>
           </div>
@@ -44,7 +44,7 @@ export default function PricingPage() {
               "Ubegrenset antall annonser",
               "Opptil 8 bilder per annonse",
               "Meldinger med kjøpere",
-              "Kortbetaling",
+              "Kortbetaling via Stripe",
               "Bring-fraktlabel",
               "Kjøperbeskyttelse",
             ].map((feature) => (
@@ -65,7 +65,7 @@ export default function PricingPage() {
           </Link>
         </div>
 
-        {/* Club Basic */}
+        {/* Club Basis */}
         <div className="bg-white rounded-2xl p-7 shadow-md border-2 border-forest relative">
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
             <span className="rounded-full bg-forest px-4 py-1 text-xs font-bold text-white">
@@ -76,10 +76,13 @@ export default function PricingPage() {
           <p className="text-sm text-ink-light mt-1">For idrettslag og klubber</p>
           <div className="mt-5">
             <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-bold font-display text-ink">199 kr</span>
-              <span className="text-sm text-ink-light">/mnd</span>
+              <span className="text-4xl font-bold font-display text-ink">Gratis</span>
             </div>
-            <p className="text-xs text-ink-light mt-1">+ 5 % transaksjonsgebyr ved salg</p>
+            <p className="text-xs text-ink-light mt-1">i åpningsperioden · ingen binding</p>
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-light px-3 py-1.5">
+              <span className="text-sm font-bold text-amber">5 %</span>
+              <span className="text-xs text-ink-mid">transaksjonsgebyr ved salg</span>
+            </div>
           </div>
 
           <ul className="mt-6 space-y-3">
@@ -88,8 +91,9 @@ export default function PricingPage() {
               "Egen klubbside med logo og farger",
               "Klubbfiltrert annonsevisning",
               "Digitalt byttemarked for klubben",
-              "Inviter medlemmer via lenke",
-              "Grunnleggende statistikk",
+              "Inviter medlemmer via lenke + QR",
+              "CSV-import (maks 20 per gang)",
+              "Analysetavle for klubbadmin",
               "E-postsupport",
             ].map((feature) => (
               <li key={feature} className="flex items-start gap-2 text-sm text-ink-light">
@@ -107,33 +111,42 @@ export default function PricingPage() {
           >
             Registrer klubben
           </Link>
-          <p className="mt-2 text-center text-xs text-ink-light">Gratis i åpningsperioden · ingen binding</p>
         </div>
 
         {/* Club Pro */}
-        <div className="bg-white rounded-2xl p-7 border border-border">
+        <div className="bg-white rounded-2xl p-7 border-2 border-amber/40 relative">
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+            <span className="rounded-full bg-amber px-4 py-1 text-xs font-bold text-white">
+              Pro
+            </span>
+          </div>
           <h3 className="font-display text-lg font-semibold text-ink">Klubb Pro</h3>
-          <p className="text-sm text-ink-light mt-1">For større klubber</p>
+          <p className="text-sm text-ink-light mt-1">For større og aktive klubber</p>
           <div className="mt-5">
             <div className="flex items-baseline gap-1">
               <span className="text-4xl font-bold font-display text-ink">499 kr</span>
               <span className="text-sm text-ink-light">/mnd</span>
             </div>
-            <p className="text-xs text-ink-light mt-1">+ 3 % transaksjonsgebyr ved salg</p>
+            <p className="text-xs text-ink-light mt-1">faktureres månedlig</p>
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-light px-3 py-1.5">
+              <span className="text-sm font-bold text-amber">2 %</span>
+              <span className="text-xs text-ink-mid">transaksjonsgebyr ved salg</span>
+            </div>
           </div>
 
           <ul className="mt-6 space-y-3">
             {[
               "Alt i Klubb Basis",
-              "Prioritert synlighet i søk",
-              "CSV-import av medlemmer",
-              "Avansert statistikk og rapporter",
-              "Tilpasset velkomst-e-post",
+              "Kun 2 % transaksjonsgebyr (vs. 5 %)",
+              "Prioritert synlighet på /klubber",
+              "Pro-merke på klubbsiden",
+              "Ubegrenset CSV-import av medlemmer",
+              "Utvidet analysetavle",
+              "Brandede invitasjonssider",
               "Dedikert støtte",
-              "API-tilgang (kommer)",
             ].map((feature) => (
               <li key={feature} className="flex items-start gap-2 text-sm text-ink-light">
-                <svg className="h-5 w-5 text-forest flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-amber flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
                 </svg>
                 {feature}
@@ -143,9 +156,9 @@ export default function PricingPage() {
 
           <Link
             href="/kontakt"
-            className="mt-8 block w-full rounded-lg border-2 border-forest py-2.5 text-center text-sm font-semibold text-forest hover:bg-forest hover:text-white transition-colors duration-[120ms]"
+            className="mt-8 block w-full rounded-lg bg-amber py-2.5 text-center text-sm font-semibold text-white hover:brightness-95 transition-all duration-[120ms]"
           >
-            Ta kontakt
+            Ta kontakt for Pro
           </Link>
         </div>
       </div>
@@ -155,7 +168,7 @@ export default function PricingPage() {
         <h3 className="font-display text-base font-semibold text-ink mb-2">Om transaksjonsgebyret</h3>
         <p className="text-sm text-ink-mid">
           Transaksjonsgebyret beregnes av salgsprisen og trekkes automatisk ved gjennomført salg.
-          Gebyret dekker betalingsbehandling, kjøperbeskyttelse og plattformdrift.
+          Gebyret dekker betalingsbehandling via Stripe, kjøperbeskyttelse og plattformdrift.
           Ingen skjulte avgifter — du ser alltid gebyret før du bekrefter salget.
         </p>
       </div>
@@ -169,11 +182,11 @@ export default function PricingPage() {
           {[
             {
               q: "Hva koster det å selge som privatperson?",
-              a: "Det er gratis å opprette konto og lage annonser. Vi tar 8 % av salgsprisen ved gjennomført salg.",
+              a: "Det er gratis å opprette konto og lage annonser. Vi tar 5 % av salgsprisen ved gjennomført salg.",
             },
             {
-              q: "Hva koster klubbplanen?",
-              a: "Klubb Basis koster 199 kr/mnd med 5 % transaksjonsgebyr. Klubb Pro koster 499 kr/mnd med 3 % transaksjonsgebyr. I åpningsperioden er det gratis.",
+              q: "Hva koster Pro-planen for klubber?",
+              a: "Klubb Pro koster 499 kr/mnd med kun 2 % transaksjonsgebyr. Klubb Basis er gratis i åpningsperioden med 5 % gebyr.",
             },
             {
               q: "Hva dekker transaksjonsgebyret?",
@@ -181,7 +194,7 @@ export default function PricingPage() {
             },
             {
               q: "Kan vi bytte plan underveis?",
-              a: "Ja, du kan oppgradere eller nedgradere når som helst. Endringen trer i kraft fra neste måned.",
+              a: "Ja, du kan oppgradere eller nedgradere når som helst. Kontakt oss på hei@sportsbytte.no.",
             },
           ].map((faq) => (
             <div key={faq.q} className="bg-white rounded-xl p-5 border border-border">
