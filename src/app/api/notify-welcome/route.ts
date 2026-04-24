@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         <li>Finn og bli med i din idrettsklubb</li>
         <li>Utforsk brukt utstyr fra klubbmedlemmer</li>
         <li>Legg ut utstyr du ikke lenger bruker</li>
-        <li>Betal trygt med Vipps og send med Bring</li>
+        <li>Betal trygt med kort og send med Bring</li>
       </ul>
     `,
     cta: { href: `${SITE_URL}/klubber`, label: "Finn din klubb" },

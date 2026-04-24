@@ -44,7 +44,7 @@ export default function PricingPage() {
               "Ubegrenset antall annonser",
               "Opptil 8 bilder per annonse",
               "Meldinger med kjøpere",
-              "Vipps-betaling",
+              "Kortbetaling",
               "Bring-fraktlabel",
               "Kjøperbeskyttelse",
             ].map((feature) => (
@@ -154,7 +154,7 @@ export default function PricingPage() {
       <div className="mt-10 rounded-2xl bg-cream border border-border p-6 max-w-3xl mx-auto">
         <h3 className="font-display text-base font-semibold text-ink mb-2">Om transaksjonsgebyret</h3>
         <p className="text-sm text-ink-mid">
-          Transaksjonsgebyret beregnes av salgsprisen og trekkes automatisk ved gjennomført salg via Vipps.
+          Transaksjonsgebyret beregnes av salgsprisen og trekkes automatisk ved gjennomført salg.
           Gebyret dekker betalingsbehandling, kjøperbeskyttelse og plattformdrift.
           Ingen skjulte avgifter — du ser alltid gebyret før du bekrefter salget.
         </p>
@@ -177,7 +177,7 @@ export default function PricingPage() {
             },
             {
               q: "Hva dekker transaksjonsgebyret?",
-              a: "Gebyret dekker Vipps-betaling, kjøperbeskyttelse, kundeservice og plattformdrift.",
+              a: "Gebyret dekker kortbetaling via Stripe, kjøperbeskyttelse, kundeservice og plattformdrift.",
             },
             {
               q: "Kan vi bytte plan underveis?",

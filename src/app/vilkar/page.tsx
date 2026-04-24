@@ -136,7 +136,7 @@ export default function TermsPage() {
           </h2>
           <p className="mt-4 text-ink-mid leading-relaxed text-sm">
             Betaling på Sportsbytte skjer via{" "}
-            <strong className="text-ink">Vipps</strong>. Beløpet holdes av
+            <strong className="text-ink">Stripe</strong>. Beløpet holdes av
             plattformen til kjøper bekrefter mottak og er fornøyd — først da
             utbetales pengene til selger.
           </p>

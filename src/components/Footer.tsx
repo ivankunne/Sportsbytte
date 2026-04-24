@@ -14,7 +14,7 @@ export function Footer() {
             </Link>
             <p className="mt-3 text-sm text-white/60 max-w-md">
               Norges markedsplass for brukt sportsutstyr. Klubbmedlemmer kjøper
-              og selger utstyr trygt — med Vipps-betaling og Bring-frakt.
+              og selger utstyr trygt — med kortbetaling og Bring-frakt.
             </p>
 
             {/* Social / contact links */}
@@ -112,14 +112,17 @@ export function Footer() {
 
           <div className="flex items-center gap-4">
             <span className="text-xs text-white/40">Trygg handel med</span>
-            <Image
-              src="/vipps-white.png"
-              alt="Vipps"
-              width={56}
-              height={20}
-              className="h-5 w-auto opacity-70 hover:opacity-100 transition-opacity duration-[120ms]"
-            />
-            <span className="text-white/20">·</span>
+            {/* VIPPS_HIDDEN: remove false && to re-enable Vipps logo */}
+            {false && (
+              <Image
+                src="/vipps-white.png"
+                alt="Vipps"
+                width={56}
+                height={20}
+                className="h-5 w-auto opacity-70 hover:opacity-100 transition-opacity duration-[120ms]"
+              />
+            )}
+            {false && <span className="text-white/20">·</span>}
             <Image
               src="/Bring_logo.svg.png"
               alt="Bring"

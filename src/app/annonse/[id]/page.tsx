@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const descParts = [data.condition, data.category, club?.name].filter(Boolean).join(" · ");
   const description = data.description
     ? `${data.description.slice(0, 120)} — ${descParts}`
-    : `${descParts} · Kjøp trygt med Vipps på Sportsbytte`;
+    : `${descParts} · Kjøp trygt med kort på Sportsbytte`;
 
   const pageUrl = `/annonse/${id}`;
 

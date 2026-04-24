@@ -110,7 +110,7 @@ export default function ForKlubberPage() {
                 {[
                   "Aktiv markedsplass tilgjengelig hele sesongen",
                   "Klubbens egne annonser — ikke druknet i generell feed",
-                  "Trygg betaling med Vipps og Bring-frakt",
+                  "Trygg kortbetaling og Bring-frakt",
                   "Kjøper vet hvem selgeren er — samme klubb",
                 ].map((sol) => (
                   <li key={sol} className="flex items-start gap-3 text-white/90">
@@ -301,7 +301,7 @@ export default function ForKlubberPage() {
                 {
                   step: "3",
                   title: "Medlemmene handler",
-                  desc: "De legger ut utstyr, kjøper trygt med Vipps, og du får statistikk på alt som skjer.",
+                  desc: "De legger ut utstyr, kjøper trygt med kort, og du får statistikk på alt som skjer.",
                 },
               ].map((item, idx) => (
                 <div key={item.step} className="text-center relative">
@@ -511,7 +511,7 @@ export default function ForKlubberPage() {
 
               <p className="mt-8 text-sm text-white/70 leading-relaxed">
                 Selger beholder nesten alt. Vi tar kun en liten plattformavgift
-                per gjennomført salg for å dekke Vipps og Bring-integrasjon.
+                per gjennomført salg for å dekke Stripe og Bring-integrasjon.
               </p>
 
               <div className="mt-6 inline-block rounded-full border border-amber/50 bg-amber/10 px-4 py-1.5 text-xs font-semibold text-amber">
@@ -520,7 +520,7 @@ export default function ForKlubberPage() {
 
               <div className="mt-8 rounded-xl bg-white/10 p-5">
                 <p className="text-sm text-white/70 leading-relaxed">
-                  Avgiften dekker sikker Vipps-betaling, Bring-fraktlabel og
+                  Avgiften dekker sikker kortbetaling via Stripe, Bring-fraktlabel og
                   kjøperbeskyttelse. Ingen skjulte kostnader for klubben.
                 </p>
               </div>
@@ -552,7 +552,7 @@ export default function ForKlubberPage() {
               },
               {
                 q: "Hva med betaling og frakt?",
-                a: "Betaling skjer via Vipps — trygt og kjent for alle nordmenn. Frakt ordnes med Bring, der fraktlabel genereres automatisk.",
+                a: "Betaling skjer via Stripe — trygt og kjent for alle med kort. Frakt ordnes med Bring, der fraktlabel genereres automatisk.",
               },
               {
                 q: "Kan vi kjøre digitalt byttemarked?",

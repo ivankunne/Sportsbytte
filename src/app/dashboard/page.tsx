@@ -970,19 +970,22 @@ function ProfilTab({
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-ink mb-1.5">Vipps-nummer</label>
-          <input
-            type="tel"
-            value={form.vipps_phone}
-            onChange={(e) => setForm((f) => ({ ...f, vipps_phone: e.target.value }))}
-            placeholder="40012345"
-            className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-          />
-          <p className="mt-1 text-xs text-ink-light">
-            Brukes for Vipps-betaling når noen kjøper dine annonser
-          </p>
-        </div>
+        {/* VIPPS_HIDDEN: remove false && to re-enable Vipps phone field */}
+        {false && (
+          <div>
+            <label className="block text-xs font-medium text-ink mb-1.5">Vipps-nummer</label>
+            <input
+              type="tel"
+              value={form.vipps_phone}
+              onChange={(e) => setForm((f) => ({ ...f, vipps_phone: e.target.value }))}
+              placeholder="40012345"
+              className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+            />
+            <p className="mt-1 text-xs text-ink-light">
+              Brukes for Vipps-betaling når noen kjøper dine annonser
+            </p>
+          </div>
+        )}
 
         {error && <p className="text-xs text-red-500">{error}</p>}
 

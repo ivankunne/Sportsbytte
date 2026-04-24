@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 
 // ─── Change this one number to adjust your platform cut ───
-export const PLATFORM_FEE_PERCENT = 2;
+export const PLATFORM_FEE_PERCENT = 5;
 // ──────────────────────────────────────────────────────────
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {

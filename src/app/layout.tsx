@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     template: "%s | Sportsbytte",
   },
   description:
-    "Norges markedsplass for brukt sportsutstyr. Kjøp og selg direkte mellom klubbmedlemmer. Trygg betaling med Vipps, enkel frakt med Bring.",
+    "Norges markedsplass for brukt sportsutstyr. Kjøp og selg direkte mellom klubbmedlemmer. Trygg kortbetaling, enkel frakt med Bring.",
   icons: {
     icon: "/favicon.png",
     apple: "/favicon.png",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     siteName: "Sportsbytte",
     title: "Sportsbytte — Kjøp og selg brukt sportsutstyr",
     description:
-      "Brukt sportsutstyr fra klubbmedlemmer. Trygg handel med Vipps og Bring.",
+      "Brukt sportsutstyr fra klubbmedlemmer. Trygg kortbetaling og frakt med Bring.",
     images: [
       {
         url: "/opengraph-image",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Sportsbytte — Kjøp og selg brukt sportsutstyr",
     description:
-      "Brukt sportsutstyr fra klubbmedlemmer. Trygg handel med Vipps og Bring.",
+      "Brukt sportsutstyr fra klubbmedlemmer. Trygg kortbetaling og frakt med Bring.",
     images: ["/opengraph-image"],
   },
   robots: {

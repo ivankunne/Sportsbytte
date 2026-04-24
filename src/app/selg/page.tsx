@@ -664,7 +664,7 @@ export default function SellPage() {
               : "Publiser annonse"}
           </button>
           <p className="mt-4 text-center text-xs text-ink-light">
-            Trygg betaling via Vipps • Bring frakt integrert • Klubbbeskyttelse
+            Trygg kortbetaling • Bring frakt integrert • Klubbbeskyttelse
           </p>
         </div>
       </div>

@@ -69,7 +69,7 @@ export default function ForTeamLeadersPage() {
               </svg>
             ),
             title: "Trygg for alle",
-            desc: "Vipps-betaling og kjøperbeskyttelse. Ingen kontanthandel, ingen risiko. Foreldre kan trygt la ungdom handle.",
+            desc: "Kortbetaling og kjøperbeskyttelse. Ingen kontanthandel, ingen risiko. Foreldre kan trygt la ungdom handle.",
           },
           {
             icon: (

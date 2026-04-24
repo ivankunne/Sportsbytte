@@ -54,7 +54,7 @@ export default function PrivacyPage() {
               },
               {
                 title: "Transaksjonsdata",
-                desc: "Kjøps- og salgshistorikk. Selve betalingen håndteres av Vipps.",
+                desc: "Kjøps- og salgshistorikk. Selve betalingen håndteres av Stripe.",
               },
               {
                 title: "Bruksdata",
@@ -132,7 +132,7 @@ export default function PrivacyPage() {
                 note: "Brukes for transaksjonsvarslinger og systemeposter.",
               },
               {
-                name: "Vipps MobilePay",
+                name: "Stripe",
                 role: "Betalingsbehandling",
                 note: "Vi deler kun nødvendig informasjon for å fullføre betalingen.",
               },

@@ -568,14 +568,17 @@ export function ListingChat({
 
             {/* Quick action buttons */}
             <div className="px-4 pt-2 pb-1 flex gap-2 flex-shrink-0 overflow-x-auto">
-              <button
-                onClick={sendVippsRequest}
-                className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-[#FF5B24] px-4 py-2 hover:brightness-110 active:scale-[0.98] transition-all duration-[120ms]"
-              >
-                <span className="text-xs font-semibold text-white">Betal med</span>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/vipps-white.png" alt="Vipps" className="h-[14px] w-auto" />
-              </button>
+              {/* VIPPS_HIDDEN: remove false && to re-enable Vipps payment button */}
+              {false && (
+                <button
+                  onClick={sendVippsRequest}
+                  className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-[#FF5B24] px-4 py-2 hover:brightness-110 active:scale-[0.98] transition-all duration-[120ms]"
+                >
+                  <span className="text-xs font-semibold text-white">Betal med</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/vipps-white.png" alt="Vipps" className="h-[14px] w-auto" />
+                </button>
+              )}
               <button
                 onClick={() => setShowBringForm((v) => !v)}
                 className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-ink-mid hover:bg-cream transition-colors duration-[120ms]"

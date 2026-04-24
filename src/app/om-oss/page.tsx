@@ -56,7 +56,7 @@ export default function AboutPage() {
               },
               {
                 title: "Trygg handel",
-                desc: "Vipps-betaling og kjøperbeskyttelse. Du vet hvem du handler med.",
+                desc: "Kortbetaling og kjøperbeskyttelse. Du vet hvem du handler med.",
               },
             ].map((v) => (
               <div key={v.title} className="rounded-xl bg-cream p-5">
@@ -93,7 +93,7 @@ export default function AboutPage() {
           <p className="mt-3 text-ink-mid leading-relaxed">
             Så ble Sportsbytte bygget — en plattform der klubben er
             utgangspunktet, tilliten er innebygd og handelen er like enkel som
-            en Vipps-betaling. Vi er fremdeles tidlig, men fundamentet er
+            kortbetaling. Vi er fremdeles tidlig, men fundamentet er
             solid og klubbene som er med gir oss tydelige tilbakemeldinger om
             hva som fungerer.
           </p>
