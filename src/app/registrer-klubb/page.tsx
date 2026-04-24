@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useState, Suspense, type ChangeEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -8,7 +8,7 @@ import { contrastColor } from "@/lib/color";
 
 type Plan = "free" | "pro";
 
-export default function RegisterClubPage() {
+function RegisterClubPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const proSuccess = searchParams.get("pro") === "pending";
@@ -477,5 +477,13 @@ export default function RegisterClubPage() {
         Har du spørsmål? <Link href="/kontakt" className="text-forest hover:underline">Ta kontakt</Link> — vi svarer innen 24 timer.
       </p>
     </div>
+  );
+}
+
+export default function RegisterClubPage() {
+  return (
+    <Suspense>
+      <RegisterClubPageInner />
+    </Suspense>
   );
 }
