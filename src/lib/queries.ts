@@ -49,7 +49,12 @@ export async function getAllClubs(): Promise<Club[]> {
     .select("*")
     .order("members", { ascending: false });
   if (error) throw error;
-  return data;
+  // Pro clubs first (graceful: falls back if is_pro not yet in DB)
+  return [...data].sort((a, b) => {
+    const aP = (a as Club).is_pro ?? false;
+    const bP = (b as Club).is_pro ?? false;
+    return aP === bP ? 0 : aP ? -1 : 1;
+  });
 }
 
 export async function getClubBySlug(slug: string): Promise<Club | null> {

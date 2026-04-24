@@ -11,7 +11,9 @@ import { contrastColor } from "@/lib/color";
 import type { Club, ListingWithRelations, Profile } from "@/lib/queries";
 import type { MembershipWithProfile } from "@/lib/queries";
 
-type Tab = "oversikt" | "oppslag" | "annonser" | "medlemmer" | "foresporsler" | "utseende";
+type Tab = "oversikt" | "analyse" | "oppslag" | "annonser" | "medlemmer" | "foresporsler" | "utseende";
+
+const FREE_CSV_LIMIT = 20;
 
 type Inquiry = {
   id: number;
@@ -25,6 +27,7 @@ type Inquiry = {
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "oversikt", label: "Oversikt" },
+  { id: "analyse", label: "Analyse" },
   { id: "oppslag", label: "Oppslag" },
   { id: "annonser", label: "Annonser" },
   { id: "medlemmer", label: "Medlemmer" },
@@ -152,9 +155,11 @@ function InviteLinkSection({
 // ── CSV Import Section ────────────────────────────────────
 function CsvImportSection({
   club,
+  isPro,
   onImported,
 }: {
   club: Club;
+  isPro: boolean;
   onImported: () => Promise<void>;
 }) {
   const [rows, setRows] = useState<string[]>([]);
@@ -188,11 +193,11 @@ function CsvImportSection({
   }
 
   async function handleImport() {
-    if (rows.length === 0) return;
+    if (cappedRows.length === 0) return;
     setImporting(true);
     setImportError("");
     try {
-      for (const name of rows) {
+      for (const name of cappedRows) {
         let profileId: number;
         const { data: existing } = await supabase
           .from("profiles")
@@ -232,12 +237,18 @@ function CsvImportSection({
     setImporting(false);
   }
 
+  const cappedRows = !isPro && rows.length > FREE_CSV_LIMIT ? rows.slice(0, FREE_CSV_LIMIT) : rows;
+  const isOverLimit = !isPro && rows.length > FREE_CSV_LIMIT;
+
   return (
     <div>
       <div className="mb-5">
         <h2 className="font-display text-xl font-semibold text-ink">Importer fra CSV</h2>
         <p className="text-sm text-ink-light mt-1">
           Last opp en CSV-fil med medlemsnavn for å legge til mange på én gang.
+          {!isPro && (
+            <span className="ml-1 text-amber font-medium">Gratisplan: maks {FREE_CSV_LIMIT} per import.</span>
+          )}
         </p>
       </div>
       <div className="bg-white rounded-xl border border-border p-6 space-y-4">
@@ -257,9 +268,16 @@ function CsvImportSection({
 
         {rows.length > 0 && (
           <div>
-            <p className="text-sm font-medium text-ink mb-2">{rows.length} navn funnet:</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-ink">
+                {cappedRows.length}{isOverLimit ? ` av ${rows.length}` : ""} navn{isOverLimit ? " (begrenset)" : " funnet"}:
+              </p>
+              {isOverLimit && (
+                <span className="text-xs text-amber font-medium">Oppgrader til Pro for ubegrenset import</span>
+              )}
+            </div>
             <div className="max-h-40 overflow-y-auto rounded-lg border border-border bg-cream p-3 space-y-1">
-              {rows.map((name, i) => (
+              {cappedRows.map((name, i) => (
                 <p key={i} className="text-sm text-ink-mid">{name}</p>
               ))}
             </div>
@@ -270,7 +288,7 @@ function CsvImportSection({
               disabled={importing}
               className="mt-4 px-5 py-2.5 rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] disabled:opacity-50"
             >
-              {importing ? "Importerer..." : `Importer ${rows.length} medlemmer`}
+              {importing ? "Importerer..." : `Importer ${cappedRows.length} medlemmer`}
             </button>
           </div>
         )}
@@ -680,6 +698,123 @@ export default function ClubAdminPage({
         </div>
       )}
 
+      {/* ── Tab: Analyse ── */}
+      {activeTab === "analyse" && (() => {
+        const sold = listings.filter((l) => l.is_sold);
+        const active = listings.filter((l) => !l.is_sold);
+        const totalRevenue = sold.reduce((sum, l) => sum + l.price, 0);
+        const avgPrice = sold.length > 0 ? Math.round(totalRevenue / sold.length) : 0;
+
+        // Top categories
+        const catMap: Record<string, number> = {};
+        for (const l of listings) catMap[l.category] = (catMap[l.category] ?? 0) + 1;
+        const topCats = Object.entries(catMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6);
+        const maxCat = topCats[0]?.[1] ?? 1;
+
+        // Monthly activity (last 6 months)
+        const now = new Date();
+        const months: { label: string; count: number }[] = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const label = d.toLocaleDateString("nb-NO", { month: "short" });
+          const count = listings.filter((l) => {
+            const ld = new Date(l.created_at);
+            return ld.getFullYear() === d.getFullYear() && ld.getMonth() === d.getMonth();
+          }).length;
+          months.push({ label, count });
+        }
+        const maxMonth = Math.max(...months.map((m) => m.count), 1);
+
+        return (
+          <div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+              {[
+                { label: "Total omsetning", value: `${totalRevenue.toLocaleString("nb-NO")} kr` },
+                { label: "Solgte varer", value: sold.length.toString() },
+                { label: "Aktive annonser", value: active.length.toString() },
+                { label: "Gjennomsnittspris", value: sold.length > 0 ? `${avgPrice.toLocaleString("nb-NO")} kr` : "—" },
+              ].map((s) => (
+                <div key={s.label} className="bg-white rounded-xl p-5 border border-border">
+                  <p className="text-xs text-ink-light font-medium uppercase tracking-wider">{s.label}</p>
+                  <p className="mt-1 text-2xl font-bold font-display text-ink">{s.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Top categories */}
+              <div className="bg-white rounded-xl border border-border p-6">
+                <h3 className="font-display text-base font-semibold text-ink mb-4">Topp kategorier</h3>
+                {topCats.length === 0 ? (
+                  <p className="text-sm text-ink-light">Ingen annonser ennå.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {topCats.map(([cat, count]) => (
+                      <div key={cat}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="text-ink font-medium capitalize">{cat}</span>
+                          <span className="text-ink-light">{count}</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-forest-light overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-forest transition-all duration-500"
+                            style={{ width: `${(count / maxCat) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Monthly activity */}
+              <div className="bg-white rounded-xl border border-border p-6">
+                <h3 className="font-display text-base font-semibold text-ink mb-4">Aktivitet siste 6 måneder</h3>
+                <div className="flex items-end gap-2 h-32">
+                  {months.map((m) => (
+                    <div key={m.label} className="flex-1 flex flex-col items-center gap-1">
+                      <span className="text-[10px] text-ink-light font-medium">{m.count > 0 ? m.count : ""}</span>
+                      <div
+                        className="w-full rounded-t-md bg-forest transition-all duration-500"
+                        style={{ height: `${Math.max(4, (m.count / maxMonth) * 96)}px` }}
+                      />
+                      <span className="text-[10px] text-ink-light">{m.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Top sellers */}
+            <div className="bg-white rounded-xl border border-border p-6">
+              <h3 className="font-display text-base font-semibold text-ink mb-4">Mest aktive selgere</h3>
+              {sellers.length === 0 ? (
+                <p className="text-sm text-ink-light">Ingen selgere ennå.</p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {sellers.map((seller, i) => (
+                    <div key={seller.id} className="flex items-center gap-4 py-3">
+                      <span className="text-sm font-bold text-ink-light w-5 text-right flex-shrink-0">{i + 1}</span>
+                      <div className="h-9 w-9 rounded-full bg-forest-light flex items-center justify-center text-forest text-xs font-bold flex-shrink-0">
+                        {seller.avatar}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-ink truncate">{seller.name}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-bold text-forest">{seller.total_sold} solgt</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Tab: Oppslag ── */}
       {activeTab === "oppslag" && (
         <div className="max-w-2xl">
@@ -785,6 +920,7 @@ export default function ClubAdminPage({
           {/* CSV import */}
           <CsvImportSection
             club={club}
+            isPro={club.is_pro ?? false}
             onImported={async () => { if (club) await fetchMemberships(club.id); }}
           />
 

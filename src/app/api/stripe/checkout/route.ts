@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const { data: listing } = await admin
     .from("listings")
-    .select("id, title, price, is_sold, seller_id, images, profiles(id, stripe_account_id, stripe_onboarding_complete)")
+    .select("id, title, price, is_sold, seller_id, images, clubs(is_pro), profiles(id, stripe_account_id, stripe_onboarding_complete)")
     .eq("id", listing_id)
     .single();
 
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
   if (listing.is_sold) return NextResponse.json({ error: "Annonsen er allerede solgt" }, { status: 400 });
 
   const seller = listing.profiles as { id: number; stripe_account_id: string | null; stripe_onboarding_complete: boolean } | null;
+  const isPro = (listing.clubs as { is_pro: boolean } | null)?.is_pro ?? false;
 
   if (!seller?.stripe_account_id || !seller.stripe_onboarding_complete) {
     return NextResponse.json({ error: "Selgeren har ikke aktivert kortbetaling ennå" }, { status: 400 });
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
   const amountOre = listing.price * 100;
-  const feeOre = platformFee(listing.price);
+  const feeOre = platformFee(listing.price, isPro);
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",

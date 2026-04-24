@@ -21,7 +21,7 @@ const TABLE_MAP: Record<Resource, keyof Database["public"]["Tables"]> = {
 
 // Only these columns may be updated per resource — prevents arbitrary column injection
 const COLUMN_ALLOWLIST: Record<Resource, string[]> = {
-  club: ["name", "slug", "initials", "color", "secondary_color", "description", "logo_url", "is_membership_gated", "member_email_domain"],
+  club: ["name", "slug", "initials", "color", "secondary_color", "description", "logo_url", "is_membership_gated", "is_pro", "member_email_domain"],
   profile: ["name", "bio", "club_id", "total_sold"],
   listing: ["title", "price", "description", "is_sold", "condition", "category"],
   registration: ["status"],

@@ -31,7 +31,12 @@ export default async function ClubsPage() {
             href={`/klubb/${club.slug}`}
             className="group block bg-white rounded-xl overflow-hidden border border-border hover:shadow-md transition-all duration-300 hover:-translate-y-1"
           >
-            <div className="p-6" style={{ backgroundColor: club.color }}>
+            <div className="p-6 relative" style={{ backgroundColor: club.color }}>
+              {club.is_pro && (
+                <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-amber px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
+                  Pro
+                </span>
+              )}
               <div className="flex items-center gap-4">
                 {club.logo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element

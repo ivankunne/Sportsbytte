@@ -153,18 +153,37 @@ export default function JoinViaInvitePage({
     <div className="mx-auto max-w-sm px-4 py-16">
       {/* Club banner */}
       <div
-        className="rounded-2xl px-8 py-10 text-center mb-8"
+        className="rounded-2xl px-8 py-10 text-center mb-8 relative overflow-hidden"
         style={{ backgroundColor: club.color }}
       >
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20 text-white text-xl font-bold font-display border-2 border-white/30 mb-4">
-          {club.initials}
-        </div>
+        {club.is_pro && (
+          <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-amber px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow">
+            Pro
+          </span>
+        )}
+        {club.is_pro && club.logo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={club.logo_url}
+            alt={club.name}
+            className="mx-auto mb-4 h-24 w-24 rounded-full object-cover border-4 border-white/40 shadow-lg"
+          />
+        ) : (
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20 text-white text-xl font-bold font-display border-2 border-white/30 mb-4">
+            {club.initials}
+          </div>
+        )}
         <h1 className="font-display text-2xl font-bold text-white">{club.name}</h1>
         <p className="mt-1 text-sm text-white/75">
           {club.members.toLocaleString("nb-NO")} medlemmer
         </p>
         {club.description && (
           <p className="mt-2 text-sm text-white/80">{club.description}</p>
+        )}
+        {club.is_pro && (
+          <p className="mt-3 text-xs text-white/60">
+            Verifisert Pro-klubb på Sportsbytte
+          </p>
         )}
       </div>
 

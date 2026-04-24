@@ -1,7 +1,8 @@
 import Stripe from "stripe";
 
-// ─── Change this one number to adjust your platform cut ───
-export const PLATFORM_FEE_PERCENT = 5;
+// ─── Change these numbers to adjust your platform cut ─────
+export const PLATFORM_FEE_PERCENT = 5; // standard clubs
+export const PRO_FEE_PERCENT = 2;      // Pro clubs
 // ──────────────────────────────────────────────────────────
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -9,6 +10,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 /** Platform fee in øre (Stripe uses smallest currency unit) */
-export function platformFee(priceNok: number): number {
-  return Math.round(priceNok * PLATFORM_FEE_PERCENT);
+export function platformFee(priceNok: number, isPro = false): number {
+  const pct = isPro ? PRO_FEE_PERCENT : PLATFORM_FEE_PERCENT;
+  return Math.round(priceNok * pct);
 }

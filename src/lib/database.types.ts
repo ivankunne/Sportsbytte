@@ -144,6 +144,7 @@ export type Database = {
           initials: string
           invite_token: string | null
           is_membership_gated: boolean
+          is_pro: boolean
           logo_url: string | null
           member_email_domain: string | null
           members: number
@@ -163,6 +164,7 @@ export type Database = {
           initials: string
           invite_token?: string | null
           is_membership_gated?: boolean
+          is_pro?: boolean
           logo_url?: string | null
           member_email_domain?: string | null
           members?: number
@@ -182,6 +184,7 @@ export type Database = {
           initials?: string
           invite_token?: string | null
           is_membership_gated?: boolean
+          is_pro?: boolean
           logo_url?: string | null
           member_email_domain?: string | null
           members?: number

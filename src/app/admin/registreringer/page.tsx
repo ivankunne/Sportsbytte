@@ -41,6 +41,7 @@ type Club = {
   active_listings: number;
   total_sold: number;
   is_membership_gated: boolean;
+  is_pro: boolean;
   member_email_domain: string | null;
   created_at: string;
 };
@@ -590,6 +591,7 @@ function KlubberTab() {
       secondary_color: club.secondary_color ?? "",
       members: club.members,
       is_membership_gated: club.is_membership_gated,
+      is_pro: club.is_pro,
       member_email_domain: club.member_email_domain ?? "",
     });
     setConfirmDelete(false);
@@ -606,6 +608,7 @@ function KlubberTab() {
         secondary_color: form.secondary_color || null,
         members: form.members,
         is_membership_gated: form.is_membership_gated,
+        is_pro: form.is_pro ?? false,
         member_email_domain: form.member_email_domain || null,
       });
       showSuccess("Klubb oppdatert.");
@@ -704,6 +707,11 @@ function KlubberTab() {
                       <span className="font-medium text-ink truncate max-w-[140px]">
                         {club.name}
                       </span>
+                      {club.is_pro && (
+                        <span className="inline-flex items-center rounded-full bg-amber px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white flex-shrink-0">
+                          Pro
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-ink-mid font-mono text-xs hidden md:table-cell">
@@ -836,6 +844,21 @@ function KlubberTab() {
               <label htmlFor="gated" className="text-sm text-ink-mid cursor-pointer">
                 Lukket medlemskap
               </label>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg bg-amber-light border border-amber/30 px-3 py-2.5">
+              <input
+                type="checkbox"
+                id="is_pro"
+                checked={form.is_pro ?? false}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, is_pro: e.target.checked }))
+                }
+                className="h-4 w-4 rounded border-amber/40 text-amber focus:ring-amber/20"
+              />
+              <label htmlFor="is_pro" className="text-sm font-semibold text-amber cursor-pointer">
+                Pro-klubb
+              </label>
+              <span className="text-xs text-amber/70 ml-auto">2% gebyr · featured</span>
             </div>
             <div>
               <label className="block text-xs font-semibold text-ink-mid mb-1">
