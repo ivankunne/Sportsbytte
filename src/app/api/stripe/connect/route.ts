@@ -27,30 +27,38 @@ export async function POST(req: NextRequest) {
 
   if (!profile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
 
-  let accountId = profile.stripe_account_id as string | null;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!siteUrl) return NextResponse.json({ error: "NEXT_PUBLIC_SITE_URL er ikke satt i miljøvariabler" }, { status: 500 });
 
-  if (!accountId) {
-    const account = await stripe.accounts.create({
-      type: "express",
-      email: user.email,
-      capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
-      business_type: "individual",
+  try {
+    let accountId = profile.stripe_account_id as string | null;
+
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: "express",
+        email: user.email,
+        capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+        business_type: "individual",
+      });
+      accountId = account.id;
+
+      await admin
+        .from("profiles")
+        .update({ stripe_account_id: accountId, stripe_onboarding_complete: false })
+        .eq("id", profile.id);
+    }
+
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${siteUrl}/dashboard?tab=profil&stripe=refresh`,
+      return_url: `${siteUrl}/dashboard?tab=profil&stripe=success`,
+      type: "account_onboarding",
     });
-    accountId = account.id;
 
-    await admin
-      .from("profiles")
-      .update({ stripe_account_id: accountId, stripe_onboarding_complete: false })
-      .eq("id", profile.id);
+    return NextResponse.json({ url: accountLink.url });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Ukjent Stripe-feil";
+    console.error("Stripe connect error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
-  const accountLink = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: `${siteUrl}/dashboard?tab=profil&stripe=refresh`,
-    return_url: `${siteUrl}/dashboard?tab=profil&stripe=success`,
-    type: "account_onboarding",
-  });
-
-  return NextResponse.json({ url: accountLink.url });
 }
