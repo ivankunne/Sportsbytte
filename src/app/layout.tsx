@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { Toaster } from "@/components/Toaster";
 import { MobileNav } from "@/components/MobileNav";
 import { CookieBanner } from "@/components/CookieBanner";
+import { StripeOnboardingNudge } from "@/components/StripeOnboardingNudge";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -83,6 +84,7 @@ export default function RootLayout({
         <Toaster />
         <MobileNav />
         <CookieBanner />
+        <StripeOnboardingNudge />
       </body>
     </html>
   );
