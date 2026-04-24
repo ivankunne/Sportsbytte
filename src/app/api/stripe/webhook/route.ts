@@ -34,6 +34,26 @@ export async function POST(req: NextRequest) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
 
+      // ── Pro subscription via registration form ─────────
+      if (session.mode === "subscription" && session.metadata?.type === "pro_registration") {
+        const contactEmail = session.metadata.contact_email;
+        if (contactEmail) {
+          // Mark the pending registration as paid
+          const { data: reg } = await admin
+            .from("club_registrations")
+            .select("id, description")
+            .eq("email", contactEmail)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+          if (reg) {
+            const updatedDesc = (reg.description ?? "").replace("[PRO SØKNAD]", "[PRO BETALT]");
+            await admin.from("club_registrations").update({ description: updatedDesc }).eq("id", reg.id);
+          }
+        }
+        break;
+      }
+
       // ── Pro subscription purchase ──────────────────────
       if (session.mode === "subscription" && session.metadata?.type === "pro_subscription") {
         const clubId = Number(session.metadata.club_id);

@@ -3,6 +3,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
+const LOCK_KEY = "login_rate_limit";
+const LOCK_THRESHOLDS = [
+  { attempts: 5, durationMs: 5 * 60 * 1000 },
+  { attempts: 3, durationMs: 30 * 1000 },
+];
+
 type Club = {
   id: number;
   name: string;
@@ -30,6 +36,61 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [lockCountdown, setLockCountdown] = useState(0);
+
+  // Restore lock state from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LOCK_KEY);
+      if (stored) {
+        const { attempts, until } = JSON.parse(stored) as { attempts: number; until: number };
+        setFailedAttempts(attempts);
+        if (until > Date.now()) setLockedUntil(until);
+        else localStorage.removeItem(LOCK_KEY);
+      }
+    } catch {}
+  }, []);
+
+  // Countdown timer while locked
+  useEffect(() => {
+    if (!lockedUntil) return;
+    const tick = () => {
+      const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setLockedUntil(null);
+        setLockCountdown(0);
+        setFailedAttempts(0);
+        localStorage.removeItem(LOCK_KEY);
+      } else {
+        setLockCountdown(remaining);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [lockedUntil]);
+
+  function recordFailedAttempt() {
+    const next = failedAttempts + 1;
+    const threshold = LOCK_THRESHOLDS.find((t) => next >= t.attempts);
+    const until = threshold ? Date.now() + threshold.durationMs : 0;
+    setFailedAttempts(next);
+    if (until) {
+      setLockedUntil(until);
+      localStorage.setItem(LOCK_KEY, JSON.stringify({ attempts: next, until }));
+    } else {
+      localStorage.setItem(LOCK_KEY, JSON.stringify({ attempts: next, until: 0 }));
+    }
+  }
+
+  function resetLock() {
+    setFailedAttempts(0);
+    setLockedUntil(null);
+    setLockCountdown(0);
+    localStorage.removeItem(LOCK_KEY);
+  }
 
   // Fetch clubs once when entering signup mode
   useEffect(() => {
@@ -69,6 +130,10 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
   }
 
   async function handleSubmit() {
+    if (lockedUntil && lockedUntil > Date.now()) {
+      setError(`For mange mislykkede forsøk. Vent ${lockCountdown} sekunder.`);
+      return;
+    }
     setError("");
     setLoading(true);
     try {
@@ -77,8 +142,12 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
           email: form.email.trim(),
           password: form.password,
         });
-        if (error) throw error;
+        if (error) {
+          recordFailedAttempt();
+          throw error;
+        }
 
+        resetLock();
         const { data: profile } = await supabase
           .from("profiles")
           .select("name")
@@ -91,7 +160,9 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
           authUserId: data.user.id,
         });
       } else {
-        if (!form.name.trim()) throw new Error("Skriv inn ditt navn");
+        if (!form.name.trim() || form.name.trim().length < 2) throw new Error("Navn må være minst 2 tegn");
+        if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) throw new Error("Ugyldig e-postadresse");
+        if (form.password.length < 8) throw new Error("Passordet må være minst 8 tegn");
 
         const { data, error } = await supabase.auth.signUp({
           email: form.email.trim(),
@@ -358,12 +429,21 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
         </div>
       )}
 
+      {lockedUntil && lockedUntil > Date.now() && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-center">
+          <p className="text-xs font-medium text-red-600">
+            For mange mislykkede forsøk. Vent {lockCountdown} sekunder.
+          </p>
+        </div>
+      )}
+
       {error && <p className="text-xs text-red-500">{error}</p>}
 
       <button
         onClick={handleSubmit}
         disabled={
           loading ||
+          !!(lockedUntil && lockedUntil > Date.now()) ||
           !form.email.trim() ||
           !form.password ||
           (mode === "signup" && !form.name.trim())

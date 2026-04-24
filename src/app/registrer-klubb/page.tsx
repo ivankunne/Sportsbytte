@@ -1,15 +1,23 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { contrastColor } from "@/lib/color";
 
+type Plan = "free" | "pro";
+
 export default function RegisterClubPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const proSuccess = searchParams.get("pro") === "pending";
+
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Step 1
   const [clubName, setClubName] = useState("");
@@ -33,6 +41,30 @@ export default function RegisterClubPage() {
   const [secondaryColor, setSecondaryColor] = useState("");
   const [description, setDescription] = useState("");
 
+  // Step 4
+  const [plan, setPlan] = useState<Plan>("free");
+
+  function validate(step: number): boolean {
+    const e: Record<string, string> = {};
+    if (step === 1) {
+      if (!clubName.trim()) e.clubName = "Klubbnavn er påkrevd";
+      if (!sport) e.sport = "Velg en aktivitet";
+      if (!location.trim()) e.location = "Sted er påkrevd";
+    }
+    if (step === 2) {
+      if (!firstName.trim()) e.firstName = "Fornavn er påkrevd";
+      if (!lastName.trim()) e.lastName = "Etternavn er påkrevd";
+      if (!email.trim()) e.email = "E-post er påkrevd";
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = "Ugyldig e-postadresse";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function goNext() {
+    if (validate(step)) setStep(step + 1);
+  }
+
   async function handleLogoUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -43,14 +75,8 @@ export default function RegisterClubPage() {
     const { data, error } = await supabase.storage
       .from("listing-images")
       .upload(path, file, { upsert: true });
-    if (error) {
-      setLogoPreview("");
-      setLogoUploading(false);
-      return;
-    }
-    const { data: urlData } = supabase.storage
-      .from("listing-images")
-      .getPublicUrl(data.path);
+    if (error) { setLogoPreview(""); setLogoUploading(false); return; }
+    const { data: urlData } = supabase.storage.from("listing-images").getPublicUrl(data.path);
     setLogoUrl(urlData.publicUrl);
     setLogoUploading(false);
   }
@@ -65,18 +91,40 @@ export default function RegisterClubPage() {
         body: JSON.stringify({
           clubName, sport, location, memberCount, orgNumber,
           firstName, lastName, email, phone, role,
-          logoUrl, primaryColor, secondaryColor, description,
+          logoUrl, primaryColor, secondaryColor, description, plan,
         }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Sending feilet");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Sending feilet");
+
+      if (plan === "pro" && data.checkoutUrl) {
+        router.push(data.checkoutUrl);
+      } else {
+        setSubmitted(true);
       }
-      setSubmitted(true);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Noe gikk galt. Prøv igjen.");
     }
     setSubmitting(false);
+  }
+
+  if (proSuccess) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-24 text-center">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-light">
+          <svg className="h-10 w-10 text-amber" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h1 className="font-display text-3xl font-bold text-ink">Betaling mottatt!</h1>
+        <p className="mt-3 text-ink-mid leading-relaxed">
+          Søknaden og Pro-betalingen din er bekreftet. Vi setter opp klubben din og aktiverer Pro så snart søknaden er godkjent — vanligvis innen <strong>24 timer</strong>.
+        </p>
+        <div className="mt-8 flex flex-col gap-3">
+          <Link href="/" className="rounded-lg bg-amber px-6 py-3 text-sm font-semibold text-white hover:brightness-95 transition-colors duration-[120ms] text-center">Tilbake til forsiden</Link>
+        </div>
+      </div>
+    );
   }
 
   if (submitted) {
@@ -89,15 +137,11 @@ export default function RegisterClubPage() {
         </div>
         <h1 className="font-display text-3xl font-bold text-ink">Søknad mottatt!</h1>
         <p className="mt-3 text-ink-mid leading-relaxed">
-          Takk for at du vil registrere klubben din på Sportsbytte. Vi setter opp siden
-          og tar kontakt innen <strong>24 timer</strong> på e-posten du oppgav.
+          Takk for at du vil registrere <strong>{clubName}</strong> på Sportsbytte.
+          Vi setter opp siden og tar kontakt innen <strong>24 timer</strong>.
         </p>
         <div className="mt-8 rounded-2xl bg-forest-light border border-forest/10 p-6 text-left space-y-3">
-          {[
-            "Klubbsiden settes opp og tilpasses",
-            "Du får tilgang til admin-panelet",
-            "Vi hjelper deg med å invitere de første medlemmene",
-          ].map((item) => (
+          {["Klubbsiden settes opp og tilpasses", "Du får tilgang til admin-panelet", "Vi hjelper deg med å invitere de første medlemmene"].map((item) => (
             <div key={item} className="flex items-center gap-3">
               <svg className="h-5 w-5 text-forest flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
@@ -107,40 +151,57 @@ export default function RegisterClubPage() {
           ))}
         </div>
         <div className="mt-8 flex flex-col gap-3">
-          <Link href="/" className="rounded-lg bg-forest px-6 py-3 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] text-center">
-            Tilbake til forsiden
-          </Link>
-          <Link href="/utforsk" className="rounded-lg border border-border px-6 py-3 text-sm font-medium text-ink hover:bg-cream transition-colors duration-[120ms] text-center">
-            Utforsk annonser mens du venter
-          </Link>
+          <Link href="/" className="rounded-lg bg-forest px-6 py-3 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] text-center">Tilbake til forsiden</Link>
+          <Link href="/utforsk" className="rounded-lg border border-border px-6 py-3 text-sm font-medium text-ink hover:bg-cream transition-colors duration-[120ms] text-center">Utforsk annonser mens du venter</Link>
         </div>
       </div>
     );
   }
 
-  const inputCls = "w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest";
-  const selectCls = "w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest";
+  const inputCls = (field?: string) =>
+    `w-full rounded-lg border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest ${
+      field && errors[field] ? "border-red-400 bg-red-50" : "border-border"
+    }`;
+  const selectCls = (field?: string) =>
+    `w-full rounded-lg border px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest ${
+      field && errors[field] ? "border-red-400 bg-red-50" : "border-border"
+    }`;
+  const fieldErr = (field: string) =>
+    errors[field] ? <p className="mt-1 text-xs text-red-500">{errors[field]}</p> : null;
+
+  const STEPS = [
+    { n: 1, label: "Klubbinfo" },
+    { n: 2, label: "Kontakt" },
+    { n: 3, label: "Tilpass" },
+    { n: 4, label: "Plan" },
+  ];
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
       <div className="text-center mb-12">
-        <span className="text-xs font-bold text-amber uppercase tracking-wider">Kom i gang gratis</span>
+        <span className="text-xs font-bold text-amber uppercase tracking-wider">Kom i gang</span>
         <h1 className="mt-2 font-display text-3xl sm:text-4xl font-bold text-ink">Registrer din klubb</h1>
         <p className="mt-3 text-ink-mid max-w-lg mx-auto">
           Gi klubbens medlemmer en egen markedsplass for brukt utstyr. Gratis å sette opp, ingen bindingstid.
         </p>
       </div>
 
-      {/* Progress steps */}
-      <div className="flex items-center justify-center gap-4 mb-10">
-        {[{ n: 1, label: "Klubbinfo" }, { n: 2, label: "Kontaktperson" }, { n: 3, label: "Tilpass" }].map(({ n, label }) => (
-          <button key={n} onClick={() => setStep(n)} className="flex items-center gap-2">
-            <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-colors duration-[120ms] ${step >= n ? "bg-forest text-white" : "bg-border text-ink-light"}`}>
-              {n}
-            </span>
-            <span className={`text-sm font-medium hidden sm:block ${step >= n ? "text-ink" : "text-ink-light"}`}>{label}</span>
-            {n < 3 && <div className="w-12 h-px bg-border mx-2 hidden sm:block" />}
-          </button>
+      {/* Progress */}
+      <div className="flex items-center justify-center mb-10">
+        {STEPS.map(({ n, label }, i) => (
+          <div key={n} className="flex items-center">
+            <div className="flex items-center gap-2">
+              <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-colors duration-[120ms] ${step > n ? "bg-forest text-white" : step === n ? "bg-forest text-white ring-4 ring-forest/20" : "bg-border text-ink-light"}`}>
+                {step > n ? (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                ) : n}
+              </span>
+              <span className={`text-sm font-medium hidden sm:block ${step >= n ? "text-ink" : "text-ink-light"}`}>{label}</span>
+            </div>
+            {i < STEPS.length - 1 && <div className="w-8 sm:w-12 h-px bg-border mx-2" />}
+          </div>
         ))}
       </div>
 
@@ -151,43 +212,35 @@ export default function RegisterClubPage() {
           <div className="space-y-5">
             <h2 className="font-display text-xl font-semibold text-ink mb-6">Om klubben</h2>
             <div>
-              <label htmlFor="club-name" className="block text-sm font-medium text-ink mb-1.5">Klubbnavn *</label>
-              <input id="club-name" type="text" value={clubName} onChange={(e) => setClubName(e.target.value)} placeholder="F.eks. Bergen Skiklubb" className={inputCls} />
+              <label htmlFor="club-name" className="block text-sm font-medium text-ink mb-1.5">Klubbnavn <span className="text-red-400">*</span></label>
+              <input id="club-name" type="text" value={clubName} onChange={(e) => { setClubName(e.target.value); setErrors((p) => ({ ...p, clubName: "" })); }} placeholder="F.eks. Bergen Skiklubb" className={inputCls("clubName")} />
+              {fieldErr("clubName")}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label htmlFor="sport" className="block text-sm font-medium text-ink mb-1.5">Idrett / Aktivitet *</label>
-                <select id="sport" value={sport} onChange={(e) => setSport(e.target.value)} className={selectCls}>
+                <label htmlFor="sport" className="block text-sm font-medium text-ink mb-1.5">Idrett / Aktivitet <span className="text-red-400">*</span></label>
+                <select id="sport" value={sport} onChange={(e) => { setSport(e.target.value); setErrors((p) => ({ ...p, sport: "" })); }} className={selectCls("sport")}>
                   <option value="">Velg aktivitet</option>
-                  <option>Ski / Alpint</option>
-                  <option>Klatring</option>
-                  <option>Sykkel</option>
-                  <option>Løping</option>
-                  <option>Friluftsliv</option>
-                  <option>Fotball</option>
-                  <option>Håndball</option>
-                  <option>Annet</option>
+                  {["Ski / Alpint", "Klatring", "Sykkel", "Løping", "Friluftsliv", "Fotball", "Håndball", "Svømming", "Tennis", "Annet"].map((s) => <option key={s}>{s}</option>)}
                 </select>
+                {fieldErr("sport")}
               </div>
               <div>
-                <label htmlFor="location" className="block text-sm font-medium text-ink mb-1.5">Sted *</label>
-                <input id="location" type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="F.eks. Bergen" className={inputCls} />
+                <label htmlFor="location" className="block text-sm font-medium text-ink mb-1.5">Sted <span className="text-red-400">*</span></label>
+                <input id="location" type="text" value={location} onChange={(e) => { setLocation(e.target.value); setErrors((p) => ({ ...p, location: "" })); }} placeholder="F.eks. Bergen" className={inputCls("location")} />
+                {fieldErr("location")}
               </div>
             </div>
             <div>
               <label htmlFor="members" className="block text-sm font-medium text-ink mb-1.5">Ca. antall medlemmer</label>
-              <select id="members" value={memberCount} onChange={(e) => setMemberCount(e.target.value)} className={selectCls}>
+              <select id="members" value={memberCount} onChange={(e) => setMemberCount(e.target.value)} className={selectCls()}>
                 <option value="">Velg</option>
-                <option>Under 100</option>
-                <option>100–300</option>
-                <option>300–500</option>
-                <option>500–1000</option>
-                <option>Over 1000</option>
+                {["Under 100", "100–300", "300–500", "500–1000", "Over 1000"].map((s) => <option key={s}>{s}</option>)}
               </select>
             </div>
             <div>
-              <label htmlFor="org-number" className="block text-sm font-medium text-ink mb-1.5">Organisasjonsnummer (valgfritt)</label>
-              <input id="org-number" type="text" value={orgNumber} onChange={(e) => setOrgNumber(e.target.value)} placeholder="9 siffer fra Brønnøysundregistrene" className={inputCls} />
+              <label htmlFor="org-number" className="block text-sm font-medium text-ink mb-1.5">Organisasjonsnummer <span className="font-normal text-ink-light">(valgfritt)</span></label>
+              <input id="org-number" type="text" value={orgNumber} onChange={(e) => setOrgNumber(e.target.value)} placeholder="9 siffer fra Brønnøysundregistrene" className={inputCls()} />
             </div>
           </div>
         )}
@@ -198,31 +251,30 @@ export default function RegisterClubPage() {
             <h2 className="font-display text-xl font-semibold text-ink mb-6">Kontaktperson</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label htmlFor="first-name" className="block text-sm font-medium text-ink mb-1.5">Fornavn *</label>
-                <input id="first-name" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputCls} />
+                <label htmlFor="first-name" className="block text-sm font-medium text-ink mb-1.5">Fornavn <span className="text-red-400">*</span></label>
+                <input id="first-name" type="text" value={firstName} onChange={(e) => { setFirstName(e.target.value); setErrors((p) => ({ ...p, firstName: "" })); }} className={inputCls("firstName")} />
+                {fieldErr("firstName")}
               </div>
               <div>
-                <label htmlFor="last-name" className="block text-sm font-medium text-ink mb-1.5">Etternavn *</label>
-                <input id="last-name" type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputCls} />
+                <label htmlFor="last-name" className="block text-sm font-medium text-ink mb-1.5">Etternavn <span className="text-red-400">*</span></label>
+                <input id="last-name" type="text" value={lastName} onChange={(e) => { setLastName(e.target.value); setErrors((p) => ({ ...p, lastName: "" })); }} className={inputCls("lastName")} />
+                {fieldErr("lastName")}
               </div>
             </div>
             <div>
-              <label htmlFor="contact-email" className="block text-sm font-medium text-ink mb-1.5">E-post *</label>
-              <input id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="din@epost.no" className={inputCls} />
+              <label htmlFor="contact-email" className="block text-sm font-medium text-ink mb-1.5">E-post <span className="text-red-400">*</span></label>
+              <input id="contact-email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: "" })); }} placeholder="din@epost.no" className={inputCls("email")} />
+              {fieldErr("email")}
             </div>
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-ink mb-1.5">Telefon</label>
-              <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+47" className={inputCls} />
+              <label htmlFor="phone" className="block text-sm font-medium text-ink mb-1.5">Telefon <span className="font-normal text-ink-light">(valgfritt)</span></label>
+              <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+47" className={inputCls()} />
             </div>
             <div>
               <label htmlFor="role" className="block text-sm font-medium text-ink mb-1.5">Din rolle i klubben</label>
-              <select id="role" value={role} onChange={(e) => setRole(e.target.value)} className={selectCls}>
+              <select id="role" value={role} onChange={(e) => setRole(e.target.value)} className={selectCls()}>
                 <option value="">Velg rolle</option>
-                <option>Lagleder / Styreleder</option>
-                <option>Trener</option>
-                <option>Styremedlem</option>
-                <option>Frivillig</option>
-                <option>Medlem</option>
+                {["Lagleder / Styreleder", "Trener", "Styremedlem", "Frivillig", "Medlem"].map((r) => <option key={r}>{r}</option>)}
               </select>
             </div>
           </div>
@@ -231,16 +283,13 @@ export default function RegisterClubPage() {
         {/* ── Step 3 ── */}
         {step === 3 && (
           <div className="space-y-6">
-            <h2 className="font-display text-xl font-semibold text-ink">Tilpass klubbsiden</h2>
+            <h2 className="font-display text-xl font-semibold text-ink">Tilpass klubbsiden <span className="text-base font-normal text-ink-light">(valgfritt)</span></h2>
 
             {/* Logo */}
             <div>
               <label className="block text-sm font-medium text-ink mb-3">Klubblogo</label>
               <div className="flex items-center gap-4">
-                <div
-                  className="h-16 w-16 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden border-2 border-border"
-                  style={{ backgroundColor: logoPreview ? "transparent" : primaryColor }}
-                >
+                <div className="h-16 w-16 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden border-2 border-border" style={{ backgroundColor: logoPreview ? "transparent" : primaryColor }}>
                   {logoPreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={logoPreview} alt="Logo" className="h-full w-full object-cover" />
@@ -259,49 +308,34 @@ export default function RegisterClubPage() {
                     <input type="file" accept="image/*" className="sr-only" disabled={logoUploading} onChange={handleLogoUpload} />
                   </label>
                   {logoPreview && (
-                    <button type="button" onClick={() => { setLogoPreview(""); setLogoUrl(""); }} className="block text-xs text-ink-light hover:text-red-500 transition-colors duration-[120ms]">
-                      Fjern logo
-                    </button>
-                  )}
-                  {logoUrl && !logoUploading && (
-                    <p className="flex items-center gap-1 text-xs text-forest">
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                      </svg>
-                      Logo lastet opp
-                    </p>
+                    <button type="button" onClick={() => { setLogoPreview(""); setLogoUrl(""); }} className="block text-xs text-ink-light hover:text-red-500 transition-colors duration-[120ms]">Fjern logo</button>
                   )}
                 </div>
               </div>
-              <p className="text-xs text-ink-light mt-2">PNG, JPG eller SVG anbefales.</p>
             </div>
 
             {/* Colors */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-ink mb-2">Primærfarge *</label>
+                <label className="block text-sm font-medium text-ink mb-2">Primærfarge</label>
                 <div className="flex items-center gap-3">
                   <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="h-10 w-14 rounded-lg border border-border cursor-pointer" />
                   <input type="text" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} placeholder="#1a3c2e" className="flex-1 rounded-lg border border-border px-3 py-2 text-sm text-ink font-mono focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest" />
                 </div>
-                <p className="text-xs text-ink-light mt-1.5">Bannerfarge og hovedflater</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-ink mb-2">Sekundærfarge <span className="font-normal text-ink-light">(valgfritt)</span></label>
                 <div className="flex items-center gap-3">
                   <input type="color" value={secondaryColor || primaryColor} onChange={(e) => setSecondaryColor(e.target.value)} className="h-10 w-14 rounded-lg border border-border cursor-pointer" />
-                  <input type="text" value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} placeholder="Tomt = samme som primær" className="flex-1 rounded-lg border border-border px-3 py-2 text-sm text-ink font-mono focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest" />
+                  <input type="text" value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} placeholder="Tomt = primærfarge" className="flex-1 rounded-lg border border-border px-3 py-2 text-sm text-ink font-mono focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest" />
                   {secondaryColor && (
-                    <button type="button" onClick={() => setSecondaryColor("")} className="text-xs text-ink-light hover:text-red-500 transition-colors flex-shrink-0">
-                      Nullstill
-                    </button>
+                    <button type="button" onClick={() => setSecondaryColor("")} className="text-xs text-ink-light hover:text-red-500 transition-colors flex-shrink-0">Nullstill</button>
                   )}
                 </div>
-                <p className="text-xs text-ink-light mt-1.5">Knapper og accenter</p>
               </div>
             </div>
 
-            {/* Live preview */}
+            {/* Preview */}
             <div>
               <p className="text-xs font-semibold text-ink-light uppercase tracking-wider mb-2">Forhåndsvisning</p>
               <div className="rounded-xl overflow-hidden border border-border">
@@ -315,9 +349,7 @@ export default function RegisterClubPage() {
                     )}
                   </div>
                   <span className="text-white font-display font-bold truncate">{clubName || "Klubbnavnet ditt"}</span>
-                  <button type="button" className="ml-auto rounded-lg px-4 py-1.5 text-xs font-semibold flex-shrink-0" style={{ backgroundColor: secondaryColor || "#e8843a", color: contrastColor(secondaryColor || "#e8843a") }}>
-                    Bli med
-                  </button>
+                  <button type="button" className="ml-auto rounded-lg px-4 py-1.5 text-xs font-semibold flex-shrink-0" style={{ backgroundColor: secondaryColor || "#e8843a", color: contrastColor(secondaryColor || "#e8843a") }}>Bli med</button>
                 </div>
                 <div className="bg-white px-5 py-2.5">
                   <p className="text-xs text-ink-light">Slik ser klubbsiden ut for besøkende</p>
@@ -325,32 +357,87 @@ export default function RegisterClubPage() {
               </div>
             </div>
 
-            {/* Description */}
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-ink mb-1.5">Kort beskrivelse av klubben</label>
-              <textarea
-                id="description"
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Fortell litt om klubben, aktiviteter, og hvorfor dere vil bruke Sportsbytte..."
-                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
-              />
+              <textarea id="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Fortell litt om klubben, aktiviteter, og hvorfor dere vil bruke Sportsbytte..." className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none" />
             </div>
           </div>
         )}
 
+        {/* ── Step 4: Plan ── */}
+        {step === 4 && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-ink">Velg plan</h2>
+              <p className="text-sm text-ink-light mt-1">Du kan oppgradere eller nedgradere når som helst.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Free */}
+              <button
+                type="button"
+                onClick={() => setPlan("free")}
+                className={`rounded-xl border-2 p-5 text-left transition-all duration-[120ms] ${plan === "free" ? "border-forest bg-forest-light" : "border-border hover:border-forest/40"}`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-display text-lg font-semibold text-ink">Gratis</span>
+                  {plan === "free" && <span className="rounded-full bg-forest px-2.5 py-0.5 text-[10px] font-bold uppercase text-white">Valgt</span>}
+                </div>
+                <p className="text-2xl font-bold text-ink font-display">0 kr<span className="text-sm font-normal text-ink-light"> /mnd</span></p>
+                <p className="text-xs text-ink-light mt-0.5 mb-4">+ 5 % transaksjonsgebyr</p>
+                <ul className="space-y-2">
+                  {["Klubbside med logo og farger", "Invitasjonslenker + QR-kode", "CSV-import (maks 20 per gang)", "Analysetavle for admin"].map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-ink-light">
+                      <svg className="h-4 w-4 text-forest flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </button>
+
+              {/* Pro */}
+              <button
+                type="button"
+                onClick={() => setPlan("pro")}
+                className={`rounded-xl border-2 p-5 text-left transition-all duration-[120ms] ${plan === "pro" ? "border-amber bg-amber-light" : "border-border hover:border-amber/40"}`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-display text-lg font-semibold text-ink">Pro</span>
+                  {plan === "pro" && <span className="rounded-full bg-amber px-2.5 py-0.5 text-[10px] font-bold uppercase text-white">Valgt</span>}
+                </div>
+                <p className="text-2xl font-bold text-ink font-display">499 kr<span className="text-sm font-normal text-ink-light"> /mnd</span></p>
+                <p className="text-xs text-ink-light mt-0.5 mb-4">+ kun 2 % transaksjonsgebyr</p>
+                <ul className="space-y-2">
+                  {["Alt i Gratis-planen", "Redusert gebyr: 2 % (vs. 5 %)", "Prioritert synlighet på /klubber", "Ubegrenset CSV-import"].map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-ink-light">
+                      <svg className="h-4 w-4 text-amber flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </button>
+            </div>
+
+            {plan === "pro" && (
+              <p className="text-xs text-ink-light bg-amber-light rounded-lg px-4 py-3 border border-amber/20">
+                Du blir videresendt til sikker betaling via Stripe etter registrering. Abonnementet starter umiddelbart.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Navigation */}
         <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
           {step > 1 ? (
-            <button onClick={() => setStep(step - 1)} className="text-sm font-medium text-ink-light hover:text-ink transition-colors duration-[120ms]">
-              ← Tilbake
-            </button>
-          ) : (
-            <div />
-          )}
+            <button onClick={() => setStep(step - 1)} className="text-sm font-medium text-ink-light hover:text-ink transition-colors duration-[120ms]">← Tilbake</button>
+          ) : <div />}
 
-          {step < 3 ? (
-            <button onClick={() => setStep(step + 1)} className="rounded-lg bg-forest px-7 py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]">
+          {step < 4 ? (
+            <button onClick={goNext} className="rounded-lg bg-forest px-7 py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms]">
               Neste steg →
             </button>
           ) : (
@@ -360,19 +447,22 @@ export default function RegisterClubPage() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="rounded-lg bg-amber px-7 py-2.5 text-sm font-bold text-white hover:brightness-92 transition-colors duration-[120ms] disabled:opacity-50"
+                className={`rounded-lg px-7 py-2.5 text-sm font-bold text-white hover:brightness-95 transition-colors duration-[120ms] disabled:opacity-50 ${plan === "pro" ? "bg-amber" : "bg-forest hover:bg-forest-mid"}`}
               >
-                {submitting ? "Sender..." : "Registrer klubben"}
+                {submitting
+                  ? (plan === "pro" ? "Åpner betaling..." : "Sender...")
+                  : plan === "pro"
+                  ? "Registrer og betal for Pro →"
+                  : "Registrer klubben"}
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Benefits */}
       <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[
-          { title: "Gratis oppstart", desc: "Ingen kostnad for å sette opp klubbsiden. Betal kun for premium-funksjoner." },
+          { title: "Gratis oppstart", desc: "Ingen kostnad for å sette opp klubbsiden. Betal kun for Pro-funksjoner." },
           { title: "Klar på minutter", desc: "Vi setter opp alt. Del lenken med medlemmene og kom i gang med en gang." },
           { title: "Støtte hele veien", desc: "Dedikert kontaktperson hjelper deg med oppsett og lansering i klubben." },
         ].map((item) => (
