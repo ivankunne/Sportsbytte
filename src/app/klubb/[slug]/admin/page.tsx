@@ -674,11 +674,35 @@ export default function ClubAdminPage({
             </div>
           )}
           {club.is_pro ? (
-            <div className="mb-6 rounded-xl bg-amber-light border border-amber/30 px-5 py-4 flex items-center gap-3">
-              <svg className="h-5 w-5 text-amber flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              <p className="text-sm font-semibold text-amber">Pro-plan aktiv — 2 % gebyr og prioritert synlighet</p>
+            <div className="mb-6 rounded-xl bg-amber-light border border-amber/30 px-5 py-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <svg className="h-5 w-5 text-amber flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                <p className="text-sm font-semibold text-amber">Pro-plan aktiv — 2 % gebyr og prioritert synlighet</p>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!confirm("Er du sikker på at du vil avbryte Pro-abonnementet?")) return;
+                  setUpgrading(true);
+                  const res = await fetch("/api/stripe/pro-cancel", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-admin-secret": _adminSecret },
+                    body: JSON.stringify({ club_slug: slug }),
+                  });
+                  if (res.ok) {
+                    setClub((c) => c ? { ...c, is_pro: false } : c);
+                    showSuccess("Pro-abonnement avbrutt.");
+                  } else {
+                    showError("Kunne ikke avbryte abonnementet.");
+                  }
+                  setUpgrading(false);
+                }}
+                disabled={upgrading}
+                className="text-xs text-amber/70 hover:text-amber transition-colors duration-[120ms] flex-shrink-0 disabled:opacity-50"
+              >
+                Avbryt abonnement
+              </button>
             </div>
           ) : (
             <div className="mb-6 rounded-xl border border-border bg-white overflow-hidden">
