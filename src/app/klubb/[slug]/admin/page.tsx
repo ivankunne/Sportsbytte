@@ -424,11 +424,17 @@ export default function ClubAdminPage({
       return;
     }
     setClub({ ...club, ...branding, secondary_color: branding.secondary_color || null, description: branding.description || null, logo_url: branding.logo_url || null, member_email_domain: branding.member_email_domain || null });
-    await fetch("/api/revalidate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: `/klubb/${slug}` }),
-    });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await fetch("/api/revalidate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ path: `/klubb/${slug}` }),
+      });
+    }
     showSuccess("Endringer lagret");
   }
 

@@ -189,9 +189,15 @@ export default function SellPage() {
       if (listingType === "bulk" && form.quantity) specs["Antall"] = form.quantity;
       if (listingType === "bulk" && form.sizeRange) specs["Størrelser"] = form.sizeRange;
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Ikke innlogget");
+
       const res = await fetch("/api/create-listing", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           title: form.title.trim(),
           description: form.description.trim() || null,
@@ -201,7 +207,6 @@ export default function SellPage() {
           images: imageUrls,
           specs,
           club_id: selectedClubId,
-          seller_id: selectedProfileId,
           listing_type: listingType,
           members_only: form.membersOnly,
           quantity: listingType === "bulk" ? parseInt(form.quantity || "2") : null,

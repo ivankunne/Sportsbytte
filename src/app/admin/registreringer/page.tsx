@@ -97,13 +97,19 @@ const STATUS_LABELS: Record<string, { label: string; dot: string }> = {
 };
 
 // ---------------------------------------------------------------------------
+// Admin secret — set once on login, sent with every admin API call
+// ---------------------------------------------------------------------------
+
+let _adminSecret = "";
+
+// ---------------------------------------------------------------------------
 // Shared admin action helper
 // ---------------------------------------------------------------------------
 
 async function adminAction(resource: string, action: string, id: number, data?: object) {
   const res = await fetch("/api/admin/action", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-admin-secret": _adminSecret },
     body: JSON.stringify({ resource, action, id, data }),
   });
   if (!res.ok) {
@@ -219,7 +225,7 @@ function RegistreringerTab({
     if (status === "approved" && reg) {
       const res = await fetch("/api/approve-club", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-admin-secret": _adminSecret },
         body: JSON.stringify(reg),
       });
       if (!res.ok) {
@@ -1863,11 +1869,13 @@ export default function RegistreringerPage() {
 
   function handleLogin(e: { preventDefault(): void }) {
     e.preventDefault();
-    if (password === "demo2026") {
-      setAuthenticated(true);
-    } else {
-      setAuthError("Feil passord.");
+    if (!password.trim()) {
+      setAuthError("Skriv inn passord.");
+      return;
     }
+    // Store the typed password — verified server-side on first API call
+    _adminSecret = password;
+    setAuthenticated(true);
   }
 
   if (!authenticated) {
