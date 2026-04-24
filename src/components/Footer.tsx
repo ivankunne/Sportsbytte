@@ -113,6 +113,14 @@ export function Footer() {
           <div className="flex items-center gap-4">
             <span className="text-xs text-white/40">Trygg handel med</span>
             <Image
+              src="/stripelogo.png"
+              alt="Stripe"
+              width={56}
+              height={20}
+              className="h-5 w-auto opacity-60 hover:opacity-90 brightness-0 invert transition-opacity duration-[120ms]"
+            />
+            <span className="text-white/20">·</span>
+            <Image
               src="/Bring_logo.svg.png"
               alt="Bring"
               width={56}
