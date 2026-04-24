@@ -32,12 +32,12 @@ export function ListingCard({ listing }: Props) {
         }`}
       >
         {/* Image */}
-        <div className="relative aspect-[4/3] bg-[#f2f2f2] overflow-hidden">
+        <div className="relative aspect-[4/3] bg-[#f0f0f0] overflow-hidden">
           <Image
             src={thumbnailUrl(listing)}
             alt={listing.title}
             fill
-            className={`object-contain p-4 transition-transform duration-150 ${
+            className={`object-cover transition-transform duration-150 ${
               isSold ? "grayscale opacity-60" : "group-hover:scale-[1.04]"
             }`}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
