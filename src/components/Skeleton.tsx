@@ -4,16 +4,19 @@ function Bone({ className = "" }: { className?: string }) {
 
 export function ListingCardSkeleton() {
   return (
-    <div className="bg-white rounded-xl border border-border overflow-hidden">
-      <Bone className="aspect-[4/3] w-full rounded-none" />
+    <div className="bg-white rounded-2xl border border-border overflow-hidden">
+      <Bone className="aspect-square w-full rounded-none" />
       <div className="p-4 space-y-2.5">
-        <Bone className="h-3.5 w-4/5" />
-        <Bone className="h-3.5 w-3/5" />
-        <div className="flex items-center justify-between mt-3">
-          <Bone className="h-5 w-20" />
-          <Bone className="h-3.5 w-14" />
+        <Bone className="h-4 w-4/5" />
+        <Bone className="h-5 w-24" />
+        <Bone className="h-3 w-3/5" />
+        <div className="flex items-center justify-between pt-3 border-t border-border mt-3">
+          <div className="flex items-center gap-2">
+            <Bone className="h-6 w-6 rounded-full flex-shrink-0" />
+            <Bone className="h-3 w-16" />
+          </div>
+          <Bone className="h-3 w-24" />
         </div>
-        <Bone className="h-4 w-24" />
       </div>
     </div>
   );
