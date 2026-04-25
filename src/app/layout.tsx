@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     template: "%s | Sportsbytte",
   },
   description:
-    "Norges markedsplass for brukt sportsutstyr. Kjøp og selg direkte mellom klubbmedlemmer. Trygg kortbetaling, enkel frakt med Bring.",
+    "Norges markedsplass for brukt sportsutstyr. Kjøp og selg direkte mellom klubbmedlemmer. Trygg kortbetaling og kjøperbeskyttelse.",
   icons: {
     icon: "/favicon.png",
     apple: "/favicon.png",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     siteName: "Sportsbytte",
     title: "Sportsbytte — Kjøp og selg brukt sportsutstyr",
     description:
-      "Brukt sportsutstyr fra klubbmedlemmer. Trygg kortbetaling og frakt med Bring.",
+      "Brukt sportsutstyr fra klubbmedlemmer. Trygg kortbetaling og kjøperbeskyttelse.",
     images: [
       {
         url: "/opengraph-image",
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Sportsbytte — Kjøp og selg brukt sportsutstyr",
     description:
-      "Brukt sportsutstyr fra klubbmedlemmer. Trygg kortbetaling og frakt med Bring.",
+      "Brukt sportsutstyr fra klubbmedlemmer. Trygg kortbetaling og kjøperbeskyttelse.",
     images: ["/opengraph-image"],
   },
   robots: {

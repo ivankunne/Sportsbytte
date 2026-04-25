@@ -14,7 +14,7 @@ export function Footer() {
             </Link>
             <p className="mt-3 text-sm text-white/60 max-w-md">
               Norges markedsplass for brukt sportsutstyr. Klubbmedlemmer kjøper
-              og selger utstyr trygt — med kortbetaling og Bring-frakt.
+              og selger utstyr trygt — med kortbetaling og kjøperbeskyttelse.
             </p>
 
             {/* Social / contact links */}
@@ -116,14 +116,6 @@ export function Footer() {
             <img
               src="/stripelogo.png"
               alt="Stripe"
-              className="h-5 w-auto opacity-60 hover:opacity-90 brightness-0 invert transition-opacity duration-[120ms]"
-            />
-            <span className="text-white/20">·</span>
-            <Image
-              src="/Bring_logo.svg.png"
-              alt="Bring"
-              width={56}
-              height={20}
               className="h-5 w-auto opacity-60 hover:opacity-90 brightness-0 invert transition-opacity duration-[120ms]"
             />
           </div>
