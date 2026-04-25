@@ -28,12 +28,13 @@ export async function POST(req: NextRequest) {
 
   const { data: listing } = await admin
     .from("listings")
-    .select("id, title, price, is_sold, seller_id, images, clubs(is_pro), profiles(id, stripe_account_id, stripe_onboarding_complete, is_pro)")
+    .select("id, title, price, is_sold, seller_id, images, members_only, club_id, quantity, clubs(is_pro), profiles(id, stripe_account_id, stripe_onboarding_complete, is_pro)")
     .eq("id", listing_id)
     .single();
 
   if (!listing) return NextResponse.json({ error: "Annonse ikke funnet" }, { status: 404 });
   if (listing.is_sold) return NextResponse.json({ error: "Annonsen er allerede solgt" }, { status: 400 });
+  if (listing.quantity !== null && listing.quantity <= 0) return NextResponse.json({ error: "Annonsen er utsolgt" }, { status: 400 });
 
   const seller = listing.profiles as { id: number; stripe_account_id: string | null; stripe_onboarding_complete: boolean; is_pro?: boolean } | null;
   const clubIsPro = (listing.clubs as { is_pro: boolean } | null)?.is_pro ?? false;
@@ -51,6 +52,20 @@ export async function POST(req: NextRequest) {
     .single();
   if (buyerProfile?.id === seller.id) {
     return NextResponse.json({ error: "Du kan ikke kjøpe din egen annonse" }, { status: 400 });
+  }
+
+  // Enforce members_only listings — buyer must be an approved club member
+  if (listing.members_only && listing.club_id && buyerProfile) {
+    const { data: membership } = await admin
+      .from("memberships")
+      .select("status")
+      .eq("club_id", listing.club_id)
+      .eq("profile_id", buyerProfile.id)
+      .eq("status", "approved")
+      .maybeSingle();
+    if (!membership) {
+      return NextResponse.json({ error: "members_only" }, { status: 403 });
+    }
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;

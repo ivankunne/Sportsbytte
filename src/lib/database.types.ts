@@ -205,13 +205,14 @@ export type Database = {
       }
       listings: {
         Row: {
+          boosted_until: string | null
+          buyer_profile_id: number | null
           category: string
           club_id: number
           condition: string
           created_at: string
-          description: string | null
-          boosted_until: string | null
           delivery_method: string | null
+          description: string | null
           id: number
           images: string[]
           is_boosted: boolean
@@ -229,6 +230,7 @@ export type Database = {
         }
         Insert: {
           boosted_until?: string | null
+          buyer_profile_id?: number | null
           category: string
           club_id: number
           condition: string
@@ -252,6 +254,7 @@ export type Database = {
         }
         Update: {
           boosted_until?: string | null
+          buyer_profile_id?: number | null
           category?: string
           club_id?: number
           condition?: string

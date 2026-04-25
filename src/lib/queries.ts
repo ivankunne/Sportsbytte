@@ -34,11 +34,8 @@ export function formatDaysAgo(dateStr: string): string {
   return `${d} dager siden`;
 }
 
-// Helper to get the first image as a thumbnail (400x300)
 export function thumbnailUrl(listing: Listing): string {
-  const img = listing.images?.[0];
-  if (!img) return "https://picsum.photos/seed/default/400/300";
-  return img.replace(/\/\d+\/\d+$/, "/400/300");
+  return listing.images?.[0] ?? "/placeholder-listing.svg";
 }
 
 // ─── Clubs ──────────────────────────────────────────────

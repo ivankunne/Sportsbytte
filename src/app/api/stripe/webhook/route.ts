@@ -97,7 +97,29 @@ export async function POST(req: NextRequest) {
       const buyerAuthId = session.metadata?.buyer_auth_id ?? null;
       if (!listingId) break;
 
-      await admin.from("listings").update({ is_sold: true }).eq("id", listingId);
+      // Resolve buyer profile for purchase tracking and bulk quantity handling
+      let buyerProfileId: number | null = null;
+      if (buyerAuthId) {
+        const { data: bp } = await admin.from("profiles").select("id").eq("auth_user_id", buyerAuthId).maybeSingle();
+        buyerProfileId = bp?.id ?? null;
+      }
+
+      // For bulk listings: decrement quantity; mark sold only when stock hits 0
+      const { data: listingStock } = await admin
+        .from("listings")
+        .select("quantity")
+        .eq("id", listingId)
+        .single();
+
+      const qty = listingStock?.quantity ?? null;
+      if (qty !== null && qty > 1) {
+        await admin.from("listings").update({ quantity: qty - 1 }).eq("id", listingId);
+      } else {
+        await admin.from("listings").update({
+          is_sold: true,
+          ...(buyerProfileId ? { buyer_profile_id: buyerProfileId } : {}),
+        }).eq("id", listingId);
+      }
 
       const { data: listing } = await admin
         .from("listings")
@@ -119,17 +141,29 @@ export async function POST(req: NextRequest) {
             .eq("id", listing.seller_id);
         }
 
-        // Keep club stats in sync
-        const { data: club } = await admin
-          .from("clubs")
-          .select("total_sold, active_listings")
-          .eq("id", listing.club_id)
-          .single();
-        if (club) {
-          await admin.from("clubs").update({
-            total_sold: club.total_sold + 1,
-            active_listings: Math.max(0, club.active_listings - 1),
-          }).eq("id", listing.club_id);
+        // Keep club stats in sync (only decrement active_listings when fully sold)
+        if (qty === null || qty <= 1) {
+          const { data: club } = await admin
+            .from("clubs")
+            .select("total_sold, active_listings")
+            .eq("id", listing.club_id)
+            .single();
+          if (club) {
+            await admin.from("clubs").update({
+              total_sold: club.total_sold + 1,
+              active_listings: Math.max(0, club.active_listings - 1),
+            }).eq("id", listing.club_id);
+          }
+        } else {
+          // Bulk: only increment total_sold
+          const { data: club } = await admin
+            .from("clubs")
+            .select("total_sold")
+            .eq("id", listing.club_id)
+            .single();
+          if (club) {
+            await admin.from("clubs").update({ total_sold: club.total_sold + 1 }).eq("id", listing.club_id);
+          }
         }
 
         // Notify seller via email

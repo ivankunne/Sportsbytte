@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" fill="#f0efeb"/>
+  <!-- Jersey body -->
+  <rect x="155" y="118" width="90" height="112" rx="5" fill="#d8d6d0"/>
+  <!-- Left sleeve -->
+  <polygon points="155,132 120,105 100,138 148,148" fill="#d8d6d0"/>
+  <!-- Right sleeve -->
+  <polygon points="245,132 280,105 300,138 252,148" fill="#d8d6d0"/>
+  <!-- Collar -->
+  <path d="M175 118 Q200 106 225 118" stroke="#c4c2bc" stroke-width="7" stroke-linecap="round" fill="none"/>
+</svg>

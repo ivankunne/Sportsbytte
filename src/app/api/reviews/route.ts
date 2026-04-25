@@ -68,6 +68,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "already_reviewed" }, { status: 409 });
   }
 
+  // Require a completed purchase before allowing a review
+  const { data: purchase } = await admin
+    .from("listings")
+    .select("id")
+    .eq("seller_id", profile_id)
+    .eq("buyer_profile_id", reviewerProfile.id)
+    .eq("is_sold", true)
+    .limit(1)
+    .maybeSingle();
+  if (!purchase) {
+    return NextResponse.json({ error: "no_purchase" }, { status: 403 });
+  }
+
   const { error: insertError } = await admin.from("reviews").insert({
     profile_id,
     rating,

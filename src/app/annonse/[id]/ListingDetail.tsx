@@ -30,6 +30,8 @@ export function ListingDetail({ id }: { id: string }) {
   const [ratingComment, setRatingComment] = useState("");
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [ratingLoading, setRatingLoading] = useState(false);
+  const [isMembersOnly, setIsMembersOnly] = useState(false);
+  const [isApprovedMember, setIsApprovedMember] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
 
   // Close share dropdown on outside click
@@ -59,6 +61,19 @@ export function ListingDetail({ id }: { id: string }) {
       const l = data as ListingWithRelations;
       setListing(l);
       setIsSold(l.is_sold);
+
+      // Check members_only access
+      if (l.members_only && l.club_id) {
+        setIsMembersOnly(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: prof } = await supabase.from("profiles").select("id").eq("auth_user_id", session.user.id).maybeSingle();
+          if (prof) {
+            const { data: mem } = await supabase.from("memberships").select("status").eq("club_id", l.club_id).eq("profile_id", prof.id).eq("status", "approved").maybeSingle();
+            setIsApprovedMember(!!mem);
+          }
+        }
+      }
 
       const cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
       const soldFilter = `is_sold.eq.false,and(is_sold.eq.true,updated_at.gt.${cutoff})`;
@@ -105,7 +120,7 @@ export function ListingDetail({ id }: { id: string }) {
   }
 
 
-  const images = listing.images.length > 0 ? listing.images : ["https://picsum.photos/seed/default/800/600"];
+  const images = listing.images.length > 0 ? listing.images : ["/placeholder-listing.svg"];
   const specs = listing.specs as Record<string, string> | null;
 
   async function copyLink() {
@@ -143,6 +158,8 @@ export function ListingDetail({ id }: { id: string }) {
         if (reviewRes.error === "already_reviewed") {
           setRatingSubmitted(true);
           showError("Du har allerede vurdert denne selgeren.");
+        } else if (reviewRes.error === "no_purchase") {
+          showError("Du kan bare vurdere selgere du har kjøpt fra.");
         } else {
           throw new Error();
         }
@@ -180,6 +197,8 @@ export function ListingDetail({ id }: { id: string }) {
       } else {
         if (json.error === "seller_onboarding_incomplete") {
           showError("Selgeren har ikke fullført betalingsoppsettet sitt ennå. Send dem en melding og be dem fullføre det.");
+        } else if (json.error === "members_only") {
+          showError("Denne annonsen er kun for godkjente klubbmedlemmer.");
         } else {
           showError(json.error ?? "Noe gikk galt");
         }
@@ -301,12 +320,15 @@ export function ListingDetail({ id }: { id: string }) {
                 {listing.title}
               </h1>
 
-              <div className="flex items-baseline gap-2 mt-4 mb-6">
+              <div className="flex items-baseline gap-2 mt-4 mb-2">
                 <span className="text-3xl font-display font-bold text-forest">
                   {listing.price.toLocaleString("nb-NO")}
                 </span>
                 <span className="text-lg text-ink-mid">kr</span>
               </div>
+              {listing.listing_type === "bulk" && listing.quantity !== null && listing.quantity > 0 && (
+                <p className="text-xs text-ink-light mb-5">{listing.quantity} igjen på lager</p>
+              )}
 
               {isSold ? (
                 <div className="mb-6 space-y-4">
@@ -348,6 +370,22 @@ export function ListingDetail({ id }: { id: string }) {
               ) : listing.listing_type === "iso" ? (
                 <div className="mb-6 rounded-lg bg-amber-light border border-amber/30 py-3.5 px-4 text-sm text-amber-dark text-center font-medium">
                   Dette er et ettersøk — personen ønsker å kjøpe dette utstyret
+                </div>
+              ) : isMembersOnly && !isApprovedMember ? (
+                <div className="mb-6 rounded-lg border border-border bg-cream px-4 py-5 text-center space-y-2">
+                  <svg className="mx-auto h-6 w-6 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                  </svg>
+                  <p className="text-sm font-semibold text-ink">Kun for klubbmedlemmer</p>
+                  <p className="text-xs text-ink-light">Du må være godkjent medlem av klubben for å kjøpe denne annonsen.</p>
+                  {listing.club_id && (listing.clubs as { slug?: string })?.slug && (
+                    <Link
+                      href={`/klubb/${(listing.clubs as { slug: string }).slug}`}
+                      className="inline-block mt-1 text-xs font-semibold text-forest hover:underline"
+                    >
+                      Søk om medlemskap →
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3 mb-6">
