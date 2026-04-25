@@ -28,15 +28,16 @@ export async function POST(req: NextRequest) {
 
   const { data: listing } = await admin
     .from("listings")
-    .select("id, title, price, is_sold, seller_id, images, clubs(is_pro), profiles(id, stripe_account_id, stripe_onboarding_complete)")
+    .select("id, title, price, is_sold, seller_id, images, clubs(is_pro), profiles(id, stripe_account_id, stripe_onboarding_complete, is_pro)")
     .eq("id", listing_id)
     .single();
 
   if (!listing) return NextResponse.json({ error: "Annonse ikke funnet" }, { status: 404 });
   if (listing.is_sold) return NextResponse.json({ error: "Annonsen er allerede solgt" }, { status: 400 });
 
-  const seller = listing.profiles as { id: number; stripe_account_id: string | null; stripe_onboarding_complete: boolean } | null;
-  const isPro = (listing.clubs as { is_pro: boolean } | null)?.is_pro ?? false;
+  const seller = listing.profiles as { id: number; stripe_account_id: string | null; stripe_onboarding_complete: boolean; is_pro?: boolean } | null;
+  const clubIsPro = (listing.clubs as { is_pro: boolean } | null)?.is_pro ?? false;
+  const isPro = clubIsPro || (seller?.is_pro ?? false);
 
   if (!seller?.stripe_account_id || !seller.stripe_onboarding_complete) {
     return NextResponse.json({ error: "seller_onboarding_incomplete" }, { status: 400 });

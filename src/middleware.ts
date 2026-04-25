@@ -11,6 +11,9 @@ const BEARER_ROUTES = [
   "/api/reviews",
   "/api/notify-welcome",
   "/api/inquiry",
+  "/api/stripe/seller-pro-subscribe",
+  "/api/stripe/seller-pro-cancel",
+  "/api/stripe/boost-listing",
 ];
 
 export async function middleware(req: NextRequest) {

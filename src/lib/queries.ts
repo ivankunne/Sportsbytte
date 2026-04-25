@@ -87,6 +87,7 @@ export async function getFeaturedListings(
     .from("listings")
     .select("*, clubs(*), profiles(*)")
     .eq("is_sold", false)
+    .order("is_boosted", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -98,6 +99,7 @@ export async function getAllListings(): Promise<ListingWithRelations[]> {
     .from("listings")
     .select("*, clubs(*), profiles(*)")
     .eq("is_sold", false)
+    .order("is_boosted", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as ListingWithRelations[];
@@ -111,6 +113,7 @@ export async function getListingsByClub(
     .select("*, clubs(*), profiles(*)")
     .eq("club_id", clubId)
     .eq("is_sold", false)
+    .order("is_boosted", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as ListingWithRelations[];
@@ -386,6 +389,8 @@ export async function searchListings(
   }
 
   if (category) q = q.ilike("category", `%${category}%`);
+
+  q = q.order("is_boosted", { ascending: false });
 
   switch (sort) {
     case "pris-lav":

@@ -21,6 +21,8 @@ type UserProfile = {
   rating: number;
   stripe_account_id: string | null;
   stripe_onboarding_complete: boolean;
+  is_pro: boolean;
+  stripe_subscription_id: string | null;
 };
 
 type ConvListing = { id: number; title: string; price: number };
@@ -52,6 +54,8 @@ type MyListing = {
   category: string;
   condition: string;
   is_sold: boolean;
+  is_boosted: boolean;
+  boosted_until: string | null;
   views: number;
   images: string[];
   created_at: string;
@@ -80,6 +84,8 @@ function DashboardContent() {
   const initialTab = (searchParams.get("tab") as Tab | null) ?? "innboks";
   const [tab, setTab] = useState<Tab>(initialTab);
   const stripeReturn = searchParams.get("stripe");
+  const proReturn = searchParams.get("pro");
+  const boostReturn = searchParams.get("boost");
 
   useEffect(() => {
     let mounted = true;
@@ -99,10 +105,13 @@ function DashboardContent() {
       setLoading(false);
       localStorage.setItem("dashboard_last_visited", new Date().toISOString());
       if (stripeReturn === "success") {
-        // Profile will update via webhook; show optimistic message
         showSuccess("Stripe-oppsett fullført! Kortbetaling er nå aktivert på annonser dine.");
       } else if (stripeReturn === "refresh") {
         showError("Stripe-oppsett ikke fullført. Prøv igjen.");
+      } else if (proReturn === "success") {
+        showSuccess("Velkommen som Selger Pro! Du betaler nå kun 2% gebyr på salg.");
+      } else if (boostReturn === "success") {
+        showSuccess("Annonsen er nå fremhevet i 7 dager!");
       }
     }
 
@@ -114,7 +123,7 @@ function DashboardContent() {
     });
 
     return () => { mounted = false; subscription.unsubscribe(); };
-  }, [router]);
+  }, [router, stripeReturn, proReturn, boostReturn]);
 
   if (loading) {
     return (
@@ -585,11 +594,29 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ title: "", price: "" });
+  const [boosting, setBoosting] = useState<number | null>(null);
+
+  async function boostListing(listingId: number) {
+    setBoosting(listingId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setBoosting(null); return; }
+    const res = await fetch("/api/stripe/boost-listing", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ listing_id: listingId }),
+    });
+    const json = await res.json();
+    if (json.url) window.location.href = json.url;
+    else { showError(json.error ?? "Noe gikk galt"); setBoosting(null); }
+  }
 
   useEffect(() => {
     supabase
       .from("listings")
-      .select("id, title, price, category, condition, is_sold, views, images, created_at")
+      .select("id, title, price, category, condition, is_sold, is_boosted, boosted_until, views, images, created_at")
       .eq("seller_id", profile.id)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
@@ -753,6 +780,22 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
                 >
                   Rediger
                 </button>
+                {!listing.is_sold && (() => {
+                  const isActiveBoosted = listing.is_boosted && listing.boosted_until && new Date(listing.boosted_until) > new Date();
+                  return isActiveBoosted ? (
+                    <span className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-amber-50 text-amber-700">
+                      ★ Fremhevet
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => boostListing(listing.id)}
+                      disabled={boosting === listing.id}
+                      className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                    >
+                      {boosting === listing.id ? "..." : "Fremhev"}
+                    </button>
+                  );
+                })()}
                 <button
                   onClick={() => toggleSold(listing.id, listing.is_sold)}
                   className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
@@ -853,6 +896,88 @@ function StripeConnectCard({ profile }: { profile: UserProfile }) {
           className="w-full rounded-lg bg-[#635bff] py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {loading ? "Åpner Stripe..." : "Koble til Stripe"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Selger Pro card ─────────────────────────────────────
+
+function SelgerProCard({ profile }: { profile: UserProfile }) {
+  const [loading, setLoading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  async function handleSubscribe() {
+    setLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setLoading(false); return; }
+    const res = await fetch("/api/stripe/seller-pro-subscribe", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${session.access_token}` },
+    });
+    const json = await res.json();
+    if (json.url) window.location.href = json.url;
+    else { showError(json.error ?? "Noe gikk galt"); setLoading(false); }
+  }
+
+  async function handleCancel() {
+    if (!confirm("Er du sikker på at du vil avslutte Selger Pro?")) return;
+    setCancelling(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setCancelling(false); return; }
+    const res = await fetch("/api/stripe/seller-pro-cancel", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${session.access_token}` },
+    });
+    const json = await res.json();
+    if (json.ok) {
+      showSuccess("Abonnementet er avsluttet.");
+      window.location.reload();
+    } else {
+      showError(json.error ?? "Noe gikk galt");
+      setCancelling(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl p-6">
+      <div className="flex items-center gap-2 mb-1">
+        <h2 className="font-display text-base font-semibold text-ink">Selger Pro</h2>
+        {profile.is_pro && (
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 tracking-wide">PRO</span>
+        )}
+      </div>
+      <p className="text-xs text-ink-light mb-4">
+        {profile.is_pro
+          ? "Du er Pro-selger — du betaler kun 2% transaksjonsgebyr på salg."
+          : "Oppgrader til Pro og betal kun 2% transaksjonsgebyr (mot 5% standard). 99 kr/mnd, avbryt når som helst."}
+      </p>
+
+      {profile.is_pro ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+            <span className="text-amber-600 font-bold text-lg">★</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Selger Pro aktiv</p>
+              <p className="text-xs text-amber-700">2% gebyr · Fremhevede annonser</p>
+            </div>
+          </div>
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="w-full rounded-lg border border-border py-2.5 text-sm font-medium text-ink-mid hover:bg-cream transition-colors disabled:opacity-50"
+          >
+            {cancelling ? "Avslutter..." : "Avslutt abonnement"}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleSubscribe}
+          disabled={loading}
+          className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-colors disabled:opacity-50"
+        >
+          {loading ? "Åpner betaling..." : "Bli Pro — 99 kr/mnd"}
         </button>
       )}
     </div>
@@ -1003,6 +1128,8 @@ function ProfilTab({
       </div>
 
       <StripeConnectCard profile={profile} />
+
+      <SelgerProCard profile={profile} />
 
       <div className="bg-white rounded-xl p-6">
         <h2 className="font-display text-base font-semibold text-ink mb-4">Din statistikk</h2>

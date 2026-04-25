@@ -67,6 +67,31 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      // ── Seller Pro subscription ────────────────────────
+      if (session.mode === "subscription" && session.metadata?.type === "seller_pro_subscription") {
+        const profileId = Number(session.metadata.profile_id);
+        if (profileId) {
+          await admin.from("profiles").update({
+            is_pro: true,
+            stripe_subscription_id: String(session.subscription ?? ""),
+          }).eq("id", profileId);
+        }
+        break;
+      }
+
+      // ── Listing boost payment ──────────────────────────
+      if (session.mode === "payment" && session.metadata?.type === "listing_boost") {
+        const listingId = Number(session.metadata.listing_id);
+        if (listingId) {
+          const boostedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          await admin.from("listings").update({
+            is_boosted: true,
+            boosted_until: boostedUntil,
+          }).eq("id", listingId);
+        }
+        break;
+      }
+
       // ── Listing payment ────────────────────────────────
       const listingId = Number(session.metadata?.listing_id);
       const buyerAuthId = session.metadata?.buyer_auth_id ?? null;
@@ -148,10 +173,14 @@ export async function POST(req: NextRequest) {
 
     case "customer.subscription.deleted": {
       const sub = event.data.object as Stripe.Subscription;
-      await admin
-        .from("clubs")
-        .update({ is_pro: false, stripe_subscription_id: null })
-        .eq("stripe_subscription_id", sub.id);
+      await Promise.all([
+        admin.from("clubs")
+          .update({ is_pro: false, stripe_subscription_id: null })
+          .eq("stripe_subscription_id", sub.id),
+        admin.from("profiles")
+          .update({ is_pro: false, stripe_subscription_id: null })
+          .eq("stripe_subscription_id", sub.id),
+      ]);
       break;
     }
   }

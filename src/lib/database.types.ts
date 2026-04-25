@@ -210,8 +210,10 @@ export type Database = {
           condition: string
           created_at: string
           description: string | null
+          boosted_until: string | null
           id: number
           images: string[]
+          is_boosted: boolean
           is_sold: boolean
           listing_type: string
           members_only: boolean
@@ -225,6 +227,7 @@ export type Database = {
           views: number
         }
         Insert: {
+          boosted_until?: string | null
           category: string
           club_id: number
           condition: string
@@ -232,6 +235,7 @@ export type Database = {
           description?: string | null
           id?: never
           images?: string[]
+          is_boosted?: boolean
           is_sold?: boolean
           listing_type?: string
           members_only?: boolean
@@ -245,6 +249,7 @@ export type Database = {
           views?: number
         }
         Update: {
+          boosted_until?: string | null
           category?: string
           club_id?: number
           condition?: string
@@ -252,6 +257,7 @@ export type Database = {
           description?: string | null
           id?: never
           images?: string[]
+          is_boosted?: boolean
           is_sold?: boolean
           listing_type?: string
           members_only?: boolean
@@ -339,8 +345,10 @@ export type Database = {
           name: string
           rating: number
           slug: string
+          is_pro: boolean
           stripe_account_id: string | null
           stripe_onboarding_complete: boolean
+          stripe_subscription_id: string | null
           total_sold: number
           updated_at: string
           vipps_phone: string | null
@@ -353,12 +361,14 @@ export type Database = {
           club_id?: number | null
           created_at?: string
           id?: never
+          is_pro?: boolean
           member_since?: string
           name: string
           rating?: number
           slug: string
           stripe_account_id?: string | null
           stripe_onboarding_complete?: boolean
+          stripe_subscription_id?: string | null
           total_sold?: number
           updated_at?: string
           vipps_phone?: string | null
@@ -371,12 +381,14 @@ export type Database = {
           club_id?: number | null
           created_at?: string
           id?: never
+          is_pro?: boolean
           member_since?: string
           name?: string
           rating?: number
           slug?: string
           stripe_account_id?: string | null
           stripe_onboarding_complete?: boolean
+          stripe_subscription_id?: string | null
           total_sold?: number
           updated_at?: string
           vipps_phone?: string | null

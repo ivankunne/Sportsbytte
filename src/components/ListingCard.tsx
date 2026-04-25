@@ -15,6 +15,10 @@ export function ListingCard({ listing }: Props) {
   const [saved, setSaved] = useState(false);
   const isSold = listing.is_sold;
   const seller = listing.profiles;
+  const isBoosted =
+    listing.is_boosted &&
+    listing.boosted_until != null &&
+    new Date(listing.boosted_until) > new Date();
 
   const nameParts = seller.name.trim().split(/\s+/);
   const displayName =
@@ -44,7 +48,7 @@ export function ListingCard({ listing }: Props) {
           />
 
           {/* Status badge */}
-          <div className="absolute top-3 left-3">
+          <div className="absolute top-3 left-3 flex flex-col gap-1.5">
             {isSold ? (
               <span className="inline-flex items-center rounded-full bg-gray-200/90 px-3 py-1 text-xs font-semibold text-gray-400 backdrop-blur-sm">
                 Solgt
@@ -52,6 +56,11 @@ export function ListingCard({ listing }: Props) {
             ) : (
               <span className="inline-flex items-center rounded-full bg-forest px-3 py-1 text-xs font-semibold text-white shadow-sm">
                 Til salgs
+              </span>
+            )}
+            {isBoosted && !isSold && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/90 px-3 py-1 text-xs font-semibold text-amber-900 backdrop-blur-sm shadow-sm">
+                ★ Fremhevet
               </span>
             )}
           </div>
