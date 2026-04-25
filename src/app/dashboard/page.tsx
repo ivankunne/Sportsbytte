@@ -942,12 +942,7 @@ function SelgerProCard({ profile }: { profile: UserProfile }) {
 
   return (
     <div className="bg-white rounded-xl p-6">
-      <div className="flex items-center gap-2 mb-1">
-        <h2 className="font-display text-base font-semibold text-ink">Selger Pro</h2>
-        {profile.is_pro && (
-          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 tracking-wide">PRO</span>
-        )}
-      </div>
+      <h2 className="font-display text-base font-semibold text-ink mb-1">Selger Pro</h2>
       <p className="text-xs text-ink-light mb-4">
         {profile.is_pro
           ? "Du er Pro-selger — du betaler kun 2% transaksjonsgebyr på salg."
