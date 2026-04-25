@@ -27,9 +27,9 @@ export function ListingCard({ listing }: Props) {
       : nameParts[0];
 
   return (
-    <Link href={`/annonse/${listing.id}`} className="group block">
+    <Link href={`/annonse/${listing.id}`} className="group block h-full">
       <article
-        className={`bg-white rounded-2xl border overflow-hidden transition-all duration-150 ${
+        className={`bg-white rounded-2xl border overflow-hidden transition-all duration-150 h-full flex flex-col ${
           isSold
             ? "border-border"
             : "border-border group-hover:border-forest group-hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)]"
@@ -95,7 +95,7 @@ export function ListingCard({ listing }: Props) {
         </div>
 
         {/* Body */}
-        <div className={`p-4 ${isSold ? "opacity-50" : ""}`}>
+        <div className={`p-4 flex flex-col flex-1 ${isSold ? "opacity-50" : ""}`}>
           <h3 className="font-bold text-ink text-[15px] leading-snug line-clamp-2 mb-1">
             {listing.title}
           </h3>
@@ -130,7 +130,7 @@ export function ListingCard({ listing }: Props) {
           </div>
 
           {/* Seller row */}
-          <div className="flex items-center justify-between border-t border-border pt-3">
+          <div className="flex items-center justify-between border-t border-border pt-3 mt-auto">
             <div className="flex items-center gap-2">
               {seller.avatar_url ? (
                 <Image
