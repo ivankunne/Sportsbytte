@@ -97,7 +97,7 @@ function ExplorePage() {
     (async () => {
       let q = supabase
         .from("listings")
-        .select("*, clubs(*), profiles(*)")
+        .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
         .eq("is_sold", false);
 
       if (debouncedQuery.trim()) {

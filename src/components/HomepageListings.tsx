@@ -37,7 +37,7 @@ export function HomepageListings({ initialCategories }: { initialCategories: Cat
     async function fetch() {
       let q = supabase
         .from("listings")
-        .select("*, clubs(*), profiles(*)")
+        .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
         .eq("is_sold", false);
 
       if (activeCategory) {

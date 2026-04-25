@@ -177,7 +177,7 @@ export function Header() {
     const [listingsRes, clubsRes, profilesRes] = await Promise.all([
       supabase
         .from("listings")
-        .select("*, clubs(*), profiles(*)")
+        .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
         .eq("is_sold", false)
         .or(`title.ilike.${pattern},category.ilike.${pattern}`)
         .order("created_at", { ascending: false })

@@ -1258,7 +1258,7 @@ function AnnonsertTab() {
     setLoading(true);
     const { data } = await supabase
       .from("listings")
-      .select("*, clubs(name), profiles(name)")
+      .select("*, clubs(name), profiles!listings_seller_id_fkey(name)")
       .order("created_at", { ascending: false });
     setListings((data ?? []) as Listing[]);
     setLoading(false);

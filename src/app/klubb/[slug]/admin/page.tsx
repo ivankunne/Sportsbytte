@@ -381,7 +381,7 @@ export default function ClubAdminPage({
       const [{ data: listingsData }, { data: sellersData }] = await Promise.all([
         supabase
           .from("listings")
-          .select("*, clubs(*), profiles(*)")
+          .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
           .eq("club_id", clubData.id)
           .order("created_at", { ascending: false }),
         supabase

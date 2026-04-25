@@ -88,7 +88,7 @@ export async function getFeaturedListings(
 ): Promise<ListingWithRelations[]> {
   const { data, error } = await supabase
     .from("listings")
-    .select("*, clubs(*), profiles(*)")
+    .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
     .or(soldVisibilityFilter())
     .order("is_boosted", { ascending: false })
     .order("created_at", { ascending: false })
@@ -100,7 +100,7 @@ export async function getFeaturedListings(
 export async function getAllListings(): Promise<ListingWithRelations[]> {
   const { data, error } = await supabase
     .from("listings")
-    .select("*, clubs(*), profiles(*)")
+    .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
     .or(soldVisibilityFilter())
     .order("is_boosted", { ascending: false })
     .order("created_at", { ascending: false });
@@ -113,7 +113,7 @@ export async function getListingsByClub(
 ): Promise<ListingWithRelations[]> {
   const { data, error } = await supabase
     .from("listings")
-    .select("*, clubs(*), profiles(*)")
+    .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
     .eq("club_id", clubId)
     .or(soldVisibilityFilter())
     .order("is_boosted", { ascending: false })
@@ -127,7 +127,7 @@ export async function getListingById(
 ): Promise<ListingWithRelations | null> {
   const { data, error } = await supabase
     .from("listings")
-    .select("*, clubs(*), profiles(*)")
+    .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
     .eq("id", id)
     .single();
   if (error && error.code !== "PGRST116") throw error;
@@ -140,7 +140,7 @@ export async function getListingsBySeller(
 ): Promise<ListingWithRelations[]> {
   let query = supabase
     .from("listings")
-    .select("*, clubs(*), profiles(*)")
+    .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
     .eq("seller_id", sellerId)
     .or(soldVisibilityFilter())
     .order("created_at", { ascending: false });
@@ -220,7 +220,7 @@ export async function searchAll(query: string): Promise<SearchResults> {
     await Promise.all([
       supabase
         .from("listings")
-        .select("*, clubs(*), profiles(*)")
+        .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
         .or(soldVisibilityFilter())
         .or(`title.ilike.${pattern},category.ilike.${pattern},description.ilike.${pattern}`)
         .order("created_at", { ascending: false })
@@ -381,7 +381,7 @@ export async function searchListings(
 ): Promise<ListingWithRelations[]> {
   let q = supabase
     .from("listings")
-    .select("*, clubs(*), profiles(*)")
+    .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
     .or(soldVisibilityFilter());
 
   if (clubId) q = q.eq("club_id", clubId);

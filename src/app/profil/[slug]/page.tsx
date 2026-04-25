@@ -51,7 +51,7 @@ export default async function ProfilePage({ params }: Props) {
 
   const { data: listingsRaw } = await supabase
     .from("listings")
-    .select("*, clubs(*), profiles(*)")
+    .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
     .eq("seller_id", seller.id)
     .eq("is_sold", false)
     .order("created_at", { ascending: false });

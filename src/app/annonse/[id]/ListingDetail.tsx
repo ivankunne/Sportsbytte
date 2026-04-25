@@ -49,7 +49,7 @@ export function ListingDetail({ id }: { id: string }) {
     (async () => {
       const { data } = await supabase
         .from("listings")
-        .select("*, clubs(*), profiles(*)")
+        .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
         .eq("id", Number(id))
         .single();
 
@@ -80,14 +80,14 @@ export function ListingDetail({ id }: { id: string }) {
       const [{ data: club }, { data: seller }] = await Promise.all([
         supabase
           .from("listings")
-          .select("*, clubs(*), profiles(*)")
+          .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
           .eq("club_id", l.club_id)
           .neq("id", l.id)
           .or(soldFilter)
           .limit(4),
         supabase
           .from("listings")
-          .select("*, clubs(*), profiles(*)")
+          .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
           .eq("seller_id", l.seller_id)
           .neq("id", l.id)
           .or(soldFilter)
