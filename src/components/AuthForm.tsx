@@ -33,6 +33,7 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
   const [clubSearch, setClubSearch] = useState("");
   const [allClubs, setAllClubs] = useState<Club[]>([]);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<"free" | "pro">("free");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
@@ -222,6 +223,19 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
               headers: authHeaders,
               body: JSON.stringify({ type: "submitted", membership_id: membershipId }),
             }).catch(() => {});
+          }
+
+          // Redirect to Stripe Pro checkout if user chose Pro plan
+          if (selectedPlan === "pro") {
+            const proRes = await fetch(`${origin}/api/stripe/seller-pro-subscribe`, {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${newSession.access_token}` },
+            });
+            const proJson = await proRes.json();
+            if (proJson.url) {
+              window.location.href = proJson.url;
+              return;
+            }
           }
         }
 
@@ -429,6 +443,47 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
         </div>
       )}
 
+      {/* Plan selector — signup only */}
+      {mode === "signup" && (
+        <div>
+          <label className="block text-xs font-medium text-ink mb-2">Plan</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedPlan("free")}
+              className={`rounded-xl border-2 p-3 text-left transition-colors ${
+                selectedPlan === "free"
+                  ? "border-forest bg-forest-light"
+                  : "border-border hover:border-forest/40"
+              }`}
+            >
+              <p className="text-sm font-semibold text-ink">Gratis</p>
+              <p className="text-xs text-ink-light mt-0.5">5 % gebyr</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedPlan("pro")}
+              className={`rounded-xl border-2 p-3 text-left transition-colors ${
+                selectedPlan === "pro"
+                  ? "border-amber bg-amber-light"
+                  : "border-border hover:border-amber/40"
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-semibold text-ink">Selger Pro</p>
+                <span className="rounded-full bg-amber px-1.5 py-px text-[9px] font-bold text-white leading-none">PRO</span>
+              </div>
+              <p className="text-xs text-ink-light mt-0.5">99 kr/mnd · 2 % gebyr</p>
+            </button>
+          </div>
+          {selectedPlan === "pro" && (
+            <p className="mt-2 text-xs text-ink-light">
+              Du betaler via Stripe etter at kontoen er opprettet.
+            </p>
+          )}
+        </div>
+      )}
+
       {lockedUntil && lockedUntil > Date.now() && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-center">
           <p className="text-xs font-medium text-red-600">
@@ -454,6 +509,8 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
           ? "Laster..."
           : mode === "login"
           ? "Logg inn"
+          : selectedPlan === "pro"
+          ? "Opprett konto og gå til betaling →"
           : "Opprett konto"}
       </button>
 
@@ -480,7 +537,7 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
           <>
             Har du allerede konto?{" "}
             <button
-              onClick={() => { setMode("login"); setError(""); setSelectedClub(null); setClubSearch(""); }}
+              onClick={() => { setMode("login"); setError(""); setSelectedClub(null); setClubSearch(""); setSelectedPlan("free"); }}
               className="font-semibold text-forest hover:underline"
             >
               Logg inn
