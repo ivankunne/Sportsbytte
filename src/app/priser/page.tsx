@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Priser",
-  description: "Se prisene for Sportsbytte — gratis å annonsere, 5 % transaksjonsgebyr ved salg. Pro-plan for selgere og klubber med 2 % gebyr og utvidede funksjoner.",
+  description: "Se prisene for Sportsbytte — gratis å annonsere. Kjøpere betaler 5 % servicegebyr ved kjøp. Pro-plan for selgere og klubber reduserer gebyret til 2 %.",
 };
 
 function Check({ gold = false }: { gold?: boolean }) {
@@ -33,8 +33,8 @@ export default function PricingPage() {
           Enkle, rettferdige priser
         </h1>
         <p className="mt-3 text-ink-mid max-w-lg mx-auto">
-          Gratis å annonsere. Betal kun når du selger — og oppgrader til Pro for
-          lavere gebyr og fremhevede annonser.
+          Gratis å annonsere. Kjøpere betaler et lite servicegebyr ved kjøp — selgere mottar alltid fullt listebeløp.
+          Oppgrader til Pro for å gi kjøperne dine lavere gebyr.
         </p>
       </div>
 
@@ -54,7 +54,7 @@ export default function PricingPage() {
               <p className="text-xs text-ink-light mt-1">å annonsere · gratis å opprette konto</p>
               <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-light px-3 py-1.5">
                 <span className="text-sm font-bold text-amber">5 %</span>
-                <span className="text-xs text-ink-mid">transaksjonsgebyr ved salg</span>
+                <span className="text-xs text-ink-mid">servicegebyr betalt av kjøper</span>
               </div>
             </div>
             <ul className="mt-6 space-y-3">
@@ -99,13 +99,13 @@ export default function PricingPage() {
               <p className="text-xs text-ink-light mt-1">avbryt når som helst</p>
               <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-light px-3 py-1.5">
                 <span className="text-sm font-bold text-amber">2 %</span>
-                <span className="text-xs text-ink-mid">transaksjonsgebyr ved salg</span>
+                <span className="text-xs text-ink-mid">servicegebyr betalt av kjøper</span>
               </div>
             </div>
             <ul className="mt-6 space-y-3">
               {[
                 "Alt i Selger-planen",
-                "Kun 2 % transaksjonsgebyr (vs. 5 %)",
+                "Kjøpere betaler kun 2 % servicegebyr (vs. 5 %)",
                 "Fremhev annonser øverst i søk",
                 "Pro-badge på profilen din",
                 "Prioritert kundeservice",
@@ -150,7 +150,7 @@ export default function PricingPage() {
               <p className="text-xs text-ink-light mt-1">i åpningsperioden · ingen binding</p>
               <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-light px-3 py-1.5">
                 <span className="text-sm font-bold text-amber">5 %</span>
-                <span className="text-xs text-ink-mid">transaksjonsgebyr ved salg</span>
+                <span className="text-xs text-ink-mid">servicegebyr betalt av kjøper</span>
               </div>
             </div>
             <ul className="mt-6 space-y-3">
@@ -197,13 +197,13 @@ export default function PricingPage() {
               <p className="text-xs text-ink-light mt-1">faktureres månedlig</p>
               <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-light px-3 py-1.5">
                 <span className="text-sm font-bold text-amber">2 %</span>
-                <span className="text-xs text-ink-mid">transaksjonsgebyr ved salg</span>
+                <span className="text-xs text-ink-mid">servicegebyr betalt av kjøper</span>
               </div>
             </div>
             <ul className="mt-6 space-y-3">
               {[
                 "Alt i Klubb Basis",
-                "Kun 2 % transaksjonsgebyr (vs. 5 %)",
+                "Kjøpere betaler kun 2 % servicegebyr (vs. 5 %)",
                 "Prioritert synlighet på /klubber",
                 "Pro-merke på klubbsiden",
                 "Ubegrenset CSV-import av medlemmer",
@@ -234,9 +234,9 @@ export default function PricingPage() {
       <div className="mt-10 rounded-2xl bg-cream border border-border p-6 max-w-3xl mx-auto">
         <h3 className="font-display text-base font-semibold text-ink mb-2">Om transaksjonsgebyret</h3>
         <p className="text-sm text-ink-mid">
-          Transaksjonsgebyret beregnes av salgsprisen og trekkes automatisk ved gjennomført salg.
+          Servicegebyret betales av kjøperen og legges på toppen av listeprisen ved utsjekk — selgeren mottar alltid det fulle beløpet som er annonsert.
           Gebyret dekker betalingsbehandling via Stripe, kjøperbeskyttelse og plattformdrift.
-          Ingen skjulte avgifter — du ser alltid gebyret før du bekrefter salget.
+          Ingen skjulte avgifter — kjøper ser alltid gebyret og totalpris tydelig før de bekrefter kjøpet.
         </p>
       </div>
 
@@ -249,15 +249,15 @@ export default function PricingPage() {
           {[
             {
               q: "Hva koster det å selge som privatperson?",
-              a: "Det er gratis å opprette konto og lage annonser. Vi tar 5 % av salgsprisen ved gjennomført salg. Med Selger Pro betaler du kun 2 %.",
+              a: "Det er gratis å opprette konto og lage annonser. Kjøpere betaler 5 % servicegebyr på toppen av listeprisen. Som Selger Pro betaler kjøperne dine kun 2 %.",
             },
             {
               q: "Hva er Selger Pro?",
-              a: "Selger Pro er en abonnementsplan for aktive selgere til 99 kr/mnd. Du betaler kun 2 % transaksjonsgebyr (mot 5 % standard), kan fremheve annonser øverst i søk, og får et Pro-badge på profilen din.",
+              a: "Selger Pro er en abonnementsplan for aktive selgere til 99 kr/mnd. Kjøperne dine betaler kun 2 % servicegebyr (mot 5 % standard), du kan fremheve annonser øverst i søk, og får et Pro-badge på profilen din.",
             },
             {
               q: "Hva koster Pro-planen for klubber?",
-              a: "Klubb Pro koster 499 kr/mnd med kun 2 % transaksjonsgebyr. Klubb Basis er gratis i åpningsperioden med 5 % gebyr.",
+              a: "Klubb Pro koster 499 kr/mnd — kjøpere på klubbens annonser betaler kun 2 % servicegebyr. Klubb Basis er gratis i åpningsperioden med 5 % servicegebyr for kjøpere.",
             },
             {
               q: "Hva dekker transaksjonsgebyret?",

@@ -1043,8 +1043,8 @@ function SelgerProCard({ profile }: { profile: UserProfile }) {
       <h2 className="font-display text-base font-semibold text-ink mb-1">Selger Pro</h2>
       <p className="text-xs text-ink-light mb-4">
         {profile.is_pro
-          ? "Du er Pro-selger — du betaler kun 2% transaksjonsgebyr på salg."
-          : "Oppgrader til Pro og betal kun 2% transaksjonsgebyr (mot 5% standard). 99 kr/mnd, avbryt når som helst."}
+          ? "Du er Pro-selger — kjøperne dine betaler kun 2% servicegebyr. Du mottar alltid fullt listebeløp."
+          : "Oppgrader til Pro — kjøperne dine betaler 2% servicegebyr i stedet for 5%. 99 kr/mnd, avbryt når som helst."}
       </p>
 
       {profile.is_pro ? (
@@ -1053,7 +1053,7 @@ function SelgerProCard({ profile }: { profile: UserProfile }) {
             <span className="text-amber-600 font-bold text-lg">★</span>
             <div>
               <p className="text-sm font-semibold text-amber-800">Selger Pro aktiv</p>
-              <p className="text-xs text-amber-700">2% gebyr · Fremhevede annonser</p>
+              <p className="text-xs text-amber-700">2% servicegebyr for kjøpere · Fremhevede annonser</p>
             </div>
           </div>
           <button

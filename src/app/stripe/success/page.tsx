@@ -8,7 +8,8 @@ import { supabase } from "@/lib/supabase";
 type ListingSnippet = {
   title: string;
   price: number;
-  profiles: { name: string } | null;
+  profiles: { name: string; is_pro: boolean } | null;
+  clubs: { is_pro: boolean } | null;
 };
 
 function SuccessContent() {
@@ -20,7 +21,7 @@ function SuccessContent() {
     if (!listingId) return;
     supabase
       .from("listings")
-      .select("title, price, profiles!listings_seller_id_fkey(name)")
+      .select("title, price, profiles!listings_seller_id_fkey(name, is_pro), clubs(is_pro)")
       .eq("id", Number(listingId))
       .single()
       .then(({ data }) => setListing(data as ListingSnippet | null));
@@ -41,22 +42,36 @@ function SuccessContent() {
           </p>
         </div>
 
-        {listing && (
-          <div className="rounded-xl border border-border bg-white p-5 space-y-3">
-            <p className="text-xs font-semibold text-ink-light uppercase tracking-wider">Kvittering</p>
-            <div className="flex items-start justify-between gap-3">
+        {listing && (() => {
+          const isPro = listing.clubs?.is_pro || listing.profiles?.is_pro;
+          const feeNok = Math.round(listing.price * (isPro ? 2 : 5)) / 100;
+          const totalNok = listing.price + feeNok;
+          return (
+            <div className="rounded-xl border border-border bg-white p-5 space-y-3">
+              <p className="text-xs font-semibold text-ink-light uppercase tracking-wider">Kvittering</p>
               <p className="text-sm font-semibold text-ink leading-snug">{listing.title}</p>
-              <p className="text-sm font-bold text-forest flex-shrink-0">
-                {listing.price.toLocaleString("nb-NO")} kr
-              </p>
+              {listing.profiles?.name && (
+                <p className="text-xs text-ink-light">
+                  Selger: <span className="text-ink font-medium">{listing.profiles.name}</span>
+                </p>
+              )}
+              <div className="border-t border-border pt-3 space-y-1.5">
+                <div className="flex justify-between text-xs text-ink-light">
+                  <span>Varepris</span>
+                  <span>{listing.price.toLocaleString("nb-NO")} kr</span>
+                </div>
+                <div className="flex justify-between text-xs text-ink-light">
+                  <span>Servicegebyr</span>
+                  <span>{feeNok.toLocaleString("nb-NO")} kr</span>
+                </div>
+                <div className="flex justify-between text-sm font-bold text-ink pt-1 border-t border-border">
+                  <span>Totalt betalt</span>
+                  <span className="text-forest">{totalNok.toLocaleString("nb-NO")} kr</span>
+                </div>
+              </div>
             </div>
-            {listing.profiles?.name && (
-              <p className="text-xs text-ink-light">
-                Selger: <span className="text-ink font-medium">{listing.profiles.name}</span>
-              </p>
-            )}
-          </div>
-        )}
+          );
+        })()}
 
         <div className="flex flex-col gap-2">
           {listingId && (
