@@ -413,6 +413,16 @@ export function ListingDetail({ id }: { id: string }) {
                       {checkingOut ? "Åpner betaling..." : `Kjøp nå — ${listing.price.toLocaleString("nb-NO")} kr`}
                     </button>
                   )}
+                  {(listing.profiles as { stripe_account_id?: string | null; stripe_onboarding_complete?: boolean }).stripe_account_id &&
+                   (listing.profiles as { stripe_onboarding_complete?: boolean }).stripe_onboarding_complete && (() => {
+                    const isPro = (listing.clubs as { is_pro?: boolean })?.is_pro || (listing.profiles as { is_pro?: boolean })?.is_pro;
+                    const feeNok = Math.round(listing.price * (isPro ? 2 : 5)) / 100;
+                    return (
+                      <p className="text-xs text-ink-light text-center -mt-1">
+                        + {feeNok.toLocaleString("nb-NO")} kr servicegebyr · totalt {(listing.price + feeNok).toLocaleString("nb-NO")} kr
+                      </p>
+                    );
+                  })()}
                   <button
                     onClick={() => setChatOpen(true)}
                     className="w-full rounded-lg bg-forest py-3.5 text-sm font-bold text-white hover:bg-forest-mid transition-colors duration-[120ms] flex items-center justify-center gap-2"
