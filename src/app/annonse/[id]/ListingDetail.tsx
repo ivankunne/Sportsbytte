@@ -52,7 +52,7 @@ export function ListingDetail({ id }: { id: string }) {
         .from("listings")
         .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
         .eq("id", Number(id))
-        .single();
+        .maybeSingle();
 
       if (!data) {
         setLoading(false);
@@ -520,6 +520,7 @@ export function ListingDetail({ id }: { id: string }) {
                 <div className="relative" ref={shareRef}>
                   <button
                     onClick={() => setShareOpen((o) => !o)}
+                    aria-label="Del annonse"
                     className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-mid hover:bg-cream transition-colors duration-[120ms]"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -665,6 +666,7 @@ export function ListingDetail({ id }: { id: string }) {
       {lightboxOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onClick={() => setLightboxOpen(false)}>
           <button
+            aria-label="Lukk"
             className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
             onClick={() => setLightboxOpen(false)}
           >
@@ -674,6 +676,7 @@ export function ListingDetail({ id }: { id: string }) {
           </button>
           {images.length > 1 && (
             <button
+              aria-label="Forrige bilde"
               className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 transition-colors"
               onClick={(e) => { e.stopPropagation(); setActiveImage((activeImage - 1 + images.length) % images.length); }}
             >
@@ -693,6 +696,7 @@ export function ListingDetail({ id }: { id: string }) {
           </div>
           {images.length > 1 && (
             <button
+              aria-label="Neste bilde"
               className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 transition-colors"
               onClick={(e) => { e.stopPropagation(); setActiveImage((activeImage + 1) % images.length); }}
             >

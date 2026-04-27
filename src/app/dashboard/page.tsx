@@ -13,7 +13,6 @@ type UserProfile = {
   id: number;
   name: string;
   bio: string;
-  vipps_phone: string | null;
   avatar: string;
   avatar_url: string | null;
   club_id: number | null;
@@ -99,7 +98,7 @@ function DashboardContent() {
         .from("profiles")
         .select("*")
         .eq("auth_user_id", session.user.id)
-        .single();
+        .maybeSingle();
       if (!mounted) return;
       setProfile(p as UserProfile ?? null);
       setLoading(false);
@@ -245,7 +244,7 @@ function InboksTab({
       setConversations(all);
       setLoading(false);
     }
-    load();
+    load().catch(() => setLoading(false));
   }, [profile.id, userEmail]);
 
   if (loading) {
@@ -596,6 +595,7 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ title: "", price: "" });
+  const [editSaving, setEditSaving] = useState(false);
   const [boosting, setBoosting] = useState<number | null>(null);
 
   async function boostListing(listingId: number) {
@@ -624,7 +624,7 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
       .then(({ data }) => {
         setListings((data ?? []) as MyListing[]);
         setLoading(false);
-      });
+      }, () => setLoading(false));
   }, [profile.id]);
 
   async function toggleSold(id: number, currentSold: boolean) {
@@ -644,6 +644,7 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
   }
 
   async function saveEdit(id: number) {
+    setEditSaving(true);
     const price = parseInt(editForm.price || "0");
     await supabase
       .from("listings")
@@ -655,6 +656,7 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
         l.id === id ? { ...l, title: editForm.title.trim(), price } : l
       )
     );
+    setEditSaving(false);
     setEditing(null);
   }
 
@@ -721,13 +723,15 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
               <div className="flex gap-2">
                 <button
                   onClick={() => saveEdit(listing.id)}
-                  className="rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white hover:bg-forest-mid transition-colors"
+                  disabled={editSaving || !editForm.title.trim()}
+                  className="rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white hover:bg-forest-mid transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Lagre
+                  {editSaving ? "Lagrer..." : "Lagre"}
                 </button>
                 <button
                   onClick={() => setEditing(null)}
-                  className="rounded-lg border border-border px-4 py-2 text-sm text-ink-mid hover:bg-cream transition-colors"
+                  disabled={editSaving}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-ink-mid hover:bg-cream transition-colors disabled:opacity-40"
                 >
                   Avbryt
                 </button>
@@ -840,7 +844,7 @@ function AnmedelserTab({ profile }: { profile: UserProfile }) {
       .then(({ data }) => {
         setReviews((data ?? []) as unknown as Review[]);
         setLoading(false);
-      });
+      }, () => setLoading(false));
   }, [profile.id]);
 
   if (loading) {
@@ -1092,7 +1096,6 @@ function ProfilTab({
   const [form, setForm] = useState({
     name: profile.name,
     bio: profile.bio ?? "",
-    vipps_phone: profile.vipps_phone ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -1124,7 +1127,6 @@ function ProfilTab({
       .update({
         name: form.name.trim(),
         bio: form.bio.trim(),
-        vipps_phone: form.vipps_phone.trim() || null,
       })
       .eq("id", profile.id);
 
@@ -1134,7 +1136,6 @@ function ProfilTab({
       onSave({
         name: form.name.trim(),
         bio: form.bio.trim(),
-        vipps_phone: form.vipps_phone.trim() || null,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);

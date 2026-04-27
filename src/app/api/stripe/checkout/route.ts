@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     .from("listings")
     .select("id, title, price, is_sold, seller_id, images, members_only, club_id, quantity, clubs(is_pro), profiles(id, stripe_account_id, stripe_onboarding_complete, is_pro)")
     .eq("id", listing_id)
-    .single();
+    .maybeSingle();
 
   if (!listing) return NextResponse.json({ error: "Annonse ikke funnet" }, { status: 404 });
   if (listing.is_sold) return NextResponse.json({ error: "Annonsen er allerede solgt" }, { status: 400 });
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     .from("profiles")
     .select("id")
     .eq("auth_user_id", user.id)
-    .single();
+    .maybeSingle();
   if (buyerProfile?.id === seller.id) {
     return NextResponse.json({ error: "Du kan ikke kjøpe din egen annonse" }, { status: 400 });
   }

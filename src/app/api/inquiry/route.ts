@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import type { Database } from "@/lib/database.types";
 import { buildEmail, infoBox, p, escapeHtml, FROM, SITE_URL } from "@/lib/email";
+import { rateLimit, ipKey } from "@/lib/rate-limit";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -17,6 +18,10 @@ const anonClient = createClient(
 );
 
 export async function POST(req: NextRequest) {
+  if (rateLimit(ipKey(req, "inquiry"), { limit: 5, windowMs: 60 * 60 * 1000 })) {
+    return NextResponse.json({ error: "For mange forsøk. Prøv igjen senere." }, { status: 429 });
+  }
+
   // Require a valid Supabase session — buyer email always comes from the session
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -47,7 +52,7 @@ export async function POST(req: NextRequest) {
     .from("profiles")
     .select("name")
     .eq("auth_user_id", user.id)
-    .single();
+    .maybeSingle();
 
   const buyerName = buyerProfile?.name ?? user.email.split("@")[0];
   const buyerEmail = user.email;

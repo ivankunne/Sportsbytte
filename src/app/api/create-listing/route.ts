@@ -2,13 +2,13 @@ import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import type { Database } from "@/lib/database.types";
 import { SITE_URL } from "@/lib/email";
+import { rateLimit, ipKey } from "@/lib/rate-limit";
 
 const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Separate anon client — used only to verify the user's JWT
 const anonClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -21,27 +21,23 @@ const ALLOWED_COLUMNS = [
 ] as const;
 
 export async function POST(req: NextRequest) {
-  // Require a valid Supabase session
-  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (rateLimit(ipKey(req, "create-listing"), { limit: 10, windowMs: 60 * 60 * 1000 })) {
+    return NextResponse.json({ error: "For mange forsøk. Prøv igjen senere." }, { status: 429 });
   }
+
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: { user }, error: authError } = await anonClient.auth.getUser(token);
-  if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Resolve the authenticated user's profile — seller_id is always set server-side
   const { data: profile } = await supabase
     .from("profiles")
     .select("id")
     .eq("auth_user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (!profile) {
-    return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
-  }
+  if (!profile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
 
   let body: Record<string, unknown>;
   try {
@@ -50,19 +46,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ugyldig JSON" }, { status: 400 });
   }
 
-  // Strip unknown columns and inject the verified seller_id
   const filtered: Record<string, unknown> = { seller_id: profile.id };
   for (const col of ALLOWED_COLUMNS) {
     if (col in body) filtered[col] = body[col];
   }
 
-  // Basic required-field checks
-  if (!filtered.title || typeof filtered.title !== "string" || !String(filtered.title).trim()) {
-    return NextResponse.json({ error: "Tittel er påkrevd" }, { status: 400 });
+  // Server-side validation
+  const title = typeof filtered.title === "string" ? filtered.title.trim() : "";
+  if (!title) return NextResponse.json({ error: "Tittel er påkrevd" }, { status: 400 });
+  if (title.length > 200) return NextResponse.json({ error: "Tittel kan ikke overstige 200 tegn" }, { status: 400 });
+
+  const desc = typeof filtered.description === "string" ? filtered.description : "";
+  if (desc.length > 5000) return NextResponse.json({ error: "Beskrivelse kan ikke overstige 5000 tegn" }, { status: 400 });
+
+  const price = filtered.price;
+  if (typeof price !== "number" || !Number.isFinite(price) || price < 0 || price > 1_000_000) {
+    return NextResponse.json({ error: "Ugyldig pris (0–1 000 000 kr)" }, { status: 400 });
   }
-  if (typeof filtered.price !== "number" || filtered.price < 0) {
-    return NextResponse.json({ error: "Ugyldig pris" }, { status: 400 });
+
+  const qty = filtered.quantity;
+  if (qty !== undefined && qty !== null) {
+    if (typeof qty !== "number" || !Number.isInteger(qty) || qty < 1 || qty > 9999) {
+      return NextResponse.json({ error: "Antall må være mellom 1 og 9999" }, { status: 400 });
+    }
   }
+
+  const images = filtered.images;
+  if (images !== undefined && (!Array.isArray(images) || images.length > 10)) {
+    return NextResponse.json({ error: "Maks 10 bilder" }, { status: 400 });
+  }
+
+  filtered.title = title;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await supabase
@@ -71,17 +85,14 @@ export async function POST(req: NextRequest) {
     .select("id")
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: "Intern feil" }, { status: 500 });
-  }
+  if (error || !data) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
 
-  // Keep club active_listings count in sync
   if (filtered.club_id) {
     const { data: club } = await supabase
       .from("clubs")
       .select("active_listings")
       .eq("id", filtered.club_id as number)
-      .single();
+      .maybeSingle();
     if (club) {
       await supabase
         .from("clubs")

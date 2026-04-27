@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
 import { ListingDetail } from "./ListingDetail";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sportsbytte.no";
+
 type Props = {
   params: Promise<{ id: string }>;
 };
@@ -12,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .from("listings")
     .select("title, description, images, price, category, condition, clubs(name)")
     .eq("id", Number(id))
-    .single();
+    .maybeSingle();
 
   if (!data) return { title: "Annonse ikke funnet" };
 
@@ -24,7 +26,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const price = data.price.toLocaleString("nb-NO");
   const title = `${data.title} — ${price} kr`;
 
-  // Rich description: condition · category · club · site name
   const descParts = [data.condition, data.category, club?.name].filter(Boolean).join(" · ");
   const description = data.description
     ? `${data.description.slice(0, 120)} — ${descParts}`
@@ -57,5 +58,43 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ListingPage({ params }: Props) {
   const { id } = await params;
-  return <ListingDetail id={id} />;
+
+  const { data } = await supabase
+    .from("listings")
+    .select("title, description, images, price, condition, profiles!listings_seller_id_fkey(name)")
+    .eq("id", Number(id))
+    .maybeSingle();
+
+  const jsonLd = data
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: data.title,
+        description: data.description ?? undefined,
+        image: Array.isArray(data.images) && data.images.length > 0 ? data.images : undefined,
+        offers: {
+          "@type": "Offer",
+          priceCurrency: "NOK",
+          price: data.price,
+          availability: "https://schema.org/InStock",
+          url: `${SITE_URL}/annonse/${id}`,
+          seller: {
+            "@type": "Person",
+            name: (data.profiles as { name: string } | null)?.name,
+          },
+        },
+      }
+    : null;
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <ListingDetail id={id} />
+    </>
+  );
 }

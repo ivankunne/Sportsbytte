@@ -42,6 +42,9 @@ function ExplorePage() {
   const [listings, setListings] = useState<ListingWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const PAGE_SIZE = 24;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   // Instant filters (fire fetch immediately)
   const [activeCategory, setActiveCategory] = useState(searchParams.get("kategori") ?? "");
   const [sort, setSort] = useState(searchParams.get("sorter") ?? "nyeste");
@@ -166,6 +169,7 @@ function ExplorePage() {
       }
 
       setListings(result);
+      setVisibleCount(PAGE_SIZE);
       setLoading(false);
     })();
   }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, categories, categoriesReady, userLocation]);
@@ -326,11 +330,23 @@ function ExplorePage() {
           {Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />)}
         </div>
       ) : listings.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} showSeller />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {listings.slice(0, visibleCount).map((listing) => (
+              <ListingCard key={listing.id} listing={listing} showSeller />
+            ))}
+          </div>
+          {visibleCount < listings.length && (
+            <div className="mt-10 text-center">
+              <button
+                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                className="rounded-lg border border-border px-8 py-3 text-sm font-semibold text-ink hover:bg-cream transition-colors duration-[120ms]"
+              >
+                Vis flere ({listings.length - visibleCount} gjenstår)
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="text-center py-20">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-cream">

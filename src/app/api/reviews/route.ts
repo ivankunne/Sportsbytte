@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { rateLimit, ipKey } from "@/lib/rate-limit";
 
 const admin = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,7 +14,10 @@ const anonClient = createClient(
 );
 
 export async function POST(req: NextRequest) {
-  // Require a valid Supabase session
+  if (rateLimit(ipKey(req, "reviews"), { limit: 20, windowMs: 60 * 60 * 1000 })) {
+    return NextResponse.json({ error: "For mange forsøk. Prøv igjen senere." }, { status: 429 });
+  }
+
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -25,7 +29,7 @@ export async function POST(req: NextRequest) {
     .from("profiles")
     .select("id, name")
     .eq("auth_user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!reviewerProfile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
 
@@ -53,7 +57,7 @@ export async function POST(req: NextRequest) {
     .from("profiles")
     .select("id")
     .eq("id", profile_id)
-    .single();
+    .maybeSingle();
   if (!targetProfile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
 
   // Prevent duplicate reviews from the same reviewer

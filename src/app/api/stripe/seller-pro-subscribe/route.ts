@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     .from("profiles")
     .select("id, is_pro, stripe_subscription_id")
     .eq("auth_user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!profile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
   if (profile.is_pro) return NextResponse.json({ error: "Du er allerede Pro" }, { status: 400 });

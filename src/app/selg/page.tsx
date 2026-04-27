@@ -86,7 +86,7 @@ export default function SellPage() {
       .from("profiles")
       .select("id, club_id")
       .eq("auth_user_id", authUserId)
-      .single();
+      .maybeSingle();
 
     if (profile?.club_id) {
       prefilledProfileIdRef.current = profile.id;
@@ -346,8 +346,8 @@ export default function SellPage() {
 
             {imagePreviews.length === 0 ? (
               <div
-                onClick={() => fileInputRef.current?.click()}
-                className="rounded-xl border-2 border-dashed border-border bg-white p-8 text-center hover:border-forest/30 transition-colors duration-[120ms] cursor-pointer"
+                onClick={() => !uploading && fileInputRef.current?.click()}
+                className={`rounded-xl border-2 border-dashed border-border bg-white p-8 text-center transition-colors duration-[120ms] ${uploading ? "opacity-50 cursor-not-allowed" : "hover:border-forest/30 cursor-pointer"}`}
               >
                 <svg className="mx-auto h-12 w-12 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -377,7 +377,8 @@ export default function SellPage() {
                 {imagePreviews.length < 8 && (
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="aspect-square rounded-lg border-2 border-dashed border-border bg-white flex items-center justify-center hover:border-forest/30 transition-colors duration-[120ms]"
+                    disabled={uploading}
+                    className="aspect-square rounded-lg border-2 border-dashed border-border bg-white flex items-center justify-center hover:border-forest/30 transition-colors duration-[120ms] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg className="h-6 w-6 text-border" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
