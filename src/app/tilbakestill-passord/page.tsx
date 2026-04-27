@@ -55,13 +55,7 @@ export default function TilbakestillPassordPage() {
       setChecking(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-      // If user leaves this page without completing the password change, kill the session.
-      // In React Strict Mode the cleanup also runs on the fake-unmount, but resolved is still
-      // false at that point (getSession() is async and hasn't completed yet), so no spurious signOut.
-      if (resolved) supabase.auth.signOut().catch(() => {});
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   async function handleSubmit() {
