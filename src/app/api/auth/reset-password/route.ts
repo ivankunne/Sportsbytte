@@ -12,7 +12,34 @@ const admin = createClient(
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Simple in-memory rate limiter: max 5 attempts per IP per 15 minutes
+const ipAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = ipAttempts.get(ip);
+  if (!entry || entry.resetAt < now) {
+    ipAttempts.set(ip, { count: 1, resetAt: now + 15 * 60 * 1000 });
+    return false;
+  }
+  if (entry.count >= 5) return true;
+  entry.count++;
+  return false;
+}
+
 export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+
+  if (isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: "For mange forsøk. Vent 15 minutter og prøv igjen." },
+      { status: 429 }
+    );
+  }
+
   let email: string;
   try {
     ({ email } = await req.json());
@@ -24,7 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ugyldig e-postadresse" }, { status: 400 });
   }
 
-  // Generate a recovery link — silently no-op if user doesn't exist (no user enumeration)
+  // generateLink returns an error if no account exists for this email
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",
     email: email.trim(),
@@ -32,8 +59,10 @@ export async function POST(req: NextRequest) {
   });
 
   if (error || !data?.properties?.action_link) {
-    // Always return success — don't reveal whether email exists
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(
+      { error: "Ingen konto funnet med denne e-postadressen." },
+      { status: 404 }
+    );
   }
 
   const html = buildEmail({

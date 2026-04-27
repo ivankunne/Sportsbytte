@@ -4,9 +4,14 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 const LOCK_KEY = "login_rate_limit";
+const RESET_LOCK_KEY = "reset_rate_limit";
 const LOCK_THRESHOLDS = [
   { attempts: 5, durationMs: 5 * 60 * 1000 },
   { attempts: 3, durationMs: 30 * 1000 },
+];
+const RESET_LOCK_THRESHOLDS = [
+  { attempts: 5, durationMs: 15 * 60 * 1000 },
+  { attempts: 3, durationMs: 60 * 1000 },
 ];
 
 type Club = {
@@ -40,6 +45,9 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const [lockCountdown, setLockCountdown] = useState(0);
+  const [resetFailedAttempts, setResetFailedAttempts] = useState(0);
+  const [resetLockedUntil, setResetLockedUntil] = useState<number | null>(null);
+  const [resetLockCountdown, setResetLockCountdown] = useState(0);
 
   // Restore lock state from localStorage on mount
   useEffect(() => {
@@ -54,7 +62,20 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
     } catch {}
   }, []);
 
-  // Countdown timer while locked
+  // Restore reset lock state from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RESET_LOCK_KEY);
+      if (stored) {
+        const { attempts, until } = JSON.parse(stored) as { attempts: number; until: number };
+        setResetFailedAttempts(attempts);
+        if (until > Date.now()) setResetLockedUntil(until);
+        else localStorage.removeItem(RESET_LOCK_KEY);
+      }
+    } catch {}
+  }, []);
+
+  // Countdown timer while login locked
   useEffect(() => {
     if (!lockedUntil) return;
     const tick = () => {
@@ -72,6 +93,25 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [lockedUntil]);
+
+  // Countdown timer while reset locked
+  useEffect(() => {
+    if (!resetLockedUntil) return;
+    const tick = () => {
+      const remaining = Math.ceil((resetLockedUntil - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setResetLockedUntil(null);
+        setResetLockCountdown(0);
+        setResetFailedAttempts(0);
+        localStorage.removeItem(RESET_LOCK_KEY);
+      } else {
+        setResetLockCountdown(remaining);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [resetLockedUntil]);
 
   function recordFailedAttempt() {
     const next = failedAttempts + 1;
@@ -91,6 +131,19 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
     setLockedUntil(null);
     setLockCountdown(0);
     localStorage.removeItem(LOCK_KEY);
+  }
+
+  function recordResetFailedAttempt() {
+    const next = resetFailedAttempts + 1;
+    const threshold = RESET_LOCK_THRESHOLDS.find((t) => next >= t.attempts);
+    const until = threshold ? Date.now() + threshold.durationMs : 0;
+    setResetFailedAttempts(next);
+    if (until) {
+      setResetLockedUntil(until);
+      localStorage.setItem(RESET_LOCK_KEY, JSON.stringify({ attempts: next, until }));
+    } else {
+      localStorage.setItem(RESET_LOCK_KEY, JSON.stringify({ attempts: next, until: 0 }));
+    }
   }
 
   // Fetch clubs once when entering signup mode
@@ -114,6 +167,10 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
       : [];
 
   async function handleForgotPassword() {
+    if (resetLockedUntil && resetLockedUntil > Date.now()) {
+      setError(`For mange forsøk. Vent ${resetLockCountdown} sekunder.`);
+      return;
+    }
     setError("");
     setLoading(true);
     try {
@@ -122,8 +179,9 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email.trim() }),
       });
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
+        recordResetFailedAttempt();
         throw new Error(json.error ?? "Noe gikk galt");
       }
       setResetSent(true);
@@ -282,10 +340,17 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
                 className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
               />
             </div>
+            {resetLockedUntil && resetLockedUntil > Date.now() && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-center">
+                <p className="text-xs font-medium text-red-600">
+                  For mange forsøk. Vent {resetLockCountdown} sekunder.
+                </p>
+              </div>
+            )}
             {error && <p className="text-xs text-red-500">{error}</p>}
             <button
               onClick={handleForgotPassword}
-              disabled={loading || !form.email.trim()}
+              disabled={loading || !form.email.trim() || !!(resetLockedUntil && resetLockedUntil > Date.now())}
               className="w-full rounded-lg bg-forest py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Sender..." : "Send tilbakestillingslenke"}
