@@ -21,40 +21,40 @@ export default function TilbakestillPassordPage() {
   const [requestError, setRequestError] = useState("");
 
   useEffect(() => {
-    async function init() {
-      // 1. PKCE flow — code in query string
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code");
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (!error) { setReady(true); setChecking(false); return; }
+    let resolved = false;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (resolved) return;
+      if (event === "PASSWORD_RECOVERY") {
+        resolved = true;
+        setReady(true);
+        setChecking(false);
+      } else if (event === "SIGNED_IN" && session) {
+        // Fallback: Supabase processed the hash and signed us in — check URL confirms recovery
+        const hashType = new URLSearchParams(window.location.hash.slice(1)).get("type");
+        const queryType = new URLSearchParams(window.location.search).get("type");
+        if (hashType === "recovery" || queryType === "recovery") {
+          resolved = true;
+          setReady(true);
+          setChecking(false);
+        }
       }
-
-      // 2. Implicit flow — tokens in hash fragment
-      const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      const accessToken = hashParams.get("access_token");
-      const refreshToken = hashParams.get("refresh_token");
-      const type = hashParams.get("type");
-
-      if (type === "recovery" && accessToken && refreshToken) {
-        const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        if (!error) { setReady(true); setChecking(false); return; }
-      }
-
-      // 3. Supabase may have already processed the URL — check existing session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && type === "recovery") {
-        setReady(true); setChecking(false); return;
-      }
-
-      setChecking(false);
-    }
-
-    init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") { setReady(true); setChecking(false); }
     });
+
+    // Calling getSession() triggers Supabase to process the URL hash/code internally
+    // without us touching setSession — avoids lock conflicts in React Strict Mode
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (resolved) return;
+      const hashType = new URLSearchParams(window.location.hash.slice(1)).get("type");
+      const queryType = new URLSearchParams(window.location.search).get("type");
+      const isRecovery = hashType === "recovery" || queryType === "recovery";
+      if (session && isRecovery) {
+        resolved = true;
+        setReady(true);
+      }
+      setChecking(false);
+    });
+
     return () => subscription.unsubscribe();
   }, []);
 
