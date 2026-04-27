@@ -14,10 +14,19 @@ export default function TilbakestillPassordPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Supabase sets the session from the recovery link hash automatically
-    supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setReady(true);
+        return;
+      }
+      // INITIAL_SESSION fires immediately on subscribe — if a recovery session is
+      // already active (event fired before this component mounted), catch it here
+      if (event === "INITIAL_SESSION" && session) {
+        const params = new URLSearchParams(window.location.hash.slice(1));
+        if (params.get("type") === "recovery") setReady(true);
+      }
     });
+    return () => subscription.unsubscribe();
   }, []);
 
   async function handleSubmit() {
