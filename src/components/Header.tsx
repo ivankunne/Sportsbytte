@@ -95,14 +95,17 @@ export function Header() {
       }
     }
 
+    const onResetPage = pathname === "/tilbakestill-passord";
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) loadFromSession(session);
+      if (session && !onResetPage) loadFromSession(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Recovery session is only valid for changing the password — don't log the user in globally
+      // Recovery session is only for changing the password — never log the user in globally
       if (event === "PASSWORD_RECOVERY") return;
       if (session) {
+        if (onResetPage) return;
         loadFromSession(session);
       } else {
         setUserName(null);
