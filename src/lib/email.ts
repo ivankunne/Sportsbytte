@@ -58,8 +58,8 @@ export function buildEmail({ heading, kicker, body, cta, footerNote }: BuildEmai
 
         <!-- Header -->
         <tr>
-          <td style="background:${T900};padding:20px 28px;border-radius:14px 14px 0 0;">
-            <span style="font-size:17px;font-weight:800;color:${WHITE};letter-spacing:-0.4px;">Sportsbytte</span>
+          <td style="background:${WHITE};padding:20px 28px;border-radius:14px 14px 0 0;border-top:4px solid ${T900};border-left:1px solid ${BORDER};border-right:1px solid ${BORDER};">
+            <img src="${SITE_URL}/Sportbytte_logo-removebg-preview.png" alt="Sportsbytte" width="160" height="auto" style="display:block;max-width:160px;height:auto;border:0;">
           </td>
         </tr>
 
