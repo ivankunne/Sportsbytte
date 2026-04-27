@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",
     email: email.trim(),
-    options: { redirectTo: `${SITE_URL}/tilbakestill-passord` },
+    options: { redirectTo: `${SITE_URL}/auth/callback` },
   });
 
   if (error || !data?.properties?.action_link) {

@@ -23,32 +23,24 @@ export default function TilbakestillPassordPage() {
   useEffect(() => {
     let resolved = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (resolved) return;
       if (event === "PASSWORD_RECOVERY") {
         resolved = true;
         setReady(true);
         setChecking(false);
-      } else if (event === "SIGNED_IN" && session) {
-        // Fallback: Supabase processed the hash and signed us in — check URL confirms recovery
-        const hashType = new URLSearchParams(window.location.hash.slice(1)).get("type");
-        const queryType = new URLSearchParams(window.location.search).get("type");
-        if (hashType === "recovery" || queryType === "recovery") {
-          resolved = true;
-          setReady(true);
-          setChecking(false);
-        }
       }
     });
 
-    // Calling getSession() triggers Supabase to process the URL hash/code internally
-    // without us touching setSession — avoids lock conflicts in React Strict Mode
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (resolved) return;
+      if (resolved) { setChecking(false); return; }
+
+      // PKCE path: /auth/callback exchanged the code server-side and added ?recovery=1
+      const recoveryParam = new URLSearchParams(window.location.search).get("recovery");
+      // Implicit path: Supabase redirected with #type=recovery in the hash
       const hashType = new URLSearchParams(window.location.hash.slice(1)).get("type");
-      const queryType = new URLSearchParams(window.location.search).get("type");
-      const isRecovery = hashType === "recovery" || queryType === "recovery";
-      if (session && isRecovery) {
+
+      if (session && (recoveryParam === "1" || hashType === "recovery")) {
         resolved = true;
         setReady(true);
       }
