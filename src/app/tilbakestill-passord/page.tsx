@@ -143,6 +143,12 @@ export default function TilbakestillPassordPage() {
                 </button>
               </>
             )}
+            <p className="text-xs text-ink-light text-center pt-1">
+              Trenger du hjelp?{" "}
+              <a href="mailto:hei@sportsbytte.no" className="text-forest underline underline-offset-2">
+                Kontakt oss
+              </a>
+            </p>
           </div>
         ) : (
           <div className="space-y-4 mt-4">
