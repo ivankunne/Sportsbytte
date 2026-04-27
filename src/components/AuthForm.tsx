@@ -117,11 +117,15 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
     setError("");
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        form.email.trim(),
-        { redirectTo: `${window.location.origin}/tilbakestill-passord` }
-      );
-      if (error) throw error;
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email.trim() }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error ?? "Noe gikk galt");
+      }
       setResetSent(true);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Noe gikk galt");

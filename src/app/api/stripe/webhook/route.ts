@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         // Increment seller's total_sold and update club counters
         const { data: profile } = await admin
           .from("profiles")
-          .select("total_sold")
+          .select("total_sold, is_pro")
           .eq("id", listing.seller_id)
           .single();
         if (profile) {
@@ -142,13 +142,15 @@ export async function POST(req: NextRequest) {
         }
 
         // Keep club stats in sync (only decrement active_listings when fully sold)
+        let clubIsPro = false;
         if (qty === null || qty <= 1) {
           const { data: club } = await admin
             .from("clubs")
-            .select("total_sold, active_listings")
+            .select("total_sold, active_listings, is_pro")
             .eq("id", listing.club_id)
             .single();
           if (club) {
+            clubIsPro = club.is_pro ?? false;
             await admin.from("clubs").update({
               total_sold: club.total_sold + 1,
               active_listings: Math.max(0, club.active_listings - 1),
@@ -158,10 +160,11 @@ export async function POST(req: NextRequest) {
           // Bulk: only increment total_sold
           const { data: club } = await admin
             .from("clubs")
-            .select("total_sold")
+            .select("total_sold, is_pro")
             .eq("id", listing.club_id)
             .single();
           if (club) {
+            clubIsPro = club.is_pro ?? false;
             await admin.from("clubs").update({ total_sold: club.total_sold + 1 }).eq("id", listing.club_id);
           }
         }
@@ -176,20 +179,39 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({ type: "sold", listing_id: listingId }),
         }).catch(() => {});
 
-        // Buyer confirmation email
+        // Buyer confirmation email with fee breakdown
         if (buyerAuthId) {
           const { data: buyerAuth } = await admin.auth.admin.getUserById(buyerAuthId);
           const buyerEmail = buyerAuth.user?.email;
           if (buyerEmail) {
+            const isPro = (profile?.is_pro ?? false) || clubIsPro;
+            const feeNok = Math.round(listing.price * (isPro ? 2 : 5)) / 100;
+            const totalNok = listing.price + feeNok;
             const listingUrl = `${SITE_URL}/annonse/${listingId}`;
             const safeTitle = escapeHtml(listing.title);
-            const price = listing.price.toLocaleString("nb-NO");
             const html = buildEmail({
               heading: "Betaling bekreftet!",
               kicker: "Kjøp gjennomført",
               body: `
-                ${p("Takk for kjøpet ditt på Sportsbytte!")}
-                ${infoBox(`${safeTitle}\n${price} kr`, "Din ordre")}
+                ${p("Takk for kjøpet ditt på Sportsbytte! Her er kvitteringen din:")}
+                ${infoBox(
+                  `${safeTitle}`,
+                  "Din ordre"
+                )}
+                <table width="100%" style="border-collapse:collapse;margin:16px 0 20px;font-size:14px;">
+                  <tr>
+                    <td style="padding:6px 0;color:#4b5563;">Varepris</td>
+                    <td style="padding:6px 0;text-align:right;color:#4b5563;">${listing.price.toLocaleString("nb-NO")} kr</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 0;color:#4b5563;">Servicegebyr</td>
+                    <td style="padding:6px 0;text-align:right;color:#4b5563;">${feeNok.toLocaleString("nb-NO")} kr</td>
+                  </tr>
+                  <tr style="border-top:1px solid #e5e7eb;">
+                    <td style="padding:10px 0 4px;font-weight:700;color:#1c1917;">Totalt betalt</td>
+                    <td style="padding:10px 0 4px;text-align:right;font-weight:700;color:#134e4a;">${totalNok.toLocaleString("nb-NO")} kr</td>
+                  </tr>
+                </table>
                 ${p("Selgeren vil kontakte deg for å avtale levering. Du kan også sende en melding direkte i appen.")}
               `,
               cta: { href: listingUrl, label: "Se annonsen" },

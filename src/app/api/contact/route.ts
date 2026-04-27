@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import { NextRequest, NextResponse } from "next/server";
-import { escapeHtml, ADMIN_EMAIL } from "@/lib/email";
+import { buildEmail, p, infoBox, escapeHtml, FROM, ADMIN_EMAIL } from "@/lib/email";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -26,17 +26,22 @@ export async function POST(req: NextRequest) {
   const safeSubject = subject ? escapeHtml(subject.trim().slice(0, 200)) : null;
   const safeMessage = escapeHtml(message.trim().slice(0, 5000));
 
+  const html = buildEmail({
+    heading: safeSubject ?? `Melding fra ${safeName}`,
+    kicker: "Kontaktskjema",
+    body: `
+      ${p(`<strong>Fra:</strong> ${safeName} (<a href="mailto:${safeEmail}" style="color:#0d9488;">${safeEmail}</a>)`)}
+      ${infoBox(safeMessage, "Melding")}
+    `,
+    footerNote: "Denne e-posten ble sendt via kontaktskjemaet på Sportsbytte.",
+  });
+
   const { error } = await resend.emails.send({
-    from: "Sportsbytte <onboarding@resend.dev>",
+    from: FROM,
     to: ADMIN_EMAIL,
     replyTo: email.trim(),
     subject: safeSubject ? `Kontaktskjema: ${safeSubject}` : `Kontaktskjema fra ${safeName}`,
-    html: `
-      <p><strong>Fra:</strong> ${safeName} (${safeEmail})</p>
-      ${safeSubject ? `<p><strong>Emne:</strong> ${safeSubject}</p>` : ""}
-      <p><strong>Melding:</strong></p>
-      <p style="white-space:pre-wrap">${safeMessage}</p>
-    `,
+    html,
   });
 
   if (error) {
