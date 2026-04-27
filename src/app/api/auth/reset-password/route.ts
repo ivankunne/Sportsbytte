@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
-import { buildEmail, p, FROM, SITE_URL } from "@/lib/email";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { SITE_URL } from "@/lib/email";
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,40 +48,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ugyldig e-postadresse" }, { status: 400 });
   }
 
-  // generateLink returns an error if no account exists for this email
-  const { data, error } = await admin.auth.admin.generateLink({
+  // generateLink returns an error if no account exists for this email.
+  // Supabase sends the email itself via the configured SMTP (Resend).
+  // We only need to verify the account exists and let Supabase handle delivery.
+  const { error } = await admin.auth.admin.generateLink({
     type: "recovery",
     email: email.trim(),
     options: { redirectTo: `${SITE_URL}/tilbakestill-passord` },
   });
 
-  if (error || !data?.properties?.action_link) {
+  if (error) {
     return NextResponse.json(
       { error: "Ingen konto funnet med denne e-postadressen." },
       { status: 404 }
     );
   }
-
-  const html = buildEmail({
-    heading: "Tilbakestill passordet ditt",
-    kicker: "Sikkerhetslenke",
-    body: `
-      ${p("Vi mottok en forespørsel om å tilbakestille passordet for kontoen din på Sportsbytte.")}
-      ${p("Klikk på knappen under for å velge et nytt passord. Lenken er gyldig i <strong>1 time</strong>.")}
-      ${p("Hvis du ikke ba om dette, kan du trygt ignorere denne e-posten — ingenting skjer.")}
-    `,
-    cta: { href: data.properties.action_link, label: "Tilbakestill passord" },
-    footerNote: "Du mottar denne e-posten fordi noen ba om å tilbakestille passordet for denne kontoen på Sportsbytte.",
-  });
-
-  const { error: sendError } = await resend.emails.send({
-    from: FROM,
-    to: email.trim(),
-    subject: "Tilbakestill passordet ditt — Sportsbytte",
-    html,
-  });
-
-  if (sendError) console.error("reset-password Resend error:", sendError);
 
   return NextResponse.json({ ok: true });
 }
