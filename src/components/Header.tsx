@@ -83,32 +83,27 @@ export function Header() {
 
   // Track auth state
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("name, id")
-          .eq("auth_user_id", session.user.id)
-          .single();
-        setUserName(profile?.name ?? session.user.email?.split("@")[0] ?? "Meg");
-        if (profile?.id && session.user.email) {
-          checkNewMessages(profile.id, session.user.email);
-        }
+    async function loadFromSession(session: { user: { id: string; email?: string } }) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name, id")
+        .eq("auth_user_id", session.user.id)
+        .maybeSingle();
+      setUserName(profile?.name ?? session.user.email?.split("@")[0] ?? "Meg");
+      if (profile?.id && session.user.email) {
+        checkNewMessages(profile.id, session.user.email);
       }
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) loadFromSession(session);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // Recovery session is only valid for changing the password — don't log the user in globally
       if (event === "PASSWORD_RECOVERY") return;
       if (session) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("name, id")
-          .eq("auth_user_id", session.user.id)
-          .single();
-        setUserName(profile?.name ?? session.user.email?.split("@")[0] ?? "Meg");
-        if (profile?.id && session.user.email) {
-          checkNewMessages(profile.id, session.user.email);
-        }
+        loadFromSession(session);
       } else {
         setUserName(null);
         setHasNewMessages(false);

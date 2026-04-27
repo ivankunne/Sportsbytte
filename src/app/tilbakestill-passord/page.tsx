@@ -66,10 +66,13 @@ export default function TilbakestillPassordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      // Sign out the recovery session — user must log in fresh with their new password
-      await supabase.auth.signOut();
       setDone(true);
-      setTimeout(() => router.push("/"), 3000);
+      // Navigate away first so this component unmounts and releases its auth lock,
+      // then sign out the recovery session so the user must log in fresh.
+      setTimeout(() => {
+        router.push("/");
+        setTimeout(() => supabase.auth.signOut(), 300);
+      }, 2000);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Noe gikk galt");
     } finally {
