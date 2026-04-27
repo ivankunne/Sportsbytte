@@ -97,6 +97,8 @@ export function Header() {
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Recovery session is only valid for changing the password — don't log the user in globally
+      if (event === "PASSWORD_RECOVERY") return;
       if (session) {
         const { data: profile } = await supabase
           .from("profiles")

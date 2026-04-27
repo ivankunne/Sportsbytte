@@ -66,8 +66,10 @@ export default function TilbakestillPassordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+      // Sign out the recovery session — user must log in fresh with their new password
+      await supabase.auth.signOut();
       setDone(true);
-      setTimeout(() => router.push("/"), 2000);
+      setTimeout(() => router.push("/"), 3000);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Noe gikk galt");
     } finally {
@@ -103,7 +105,7 @@ export default function TilbakestillPassordPage() {
         {done ? (
           <div className="rounded-lg bg-forest-light p-4 text-center mt-4">
             <p className="text-sm font-medium text-forest">Passordet er oppdatert!</p>
-            <p className="mt-1 text-xs text-ink-light">Du blir sendt til forsiden...</p>
+            <p className="mt-1 text-xs text-ink-light">Logg inn med det nye passordet ditt...</p>
           </div>
         ) : checking ? (
           <p className="mt-4 text-sm text-ink-light">Verifiserer lenke...</p>
