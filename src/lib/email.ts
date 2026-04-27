@@ -1,4 +1,4 @@
-// Nordic Teal email template — matches site palette exactly
+// Nordic Teal email template — matches site palette
 
 /** Escape user-supplied strings before interpolating into HTML email bodies */
 export function escapeHtml(s: string): string {
