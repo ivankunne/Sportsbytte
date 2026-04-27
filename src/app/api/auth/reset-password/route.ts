@@ -85,7 +85,13 @@ export async function POST(req: NextRequest) {
     html,
   });
 
-  if (sendError) console.error("reset-password Resend error:", sendError);
+  if (sendError) {
+    console.error("reset-password Resend error:", sendError);
+    return NextResponse.json(
+      { error: "Kunne ikke sende e-post. Prøv igjen." },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ ok: true });
 }
