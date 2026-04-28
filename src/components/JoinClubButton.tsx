@@ -44,9 +44,27 @@ export function JoinClubButton({ clubId, clubName, isMembershipGated, memberEmai
   }
 
   if (submitted) {
+    if (approvedStatus === "approved") {
+      return (
+        <div className="flex items-center gap-2 rounded-lg bg-white/20 px-5 py-2 text-sm font-medium text-white backdrop-blur-sm">
+          <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+          Velkommen som medlem!
+        </div>
+      );
+    }
     return (
-      <div className="rounded-lg bg-white/20 px-5 py-2 text-sm font-medium text-white backdrop-blur-sm">
-        {approvedStatus === "approved" ? "Velkommen!" : "Søknad sendt"}
+      <div className="rounded-lg bg-white/15 border border-white/30 px-5 py-3 max-w-xs text-left backdrop-blur-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <svg className="h-4 w-4 text-white flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-sm font-semibold text-white">Søknad sendt!</span>
+        </div>
+        <p className="text-xs text-white/80 leading-snug">
+          En klubbadmin vil godkjenne forespørselen din. Du får beskjed på e-post når du er godkjent.
+        </p>
       </div>
     );
   }

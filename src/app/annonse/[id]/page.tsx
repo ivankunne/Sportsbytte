@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { ListingDetail } from "./ListingDetail";
 
@@ -94,7 +95,9 @@ export default async function ListingPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
-      <ListingDetail id={id} />
+      <Suspense>
+        <ListingDetail id={id} />
+      </Suspense>
     </>
   );
 }

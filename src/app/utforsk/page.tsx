@@ -48,15 +48,16 @@ function ExplorePage() {
   // Instant filters (fire fetch immediately)
   const [activeCategory, setActiveCategory] = useState(searchParams.get("kategori") ?? "");
   const [sort, setSort] = useState(searchParams.get("sorter") ?? "nyeste");
-  const [condition, setCondition] = useState("");
+  const [condition, setCondition] = useState(searchParams.get("tilstand") ?? "");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState("");
+  const [geoErrorPersist, setGeoErrorPersist] = useState("");
 
   // Debounced filters (text / price — wait 350ms after last change)
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
+  const [minPrice, setMinPrice] = useState(searchParams.get("fra") ?? "");
+  const [maxPrice, setMaxPrice] = useState(searchParams.get("til") ?? "");
 
   // Debounced versions used for the actual fetch
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -95,24 +96,30 @@ function ExplorePage() {
       (pos) => {
         setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setGeoLoading(false);
+        setGeoErrorPersist("");
       },
       () => {
-        setGeoError("Kunne ikke hente posisjon. Sjekk at du har gitt tillatelse.");
+        const msg = "Kunne ikke hente posisjon — sjekk at du har gitt tillatelse i nettleseren.";
+        setGeoError(msg);
+        setGeoErrorPersist(msg);
         setGeoLoading(false);
         setSort("nyeste");
       }
     );
   }, [sort, userLocation]);
 
-  // Sync URL
+  // Sync URL (including condition and price so filters survive back navigation)
   useEffect(() => {
     const params = new URLSearchParams();
     if (debouncedQuery) params.set("q", debouncedQuery);
     if (activeCategory) params.set("kategori", activeCategory);
     if (sort !== "nyeste") params.set("sorter", sort);
+    if (condition) params.set("tilstand", condition);
+    if (debouncedMin) params.set("fra", debouncedMin);
+    if (debouncedMax) params.set("til", debouncedMax);
     const str = params.toString();
     router.replace(`/utforsk${str ? `?${str}` : ""}`, { scroll: false });
-  }, [debouncedQuery, activeCategory, sort, router]);
+  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, router]);
 
   // Fetch — depends only on settled (debounced) values + instant filters
   const categoriesReady = categories.length > 0;
@@ -187,7 +194,7 @@ function ExplorePage() {
   function resetAll() {
     setQuery(""); setActiveCategory(""); setSort("nyeste");
     setCondition(""); setMinPrice(""); setMaxPrice("");
-    setUserLocation(null); setGeoError("");
+    setUserLocation(null); setGeoError(""); setGeoErrorPersist("");
   }
 
   const hasActiveFilters = query || activeCategory || condition || minPrice || maxPrice || sort !== "nyeste";
@@ -294,16 +301,22 @@ function ExplorePage() {
       </div>
 
       {/* Geo status */}
-      {sort === "nær-meg" && (geoLoading || geoError || userLocation) && (
+      {geoErrorPersist && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+          <svg className="h-4 w-4 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+          </svg>
+          <p className="text-xs text-red-600">{geoErrorPersist}</p>
+          <button onClick={() => setGeoErrorPersist("")} className="ml-auto text-red-400 hover:text-red-600 text-xs">✕</button>
+        </div>
+      )}
+      {sort === "nær-meg" && !geoErrorPersist && (geoLoading || userLocation) && (
         <div className="mb-4">
           {geoLoading && (
             <div className="flex items-center gap-2 text-xs text-ink-light">
               <div className="h-3.5 w-3.5 rounded-full border-2 border-forest border-t-transparent animate-spin" />
               Henter posisjon...
             </div>
-          )}
-          {geoError && (
-            <p className="text-xs text-red-500">{geoError}</p>
           )}
           {userLocation && !geoLoading && (
             <div className="flex items-center gap-1.5 text-xs text-forest">

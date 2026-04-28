@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { ListingWithRelations } from "@/lib/queries";
 import { formatDaysAgo } from "@/lib/queries";
@@ -13,6 +14,8 @@ import { ListingCard } from "@/components/ListingCard";
 import { ListingChat } from "@/components/ListingChat";
 
 export function ListingDetail({ id }: { id: string }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [listing, setListing] = useState<ListingWithRelations | null>(null);
   const [clubListings, setClubListings] = useState<ListingWithRelations[]>([]);
   const [sellerListings, setSellerListings] = useState<ListingWithRelations[]>([]);
@@ -106,6 +109,27 @@ export function ListingDetail({ id }: { id: string }) {
       setSellerListings((seller ?? []) as ListingWithRelations[]);
       setLoading(false);
     })();
+  }, [id]);
+
+  // Show success toast when redirected from /selg after publishing
+  useEffect(() => {
+    if (searchParams.get("published") === "1") {
+      showSuccess("Annonsen er publisert!");
+      router.replace(`/annonse/${id}`, { scroll: false });
+    }
+  }, [searchParams, id, router]);
+
+  // Realtime: update quantity / sold state when webhook fires
+  useEffect(() => {
+    const channel = supabase
+      .channel(`listing-${id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "listings", filter: `id=eq.${id}` }, (payload) => {
+        const updated = payload.new as { quantity?: number | null; is_sold?: boolean };
+        setListing((prev) => prev ? { ...prev, quantity: updated.quantity ?? prev.quantity, is_sold: updated.is_sold ?? prev.is_sold } : prev);
+        if (updated.is_sold) setIsSold(true);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [id]);
 
   if (loading) {

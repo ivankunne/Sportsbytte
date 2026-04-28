@@ -80,6 +80,7 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [userEmail, setUserEmail] = useState("");
+  const [inboxUnread, setInboxUnread] = useState(0);
   const initialTab = (searchParams.get("tab") as Tab | null) ?? "innboks";
   const [tab, setTab] = useState<Tab>(initialTab);
   const stripeReturn = searchParams.get("stripe");
@@ -162,19 +163,24 @@ function DashboardContent() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors duration-[120ms] border-b-2 -mb-px ${
+            className={`relative px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors duration-[120ms] border-b-2 -mb-px ${
               tab === t.id
                 ? "border-forest text-forest"
                 : "border-transparent text-ink-light hover:text-ink"
             }`}
           >
             {t.label}
+            {t.id === "innboks" && inboxUnread > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
+                {inboxUnread > 9 ? "9+" : inboxUnread}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {tab === "innboks" && (
-        <InboksTab profile={profile} userEmail={userEmail} />
+        <InboksTab profile={profile} userEmail={userEmail} onUnreadCount={setInboxUnread} />
       )}
       {tab === "annonser" && <AnnonserTab profile={profile} />}
       {tab === "anmeldelser" && <AnmedelserTab profile={profile} />}
@@ -193,11 +199,14 @@ function DashboardContent() {
 function InboksTab({
   profile,
   userEmail,
+  onUnreadCount,
 }: {
   profile: UserProfile;
   userEmail: string;
+  onUnreadCount: (n: number) => void;
 }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Conversation | null>(null);
 
@@ -242,6 +251,34 @@ function InboksTab({
       );
 
       setConversations(all);
+
+      // Compute unread: fetch latest message per conversation, compare to localStorage read time
+      if (all.length > 0) {
+        const ids = all.map((c) => c.id);
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: msgs } = await supabase
+          .from("messages")
+          .select("conversation_id, created_at")
+          .in("conversation_id", ids)
+          .gt("created_at", weekAgo)
+          .order("created_at", { ascending: false });
+
+        if (msgs) {
+          const latestPerConv: Record<string, string> = {};
+          for (const m of msgs) {
+            if (!latestPerConv[m.conversation_id]) latestPerConv[m.conversation_id] = m.created_at;
+          }
+          const unread = new Set<string>();
+          for (const conv of all) {
+            const lastRead = localStorage.getItem(`inbox_read_${conv.id}`);
+            const latest = latestPerConv[conv.id];
+            if (latest && (!lastRead || latest > lastRead)) unread.add(conv.id);
+          }
+          setUnreadIds(unread);
+          onUnreadCount(unread.size);
+        }
+      }
+
       setLoading(false);
     }
     load().catch(() => setLoading(false));
@@ -275,7 +312,8 @@ function InboksTab({
             key={conv.id}
             conv={conv}
             selected={false}
-            onClick={() => setSelected(conv)}
+            unread={unreadIds.has(conv.id)}
+            onClick={() => { setSelected(conv); localStorage.setItem(`inbox_read_${conv.id}`, new Date().toISOString()); setUnreadIds((prev) => { const n = new Set(prev); n.delete(conv.id); onUnreadCount(n.size); return n; }); }}
           />
         ))}
       </div>
@@ -310,7 +348,8 @@ function InboksTab({
               key={conv.id}
               conv={conv}
               selected={selected?.id === conv.id}
-              onClick={() => setSelected(conv)}
+              unread={unreadIds.has(conv.id)}
+              onClick={() => { setSelected(conv); localStorage.setItem(`inbox_read_${conv.id}`, new Date().toISOString()); setUnreadIds((prev) => { const n = new Set(prev); n.delete(conv.id); onUnreadCount(n.size); return n; }); }}
             />
           ))}
         </div>
@@ -335,10 +374,12 @@ function InboksTab({
 function ConvListItem({
   conv,
   selected,
+  unread,
   onClick,
 }: {
   conv: Conversation;
   selected: boolean;
+  unread?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -347,22 +388,27 @@ function ConvListItem({
       className={`w-full text-left rounded-xl p-3.5 transition-colors duration-[120ms] ${
         selected
           ? "bg-forest-light border-2 border-forest"
+          : unread
+          ? "bg-white border-2 border-red-200"
           : "bg-white border-2 border-transparent hover:border-border"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold text-ink truncate">
+        <p className={`text-sm truncate ${unread ? "font-bold text-ink" : "font-semibold text-ink"}`}>
           {conv.listings?.title ?? "Ukjent annonse"}
         </p>
-        <span
-          className={`text-[10px] font-bold uppercase tracking-wide flex-shrink-0 rounded-full px-2 py-0.5 ${
-            conv.role === "seller"
-              ? "bg-amber-light text-amber"
-              : "bg-forest-light text-forest"
-          }`}
-        >
-          {conv.role === "seller" ? "Selger" : "Kjøper"}
-        </span>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {unread && <span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
+          <span
+            className={`text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 ${
+              conv.role === "seller"
+                ? "bg-amber-light text-amber"
+                : "bg-forest-light text-forest"
+            }`}
+          >
+            {conv.role === "seller" ? "Selger" : "Kjøper"}
+          </span>
+        </div>
       </div>
       <p className="text-xs text-ink-light mt-1 truncate">
         {conv.role === "seller" ? `Kjøper: ${conv.buyer_name}` : "Samtale med selger"}
@@ -1199,10 +1245,15 @@ function ProfilTab({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-ink mb-1.5">Bio</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-medium text-ink">Bio</label>
+            <span className={`text-xs ${form.bio.length > 380 ? "text-red-500" : "text-ink-light"}`}>
+              {form.bio.length}/400
+            </span>
+          </div>
           <textarea
             value={form.bio}
-            onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value.slice(0, 400) }))}
             rows={3}
             placeholder="Fortell litt om deg selv..."
             className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"

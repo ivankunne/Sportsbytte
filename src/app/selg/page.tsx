@@ -137,6 +137,13 @@ export default function SellPage() {
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const incoming = Array.from(e.target.files ?? []);
+    const MAX_SIZE = 10 * 1024 * 1024;
+    const ALLOWED = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/heic", "image/heif", "image/gif"];
+    const tooBig = incoming.find((f) => f.size > MAX_SIZE);
+    const wrongType = incoming.find((f) => !ALLOWED.includes(f.type.toLowerCase()));
+    if (tooBig) { setError(`"${tooBig.name}" er for stor (maks 10 MB per bilde).`); e.target.value = ""; return; }
+    if (wrongType) { setError(`"${wrongType.name}" har ugyldig format. Bruk JPG, PNG eller WebP.`); e.target.value = ""; return; }
+    setError("");
     const combined = [...imageFiles, ...incoming].slice(0, 8);
     setImageFiles(combined);
     setImagePreviews(combined.map((f) => URL.createObjectURL(f)));
@@ -218,7 +225,7 @@ export default function SellPage() {
 
       const result = await res.json();
       if (!res.ok) throw new Error(result.error ?? "Noe gikk galt");
-      router.push(`/annonse/${result.id}`);
+      router.push(`/annonse/${result.id}?published=1`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Noe gikk galt. Prøv igjen.");
       setSubmitting(false);
