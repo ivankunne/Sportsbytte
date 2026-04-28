@@ -31,8 +31,37 @@ export default async function HomePage() {
     getPlatformStats(),
   ]);
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sportsbytte.no";
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}/#organization`,
+        name: "Sportsbytte",
+        url: siteUrl,
+        logo: `${siteUrl}/Sportbytte_logo-removebg-preview.png`,
+        email: "hei@sportsbytte.no",
+        description: "Norges markedsplass for brukt sportsutstyr mellom klubbmedlemmer.",
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        url: siteUrl,
+        name: "Sportsbytte",
+        publisher: { "@id": `${siteUrl}/#organization` },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: { "@type": "EntryPoint", urlTemplate: `${siteUrl}/utforsk?q={search_term_string}` },
+          "query-input": "required name=search_term_string",
+        },
+      },
+    ],
+  };
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Hero */}
       <section className="bg-white overflow-hidden">
         <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-12 py-16 sm:py-20 lg:py-24">

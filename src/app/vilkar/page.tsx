@@ -135,9 +135,10 @@ export default function TermsPage() {
           </h2>
           <p className="mt-4 text-ink-mid leading-relaxed text-sm">
             Betaling på Sportsbytte skjer via{" "}
-            <strong className="text-ink">Stripe</strong>. Beløpet holdes av
-            plattformen til kjøper bekrefter mottak og er fornøyd — først da
-            utbetales pengene til selger.
+            <strong className="text-ink">Stripe</strong>. Betalingen behandles
+            umiddelbart og overføres til selgers Stripe-konto i henhold til
+            Stripes standard utbetalingsplan (vanligvis 2–7 virkedager).
+            Sportsbytte trekker et tjenestegebyr automatisk fra transaksjonen.
           </p>
           <p className="mt-3 text-ink-mid leading-relaxed text-sm">
             Frakt håndteres via{" "}
@@ -161,16 +162,28 @@ export default function TermsPage() {
             Kjøperbeskyttelse
           </h2>
           <p className="mt-4 text-ink-mid leading-relaxed text-sm">
-            Alle transaksjoner gjennomført via Sportsbytte er dekket av
-            kjøperbeskyttelse. Dersom varen ikke er som beskrevet i annonsen,
-            kan kjøper åpne en sak innen{" "}
-            <strong className="text-ink">48 timer</strong> etter mottak.
+            Sportsbytte er en markedsplass for salg mellom privatpersoner.
+            Salg mellom private kjøpere og selgere (ikke-næringsdrivende) er
+            regulert av{" "}
+            <strong className="text-ink">kjøpsloven</strong>, ikke
+            forbrukerkjøpsloven.{" "}
+            <strong className="text-ink">
+              Angrerettloven (14-dagers angrerett) gjelder ikke
+            </strong>{" "}
+            for kjøp mellom privatpersoner på denne plattformen.
           </p>
           <p className="mt-3 text-ink-mid leading-relaxed text-sm">
-            Sportsbytte vil da megle mellom kjøper og selger. Mulige utfall
-            er full refusjon, delvis refusjon eller at salget fastholdes.
-            Beslutningen er endelig. Pengene holdes tilbake inntil saken er
-            løst.
+            Dersom varen ikke er som beskrevet i annonsen, kan kjøper kontakte
+            Sportsbytte innen{" "}
+            <strong className="text-ink">48 timer</strong> etter mottak ved å
+            sende e-post til{" "}
+            <a href="mailto:hei@sportsbytte.no" className="text-forest underline underline-offset-2">
+              hei@sportsbytte.no
+            </a>
+            . Sportsbytte vil da megle mellom kjøper og selger, og kan bistå
+            med å initiere refusjon via Stripe dersom saken berettiger det.
+            Mulige utfall er full refusjon, delvis refusjon eller at salget
+            fastholdes.
           </p>
         </div>
 
