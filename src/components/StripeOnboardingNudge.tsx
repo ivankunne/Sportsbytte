@@ -18,7 +18,7 @@ export function StripeOnboardingNudge() {
         .from("profiles")
         .select("stripe_onboarding_complete")
         .eq("auth_user_id", session.user.id)
-        .single();
+        .maybeSingle();
 
       if (profile && !profile.stripe_onboarding_complete) setShow(true);
     }

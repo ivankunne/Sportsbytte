@@ -95,7 +95,7 @@ export function ListingChat({
         .from("profiles")
         .select("name")
         .eq("auth_user_id", session.user.id)
-        .single();
+        .maybeSingle();
 
       const userName =
         profile?.name ?? session.user.email?.split("@")[0] ?? "Kjøper";
@@ -215,9 +215,10 @@ export function ListingChat({
           buyer_email: currentUser.email,
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!conv) throw new Error("Failed to create conversation");
 
       localStorage.setItem(storageKey(listing.id), JSON.stringify(conv));
       setConversation(conv as Conversation);
@@ -253,7 +254,7 @@ export function ListingChat({
           metadata: metadata ?? null,
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (msg) {
         setMessages((prev) => {

@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     .from("memberships")
     .select("id, status, message, profile_id, club_id, profiles(id, name, auth_user_id), clubs(id, name, slug)")
     .eq("id", membership_id)
-    .single();
+    .maybeSingle();
 
   if (!membership) return NextResponse.json({ error: "Membership not found" }, { status: 404 });
 

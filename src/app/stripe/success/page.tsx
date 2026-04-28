@@ -23,7 +23,7 @@ function SuccessContent() {
       .from("listings")
       .select("title, price, profiles!listings_seller_id_fkey(name, is_pro), clubs(is_pro)")
       .eq("id", Number(listingId))
-      .single()
+      .maybeSingle()
       .then(({ data }) => setListing(data as ListingSnippet | null));
   }, [listingId]);
 

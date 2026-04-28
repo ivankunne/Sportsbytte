@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
             .eq("email", contactEmail)
             .order("created_at", { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
           if (reg) {
             const updatedDesc = (reg.description ?? "").replace("[PRO SØKNAD]", "[PRO BETALT]");
             await admin.from("club_registrations").update({ description: updatedDesc }).eq("id", reg.id);
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
         .from("listings")
         .select("quantity")
         .eq("id", listingId)
-        .single();
+        .maybeSingle();
 
       const qty = listingStock?.quantity ?? null;
       if (qty !== null && qty > 1) {
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
         .from("listings")
         .select("seller_id, title, price, club_id")
         .eq("id", listingId)
-        .single();
+        .maybeSingle();
 
       if (listing) {
         // Increment seller's total_sold and update club counters
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
           .from("profiles")
           .select("total_sold, is_pro")
           .eq("id", listing.seller_id)
-          .single();
+          .maybeSingle();
         if (profile) {
           await admin
             .from("profiles")
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
             .from("clubs")
             .select("total_sold, active_listings, is_pro")
             .eq("id", listing.club_id)
-            .single();
+            .maybeSingle();
           if (club) {
             clubIsPro = club.is_pro ?? false;
             await admin.from("clubs").update({
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
             .from("clubs")
             .select("total_sold, is_pro")
             .eq("id", listing.club_id)
-            .single();
+            .maybeSingle();
           if (club) {
             clubIsPro = club.is_pro ?? false;
             await admin.from("clubs").update({ total_sold: club.total_sold + 1 }).eq("id", listing.club_id);

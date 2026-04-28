@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     .from("profiles")
     .select("id")
     .eq("auth_user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!profile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
 
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     .select("id, title, is_sold, seller_id")
     .eq("id", listing_id)
     .eq("seller_id", profile.id)
-    .single();
+    .maybeSingle();
 
   if (!listing) return NextResponse.json({ error: "Annonse ikke funnet" }, { status: 404 });
   if (listing.is_sold) return NextResponse.json({ error: "Solgte annonser kan ikke fremheves" }, { status: 400 });

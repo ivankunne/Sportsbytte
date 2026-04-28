@@ -26,7 +26,7 @@ export default function JoinViaInvitePage({
         .from("clubs")
         .select("*")
         .eq("invite_token", token)
-        .single();
+        .maybeSingle();
 
       if (!data) {
         setNotFound(true);

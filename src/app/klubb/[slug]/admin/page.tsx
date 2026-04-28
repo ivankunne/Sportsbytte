@@ -218,8 +218,9 @@ function CsvImportSection({
             .from("profiles")
             .insert({ name, slug, avatar: name.slice(0, 2).toUpperCase(), club_id: club.id })
             .select("id")
-            .single();
+            .maybeSingle();
           if (error) throw error;
+          if (!newProfile) throw new Error("Failed to create profile");
           profileId = newProfile.id;
         }
 
@@ -368,7 +369,7 @@ export default function ClubAdminPage({
         .from("clubs")
         .select("*")
         .eq("slug", p.slug)
-        .single();
+        .maybeSingle();
 
       if (!clubData) { setLoading(false); return; }
       setClub(clubData);

@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   }
   if (!listing_id) return NextResponse.json({ ok: false }, { status: 400 });
 
-  const { data } = await admin.from("listings").select("views").eq("id", listing_id).single();
+  const { data } = await admin.from("listings").select("views").eq("id", listing_id).maybeSingle();
   if (data) {
     await admin.from("listings").update({ views: data.views + 1 }).eq("id", listing_id);
   }

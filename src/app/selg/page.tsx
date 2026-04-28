@@ -652,13 +652,13 @@ export default function SellPage() {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || uploading}
             className="w-full rounded-lg bg-amber py-4 text-base font-bold text-white hover:brightness-92 transition-all duration-[120ms] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting
-              ? uploading
-                ? "Laster opp bilder..."
-                : "Publiserer..."
+            {uploading
+              ? "Laster opp bilder..."
+              : submitting
+              ? "Publiserer..."
               : isISO
               ? "Publiser ettersøk"
               : isBulk

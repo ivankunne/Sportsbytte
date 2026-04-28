@@ -20,7 +20,7 @@ export function OnboardingNudge() {
         .from("profiles")
         .select("club_id")
         .eq("auth_user_id", session.user.id)
-        .single();
+        .maybeSingle();
 
       if (profile && profile.club_id === null) setShow(true);
     }

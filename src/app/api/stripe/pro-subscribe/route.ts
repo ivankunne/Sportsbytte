@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     .from("clubs")
     .select("id, name, stripe_customer_id, is_pro")
     .eq("slug", club_slug)
-    .single();
+    .maybeSingle();
 
   if (!club) return NextResponse.json({ error: "Klubb ikke funnet" }, { status: 404 });
   if (club.is_pro) return NextResponse.json({ error: "Klubben har allerede Pro" }, { status: 400 });

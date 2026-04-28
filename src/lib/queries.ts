@@ -59,7 +59,7 @@ export async function getClubBySlug(slug: string): Promise<Club | null> {
     .from("clubs")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
   if (error && error.code !== "PGRST116") throw error;
   return data;
 }
@@ -129,7 +129,7 @@ export async function getListingById(
     .from("listings")
     .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
     .eq("id", id)
-    .single();
+    .maybeSingle();
   if (error && error.code !== "PGRST116") throw error;
   return data as ListingWithRelations | null;
 }
@@ -161,7 +161,7 @@ export async function getProfileBySlug(
     .from("profiles")
     .select("*, clubs(*)")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
   if (error && error.code !== "PGRST116") throw error;
   return data as ProfileWithClub | null;
 }
@@ -276,8 +276,9 @@ export async function createAnnouncement(
     .from("announcements")
     .insert({ club_id: clubId, title, body, type, author_name: authorName ?? null })
     .select()
-    .single();
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error("Insert returned no data");
   return data;
 }
 
@@ -317,7 +318,7 @@ export async function createMembershipRequest(
     .select("id")
     .ilike("name", name.trim())
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (!profile) {
     const slug = name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -325,14 +326,15 @@ export async function createMembershipRequest(
       .from("profiles")
       .insert({ name: name.trim(), slug: `${slug}-${Date.now()}`, avatar: name.trim().slice(0, 2).toUpperCase() })
       .select("id")
-      .single();
+      .maybeSingle();
     if (error) throw error;
+    if (!newProfile) throw new Error("Failed to create profile");
     profile = newProfile;
   }
 
   const { error } = await supabase.from("memberships").upsert({
     club_id: clubId,
-    profile_id: profile.id,
+    profile_id: profile!.id,
     message: message ?? null,
     status,
   });
@@ -367,8 +369,9 @@ export async function createSavedSearch(params: {
     max_price: params.maxPrice ?? null,
     size_hint: params.sizeHint ?? null,
     club_id: params.clubId ?? null,
-  }).select("id").single();
+  }).select("id").maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error("Insert returned no data");
   return data.id;
 }
 

@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     .from("conversations")
     .select("buyer_name, buyer_email, listing_id, seller_id")
     .eq("id", record.conversation_id)
-    .single();
+    .maybeSingle();
 
   if (!conv) {
     return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     .from("listings")
     .select("title, id")
     .eq("id", conv.listing_id)
-    .single();
+    .maybeSingle();
 
   const listingTitle = listing?.title ?? "en annonse";
   const listingUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/annonse/${conv.listing_id}`;
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       .from("profiles")
       .select("auth_user_id, name")
       .eq("id", conv.seller_id)
-      .single();
+      .maybeSingle();
 
     if (!profile?.auth_user_id) {
       return NextResponse.json({ ok: true, skipped: "no seller auth" });

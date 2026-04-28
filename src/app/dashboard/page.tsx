@@ -463,7 +463,7 @@ function ConversationView({
           content: draft,
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         setSendError(`Kunne ikke sende: ${error.message}`);
@@ -1214,7 +1214,7 @@ function ProfilTab({
 
         <button
           onClick={save}
-          disabled={saving || !form.name.trim()}
+          disabled={saving || avatarUploading || !form.name.trim()}
           className="w-full rounded-lg bg-forest py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? "Lagrer..." : saved ? "✓ Lagret!" : "Lagre endringer"}

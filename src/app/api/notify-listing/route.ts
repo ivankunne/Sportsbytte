@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     .from("listings")
     .select("id, title, price, category, condition, seller_id, clubs(name), profiles(name, auth_user_id)")
     .eq("id", listing_id)
-    .single();
+    .maybeSingle();
 
   if (!listing) return NextResponse.json({ error: "Listing not found" }, { status: 404 });
 

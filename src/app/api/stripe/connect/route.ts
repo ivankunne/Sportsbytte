@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     .from("profiles")
     .select("id, stripe_account_id")
     .eq("auth_user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!profile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
 

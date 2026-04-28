@@ -215,7 +215,7 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
           .from("profiles")
           .select("name")
           .eq("auth_user_id", data.user.id)
-          .single();
+          .maybeSingle();
 
         onSuccess({
           name: profile?.name ?? data.user.email?.split("@")[0] ?? "Meg",
@@ -248,7 +248,7 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
             club_id: selectedClub?.id ?? null,
           })
           .select("id")
-          .single();
+          .maybeSingle();
 
         let membershipId: number | null = null;
         if (selectedClub && newProfile) {
@@ -261,7 +261,7 @@ export function AuthForm({ onSuccess, initialMode = "login" }: Props) {
               message: "Søkt via registrering",
             })
             .select("id")
-            .single();
+            .maybeSingle();
           membershipId = mem?.id ?? null;
         }
 

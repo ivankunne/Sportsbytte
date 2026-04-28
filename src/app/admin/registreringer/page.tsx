@@ -1700,7 +1700,7 @@ function MeldingerTab() {
           content: reply.trim(),
         })
         .select()
-        .single();
+        .maybeSingle();
       if (msg) {
         setMessages((prev) => {
           if (prev.find((m) => m.id === (msg as Message).id)) return prev;

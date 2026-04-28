@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     .from("clubs")
     .select("id, invite_token, members")
     .eq("invite_token", token)
-    .single();
+    .maybeSingle();
   if (!club) return NextResponse.json({ error: "Ugyldig invitasjonslenke" }, { status: 404 });
 
   let { data: profile } = await admin
@@ -43,8 +43,9 @@ export async function POST(req: NextRequest) {
       .from("profiles")
       .insert({ name: name.trim(), slug, avatar: name.trim().slice(0, 2).toUpperCase(), club_id: club.id })
       .select("id")
-      .single();
+      .maybeSingle();
     if (error) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
+    if (!newProfile) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
     profile = newProfile;
   }
 
@@ -52,12 +53,12 @@ export async function POST(req: NextRequest) {
     .from("memberships")
     .select("status")
     .eq("club_id", club.id)
-    .eq("profile_id", profile.id)
+    .eq("profile_id", profile!.id)
     .maybeSingle();
 
   const { error } = await admin.from("memberships").upsert({
     club_id: club.id,
-    profile_id: profile.id,
+    profile_id: profile!.id,
     status: "approved",
     message: message?.trim() || null,
   });

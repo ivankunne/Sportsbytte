@@ -48,6 +48,9 @@ export async function POST(req: NextRequest) {
   if (rating < 1 || rating > 5) {
     return NextResponse.json({ error: "Vurdering må være mellom 1 og 5" }, { status: 400 });
   }
+  if (text && text.length > 1000) {
+    return NextResponse.json({ error: "Kommentar kan ikke overstige 1000 tegn" }, { status: 400 });
+  }
   if (reviewerProfile.id === profile_id) {
     return NextResponse.json({ error: "Du kan ikke vurdere deg selv" }, { status: 400 });
   }

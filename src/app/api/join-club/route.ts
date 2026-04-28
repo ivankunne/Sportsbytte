@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     .from("clubs")
     .select("id, member_email_domain")
     .eq("id", clubId)
-    .single();
+    .maybeSingle();
 
   if (!club) return NextResponse.json({ error: "Klubb ikke funnet" }, { status: 404 });
 
@@ -54,8 +54,9 @@ export async function POST(req: NextRequest) {
       .from("profiles")
       .insert({ name: name.trim(), slug, avatar: name.trim().slice(0, 2).toUpperCase() })
       .select("id")
-      .single();
+      .maybeSingle();
     if (error) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
+    if (!newProfile) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
     profile = newProfile;
   }
 
@@ -63,12 +64,12 @@ export async function POST(req: NextRequest) {
     .from("memberships")
     .select("status")
     .eq("club_id", clubId)
-    .eq("profile_id", profile.id)
+    .eq("profile_id", profile!.id)
     .maybeSingle();
 
   const { error } = await admin.from("memberships").upsert({
     club_id: clubId,
-    profile_id: profile.id,
+    profile_id: profile!.id,
     message: message?.trim() || null,
     status,
   });
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
 
   if (status === "approved" && existing?.status !== "approved") {
-    const { data: currClub } = await admin.from("clubs").select("members").eq("id", clubId).single();
+    const { data: currClub } = await admin.from("clubs").select("members").eq("id", clubId).maybeSingle();
     if (currClub) {
       await admin.from("clubs").update({ members: currClub.members + 1 }).eq("id", clubId);
     }

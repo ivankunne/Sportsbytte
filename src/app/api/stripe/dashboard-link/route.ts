@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     .from("profiles")
     .select("stripe_account_id, stripe_onboarding_complete")
     .eq("auth_user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!profile?.stripe_account_id || !profile.stripe_onboarding_complete) {
     return NextResponse.json({ error: "Ingen aktiv Stripe-konto" }, { status: 404 });

@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     .from("listings")
     .insert(filtered as any)
     .select("id")
-    .single();
+    .maybeSingle();
 
   if (error || !data) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
 
