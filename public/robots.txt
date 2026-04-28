@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /admin/
+Disallow: /stripe/
+
+Sitemap: https://sportsbytte.no/sitemap.xml

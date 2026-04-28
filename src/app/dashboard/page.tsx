@@ -1146,6 +1146,10 @@ function ProfilTab({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1163,6 +1167,28 @@ function ProfilTab({
     setAvatarUrl(newUrl);
     onSave({ avatar_url: newUrl });
     setAvatarUploading(false);
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setDeleteError("Ikke innlogget"); setDeleting(false); return; }
+      const res = await fetch("/api/delete-account", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? "Noe gikk galt");
+      }
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Noe gikk galt");
+      setDeleting(false);
+    }
   }
 
   async function save() {
@@ -1291,6 +1317,57 @@ function ProfilTab({
           </div>
         </div>
       </div>
+
+      {/* Delete account */}
+      <div className="bg-white rounded-xl p-6 border border-red-100">
+        <h2 className="font-display text-base font-semibold text-ink mb-1">Slett konto</h2>
+        <p className="text-xs text-ink-light mb-4">
+          Sletter profilen din, annonser og all tilknyttet data permanent. Kan ikke angres.
+        </p>
+        <button
+          onClick={() => setDeleteOpen(true)}
+          className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors duration-[120ms]"
+        >
+          Slett konto
+        </button>
+      </div>
+
+      {/* Delete confirmation modal */}
+      {deleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={() => { setDeleteOpen(false); setDeleteConfirm(""); setDeleteError(""); }} />
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-7 shadow-xl">
+            <h3 className="font-display text-lg font-bold text-ink mb-2">Er du sikker?</h3>
+            <p className="text-sm text-ink-mid mb-5">
+              Kontoen, profilen og alle annonser dine slettes permanent. Dette kan ikke angres.
+            </p>
+            <p className="text-xs font-medium text-ink mb-2">Skriv <strong>SLETT</strong> for å bekrefte:</p>
+            <input
+              type="text"
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder="SLETT"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 mb-4"
+            />
+            {deleteError && <p className="text-xs text-red-600 mb-3">{deleteError}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDeleteOpen(false); setDeleteConfirm(""); setDeleteError(""); }}
+                className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-ink hover:bg-cream transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirm !== "SLETT" || deleting}
+                className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {deleting ? "Sletter..." : "Slett konto"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

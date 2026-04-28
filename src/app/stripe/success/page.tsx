@@ -88,6 +88,12 @@ function SuccessContent() {
           >
             Gå til innboks
           </Link>
+          <a
+            href={`mailto:hei@sportsbytte.no?subject=Problem med kjøp${listingId ? ` (annonse #${listingId})` : ""}&body=Hei,%0A%0AJeg har et problem med kjøp av annonse #${listingId ?? ""}.%0A%0ABeskriv problemet her:%0A`}
+            className="text-center text-xs text-ink-light hover:text-forest transition-colors pt-1"
+          >
+            Problem med kjøpet? Kontakt oss →
+          </a>
         </div>
       </div>
     </div>

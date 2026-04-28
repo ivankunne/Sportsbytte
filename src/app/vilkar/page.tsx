@@ -55,8 +55,7 @@ export default function TermsPage() {
             Brukerkonto og ansvar
           </h2>
           <p className="mt-4 text-ink-mid leading-relaxed text-sm">
-            Innlogging og brukerkontoer er under utvikling og vil lanseres
-            snart. Når kontofunksjonaliteten er aktiv, gjelder følgende:
+            For å selge på Sportsbytte må du opprette en konto. Som bruker er du ansvarlig for følgende:
           </p>
           <ul className="mt-3 space-y-2 text-sm text-ink-mid">
             <li className="flex items-start gap-2.5">
