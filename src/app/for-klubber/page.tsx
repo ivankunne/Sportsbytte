@@ -1,15 +1,80 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Koster det noe for klubben?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Nei. Det er gratis å opprette og drive en klubbside på Sportsbytte (Basis-plan). Vi tar 5 % av salgsprisen per gjennomført salg — dette betales av selger, ikke av klubben. Klubb Pro koster 499 kr/mnd og gir kun 2 % gebyr.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Hvem kan registrere klubben?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Alle med en offisiell rolle i klubben — lagleder, sportssjef, styremedlem eller daglig leder. Du bekrefter rollen ved registrering.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Kan vi ha private annonser?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Ja. Du kan velge at annonser kun er synlige for godkjente klubbmedlemmer.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Hva med betaling og frakt?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Betaling skjer via Stripe — trygt og kjent for alle med kort. Frakt ordnes med Bring, der fraktlabel genereres automatisk.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Kan vi kjøre digitalt byttemarked?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Absolutt. Fra admin-panelet kan du sette opp et tidsbegrenset digitalt byttemarked der alle annonser samles på én side.",
+      },
+    },
+  ],
+};
+
 export const metadata: Metadata = {
   title: "For idrettslag — Sportsbytte",
   description:
     "Sportsbytte gir hvert idrettslag en merkevarekledd markedsplass der medlemmene kan kjøpe og selge brukt sportsutstyr — trygt, enkelt og helt gratis for klubben.",
+  openGraph: {
+    title: "For idrettslag — Sportsbytte",
+    description: "Gi klubbens medlemmer sin egen digitale bruktmarkedsplass. Gratis å registrere, klar på 5 minutter.",
+    url: "https://sportsbytte.no/for-klubber",
+    siteName: "Sportsbytte",
+    locale: "nb_NO",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "For idrettslag — Sportsbytte",
+    description: "Gi klubbens medlemmer sin egen digitale bruktmarkedsplass. Gratis å registrere, klar på 5 minutter.",
+  },
 };
 
 export default function ForKlubberPage() {
   return (
-    <div className="overflow-x-hidden">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <div className="overflow-x-hidden">
       {/* ─── 1. HERO ─────────────────────────────────────────────── */}
       <section className="relative bg-forest text-white">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-20 pb-28 sm:pt-28 sm:pb-36 text-center">
@@ -614,5 +679,6 @@ export default function ForKlubberPage() {
         </div>
       </section>
     </div>
+    </>
   );
 }

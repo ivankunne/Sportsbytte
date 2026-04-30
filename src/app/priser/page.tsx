@@ -4,6 +4,66 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Priser",
   description: "Se prisene for Sportsbytte — gratis å annonsere. Kjøpere betaler 5 % servicegebyr ved kjøp. Pro-plan for selgere og klubber reduserer gebyret til 2 %.",
+  openGraph: {
+    title: "Priser — Sportsbytte",
+    description: "Gratis å annonsere. 5 % servicegebyr per salg. Pro-plan med 2 % for aktive selgere og klubber.",
+    url: "https://sportsbytte.no/priser",
+    siteName: "Sportsbytte",
+    locale: "nb_NO",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Priser — Sportsbytte",
+    description: "Gratis å annonsere. 5 % servicegebyr per salg. Pro-plan med 2 % for aktive selgere og klubber.",
+  },
+};
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Hva koster det å selge som privatperson?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Det er gratis å opprette konto og lage annonser. Kjøpere betaler 5 % servicegebyr på toppen av listeprisen. Som Selger Pro betaler kjøperne dine kun 2 %.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Hva er Selger Pro?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Selger Pro er en abonnementsplan for aktive selgere til 99 kr/mnd. Kjøperne dine betaler kun 2 % servicegebyr (mot 5 % standard), du kan fremheve annonser øverst i søk, og får et Pro-badge på profilen din.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Hva koster Pro-planen for klubber?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Klubb Pro koster 499 kr/mnd — kjøpere på klubbens annonser betaler kun 2 % servicegebyr. Klubb Basis er gratis i åpningsperioden med 5 % servicegebyr for kjøpere.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Hva dekker transaksjonsgebyret?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Gebyret dekker kortbetaling via Stripe, kjøperbeskyttelse, kundeservice og plattformdrift.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Kan jeg bytte plan underveis?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Ja, du kan oppgradere eller avslutte abonnementet når som helst direkte fra profilsiden i dashbordet ditt.",
+      },
+    },
+  ],
 };
 
 function Check({ gold = false }: { gold?: boolean }) {
@@ -24,7 +84,12 @@ function Check({ gold = false }: { gold?: boolean }) {
 
 export default function PricingPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
       <div className="text-center mb-14">
         <span className="text-xs font-bold text-amber uppercase tracking-wider">
           Priser
@@ -276,5 +341,6 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

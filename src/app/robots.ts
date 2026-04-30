@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/dashboard", "/admin", "/api/", "/join/"],
+        disallow: ["/dashboard", "/admin", "/api/", "/join/", "/tilbakestill-passord", "/stripe/"],
       },
     ],
     sitemap: "https://sportsbytte.no/sitemap.xml",

@@ -5,21 +5,36 @@ import {
   getListingsByClub,
   getProfilesByClub,
 } from "@/lib/queries";
-import { ClubListings } from "@/components/ClubListings";
 import { ClubAnnouncements } from "@/components/ClubAnnouncements";
+import { ClubPageTabs } from "@/components/ClubPageTabs";
 import { JoinClubButton } from "@/components/JoinClubButton";
 import Link from "next/link";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sportsbytte.no";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const club = await getClubBySlug(slug);
   if (!club) return {};
+  const description = `Kjøp og selg brukt sportsutstyr fra ${club.name}. ${club.active_listings} aktive annonser fra ${club.members} medlemmer.`;
+  const pageUrl = `${SITE_URL}/klubb/${club.slug}`;
   return {
     title: club.name,
-    description: `Kjøp og selg brukt sportsutstyr fra ${club.name}. ${club.active_listings} aktive annonser fra ${club.members} medlemmer.`,
+    description,
     openGraph: {
       title: `${club.name} | Sportsbytte`,
       description: `Brukt sportsutstyr fra ${club.name}-medlemmer.`,
+      url: pageUrl,
+      siteName: "Sportsbytte",
+      locale: "nb_NO",
+      type: "website",
+      ...(club.logo_url ? { images: [{ url: club.logo_url, width: 400, height: 400, alt: club.name }] } : {}),
+    },
+    twitter: {
+      card: club.logo_url ? "summary" : "summary_large_image",
+      title: `${club.name} | Sportsbytte`,
+      description: `Brukt sportsutstyr fra ${club.name}-medlemmer.`,
+      ...(club.logo_url ? { images: [club.logo_url] } : {}),
     },
   };
 }
@@ -58,49 +73,95 @@ export default async function ClubPage({ params }: Props) {
   const listings = allListings.filter((l) => l.listing_type !== "iso");
   const isoListings = allListings.filter((l) => l.listing_type === "iso");
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SportsOrganization",
+    name: club.name,
+    url: `${SITE_URL}/klubb/${club.slug}`,
+    ...(club.logo_url ? { logo: club.logo_url, image: club.logo_url } : {}),
+    ...(club.description ? { description: club.description } : {}),
+    numberOfEmployees: { "@type": "QuantitativeValue", value: club.members },
+    address: { "@type": "PostalAddress", addressCountry: "NO" },
+  };
+
+  const accentColor = club.secondary_color || club.color;
+
   return (
     <>
-      {/* Club banner */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
+      {/* ── Hero ─────────────────────────────────────────────────── */}
       <section className="relative" style={{ backgroundColor: club.color }}>
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-7">
+
+            {/* Logo */}
             {club.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={club.logo_url}
                 alt={club.name}
-                className="h-20 w-20 rounded-full object-cover border-2 border-white/30"
+                className="h-24 w-24 rounded-2xl object-cover shadow-xl shadow-black/25 ring-2 ring-white/20 flex-shrink-0"
               />
             ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20 text-white text-2xl font-bold font-display border-2 border-white/30">
+              <div
+                className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-2xl text-white text-3xl font-bold font-display shadow-xl shadow-black/25 ring-2 ring-white/20"
+                style={{ backgroundColor: accentColor }}
+              >
                 {club.initials}
               </div>
             )}
-            <div className="flex-1">
-              <h1 className="font-display text-3xl sm:text-4xl font-bold text-white">
+
+            {/* Name + description */}
+            <div className="flex-1 min-w-0">
+              <h1 className="font-display text-4xl sm:text-5xl font-bold text-white leading-tight">
                 {club.name}
               </h1>
-              <p className="mt-1 text-white/70 text-sm">
-                {club.members.toLocaleString("nb-NO")} medlemmer • {club.active_listings} aktive annonser
+              <p className="mt-2 text-white/60 text-sm">
+                {club.members.toLocaleString("nb-NO")} klubbmedlemmer
               </p>
               {club.description && (
-                <p className="mt-2 text-white/80 text-sm max-w-xl">{club.description}</p>
+                <p className="mt-3 text-white/80 text-sm sm:text-base max-w-xl leading-relaxed">
+                  {club.description}
+                </p>
               )}
-            </div>
-            <div className="flex gap-3">
-              <JoinClubButton
-                clubId={club.id}
-                clubName={club.name}
-                isMembershipGated={club.is_membership_gated}
-                memberEmailDomain={club.member_email_domain}
-                accentColor={club.secondary_color}
-              />
+
+              {/* Action buttons */}
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <JoinClubButton
+                  clubId={club.id}
+                  clubName={club.name}
+                  isMembershipGated={club.is_membership_gated}
+                  memberEmailDomain={club.member_email_domain}
+                  accentColor={accentColor}
+                />
+                <Link
+                  href="/selg"
+                  className="inline-flex items-center gap-2 rounded-lg bg-white/15 border border-white/25 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/25 transition-colors duration-[120ms]"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Legg ut utstyr
+                </Link>
+              </div>
+
+              {/* Admin link — subtle */}
+              <Link
+                href={`/klubb/${slug}/admin`}
+                className="mt-4 inline-block text-xs text-white/40 hover:text-white/70 transition-colors duration-[120ms]"
+              >
+                Lagleder? Administrer siden →
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Membership gating notice */}
+      {/* ── Membership gating notice ──────────────────────────────── */}
       {club.is_membership_gated && (
         <div className="bg-amber-light border-b border-amber/30">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
@@ -114,136 +175,55 @@ export default async function ClubPage({ params }: Props) {
         </div>
       )}
 
-      {/* Club stats */}
-      <section className="bg-white border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-center gap-6 sm:gap-12 text-center">
+      {/* ── Stats bar ────────────────────────────────────────────── */}
+      <section
+        className="border-b border-border"
+        style={{ backgroundColor: club.color + "10" }}
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-center gap-8 sm:gap-16 text-center">
             <div>
-              <span className="text-xl font-bold font-display text-forest">{club.active_listings}</span>
-              <span className="ml-1.5 text-sm text-ink-light">aktive annonser</span>
+              <p className="text-2xl font-bold font-display" style={{ color: club.color }}>
+                {club.active_listings}
+              </p>
+              <p className="text-xs text-ink-light mt-0.5">aktive annonser</p>
             </div>
-            <div className="w-px h-5 bg-border" />
+            <div className="w-px h-6 bg-border" />
             <div>
-              <span className="text-xl font-bold font-display text-forest">{club.total_sold}</span>
-              <span className="ml-1.5 text-sm text-ink-light">solgte varer</span>
+              <p className="text-2xl font-bold font-display" style={{ color: club.color }}>
+                {club.total_sold}
+              </p>
+              <p className="text-xs text-ink-light mt-0.5">solgte varer</p>
+            </div>
+            <div className="w-px h-6 bg-border" />
+            <div>
+              <p className="text-2xl font-bold font-display" style={{ color: club.color }}>
+                {club.members.toLocaleString("nb-NO")}
+              </p>
+              <p className="text-xs text-ink-light mt-0.5">medlemmer</p>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-
-        {/* Announcements */}
+      {/* ── Announcements (always visible above tabs) ─────────────── */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8">
         <ClubAnnouncements clubId={club.id} isAdmin={false} />
-
-        {/* Interactive listings */}
-        <ClubListings clubId={club.id} clubName={club.name} initialListings={listings} />
-
-        {/* ISO / Ettersøk */}
-        {isoListings.length > 0 && (
-          <div className="mt-12">
-            <div className="flex items-center gap-3 mb-5">
-              <span className="rounded-full bg-amber-light px-3 py-1 text-xs font-bold text-amber uppercase tracking-wider">
-                Ettersøk
-              </span>
-              <p className="text-sm text-ink-light">Medlemmer som søker etter utstyr</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {isoListings.map((iso) => (
-                <Link
-                  key={iso.id}
-                  href={`/annonse/${iso.id}`}
-                  className="flex items-start gap-4 bg-white rounded-xl p-4 border border-border hover:shadow-md transition-all hover:-translate-y-0.5"
-                >
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-light text-amber font-bold text-sm">
-                    {iso.profiles?.avatar ?? "?"}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-ink truncate">{iso.title}</p>
-                    <p className="text-xs text-ink-light mt-0.5 truncate">{iso.profiles?.name}</p>
-                    <p className="text-xs text-amber font-medium mt-1">{iso.category}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Byttemarked banner */}
-        <div
-          className="mt-12 rounded-2xl p-8 sm:p-10 text-center grain-overlay"
-          style={{ backgroundColor: club.secondary_color || club.color }}
-        >
-          <h3 className="font-display text-2xl sm:text-3xl font-semibold text-white">
-            {club.name} Digitalt Byttemarked
-          </h3>
-          <p className="mt-3 text-white/80 text-sm max-w-lg mx-auto">
-            Kjøp og selg brukt utstyr direkte mellom klubbens medlemmer — trygt, enkelt og uten mellomledd.
-          </p>
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/selg"
-              className="rounded-lg bg-white px-7 py-3 text-sm font-semibold hover:bg-cream transition-colors duration-[120ms]"
-              style={{ color: club.secondary_color || club.color }}
-            >
-              Legg ut utstyr
-            </Link>
-            <Link
-              href={`/selg?type=iso`}
-              className="rounded-lg border border-white/40 bg-white/10 px-7 py-3 text-sm font-semibold text-white hover:bg-white/20 transition-colors duration-[120ms]"
-            >
-              Jeg søker utstyr →
-            </Link>
-          </div>
-        </div>
-
-        {/* Active sellers */}
-        <div className="mt-12">
-          <h3 className="font-display text-xl font-semibold text-ink mb-6">
-            Aktive selgere i {club.name}
-          </h3>
-          <div className="flex flex-wrap gap-6">
-            {sellers.map((seller) => (
-              <Link
-                key={seller.id}
-                href={`/profil/${seller.slug}`}
-                className="flex flex-col items-center gap-2 group"
-              >
-                <div className="h-14 w-14 rounded-full bg-forest-light flex items-center justify-center text-forest font-bold text-sm group-hover:bg-forest group-hover:text-white transition-colors duration-[120ms]">
-                  {seller.avatar}
-                </div>
-                <span className="text-sm font-medium text-ink group-hover:text-forest transition-colors duration-[120ms]">{seller.name}</span>
-                {seller.rating > 0 ? (
-                  <span className="flex items-center gap-0.5 text-xs text-ink-light">
-                    <svg className="h-3 w-3 text-amber" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    {seller.rating.toFixed(1)}
-                  </span>
-                ) : (
-                  <span className="text-xs text-ink-light">{seller.total_sold} solgt</span>
-                )}
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Admin CTA */}
-        <div className="mt-12 rounded-xl bg-white border border-border p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h4 className="font-display text-lg font-semibold text-ink">Er du lagleder?</h4>
-            <p className="text-sm text-ink-light mt-1">
-              Administrer klubbsiden, inviter medlemmer, post oppslag og tilpass utseendet.
-            </p>
-          </div>
-          <Link
-            href={`/klubb/${slug}/admin`}
-            className="text-sm font-semibold text-forest hover:text-forest-mid transition-colors duration-[120ms] whitespace-nowrap"
-          >
-            Administrer klubbsiden →
-          </Link>
-        </div>
       </div>
+
+      {/* ── Tabs: Annonser / Ettersøk / Selgere ──────────────────── */}
+      <ClubPageTabs
+        club={{
+          id: club.id,
+          name: club.name,
+          slug: club.slug,
+          color: club.color,
+          secondary_color: club.secondary_color,
+        }}
+        listings={listings}
+        isoListings={isoListings}
+        sellers={sellers}
+      />
     </>
   );
 }

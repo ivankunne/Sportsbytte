@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sportsbytte.no";
 import Image from "next/image";
 import {
   getProfileBySlug,
@@ -28,9 +30,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const profile = await getProfileBySlug(slug);
   if (!profile) return {};
+  const description = `Se annonser og vurderinger fra ${profile.name} på Sportsbytte. ${profile.total_sold} solgte varer.`;
+  const pageUrl = `${SITE_URL}/profil/${profile.slug}`;
   return {
     title: `${profile.name} — Selger`,
-    description: `Se annonser og vurderinger fra ${profile.name} på Sportsbytte. ${profile.total_sold} solgte varer.`,
+    description,
+    openGraph: {
+      title: `${profile.name} — Selger | Sportsbytte`,
+      description,
+      url: pageUrl,
+      siteName: "Sportsbytte",
+      locale: "nb_NO",
+      type: "profile",
+      ...(profile.avatar_url ? { images: [{ url: profile.avatar_url, width: 400, height: 400, alt: profile.name }] } : {}),
+    },
+    twitter: {
+      card: "summary",
+      title: `${profile.name} — Selger | Sportsbytte`,
+      description,
+      ...(profile.avatar_url ? { images: [profile.avatar_url] } : {}),
+    },
   };
 }
 
@@ -62,8 +81,23 @@ export default async function ProfilePage({ params }: Props) {
 
   const activeListingCount = sellerListings.length;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: seller.name,
+    url: `${SITE_URL}/profil/${seller.slug ?? slug}`,
+    ...(seller.avatar_url ? { image: seller.avatar_url } : {}),
+    ...(seller.bio ? { description: seller.bio } : {}),
+    ...(seller.clubs ? { memberOf: { "@type": "SportsOrganization", name: seller.clubs.name, url: `${SITE_URL}/klubb/${seller.clubs.slug}` } } : {}),
+  };
+
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       {/* Profile header */}
       <div className="bg-white rounded-2xl p-6 sm:p-8 border border-border mb-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
@@ -218,5 +252,6 @@ export default async function ProfilePage({ params }: Props) {
         )}
       </div>
     </div>
+    </>
   );
 }

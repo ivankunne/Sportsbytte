@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const descParts = [data.condition, data.category, club?.name].filter(Boolean).join(" · ");
   const description = data.description
-    ? `${data.description.slice(0, 120)} — ${descParts}`
+    ? `${data.description.slice(0, 155)} — ${descParts}`
     : `${descParts} · Kjøp trygt med kort på Sportsbytte`;
 
   const pageUrl = `/annonse/${id}`;
@@ -87,6 +87,16 @@ export default async function ListingPage({ params }: Props) {
       }
     : null;
 
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Hjem", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "Utforsk", item: `${SITE_URL}/utforsk` },
+      { "@type": "ListItem", position: 3, name: data?.title ?? "Annonse", item: `${SITE_URL}/annonse/${id}` },
+    ],
+  };
+
   return (
     <>
       {jsonLd && (
@@ -95,6 +105,10 @@ export default async function ListingPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
       <Suspense>
         <ListingDetail id={id} />
       </Suspense>

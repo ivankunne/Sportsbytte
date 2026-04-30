@@ -2,6 +2,25 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ContactForm } from "./ContactForm";
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  name: "Kontakt Sportsbytte",
+  url: "https://sportsbytte.no/kontakt",
+  description: "Ta kontakt med Sportsbytte for spørsmål om klubbregistrering, samarbeid eller teknisk hjelp.",
+  mainEntity: {
+    "@type": "ContactPoint",
+    email: "hei@sportsbytte.no",
+    contactType: "customer support",
+    areaServed: "NO",
+    availableLanguage: "Norwegian",
+    hoursAvailable: {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    },
+  },
+};
+
 export const metadata: Metadata = {
   title: "Kontakt oss",
   description: "Ta kontakt med Sportsbytte for spørsmål om klubbregistrering, samarbeid eller teknisk hjelp.",
@@ -9,6 +28,11 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
       <div className="text-center mb-12">
         <h1 className="font-display text-3xl sm:text-4xl font-bold text-ink">
@@ -86,5 +110,6 @@ export default function ContactPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

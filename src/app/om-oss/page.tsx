@@ -1,6 +1,28 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Sportsbytte",
+  url: "https://sportsbytte.no",
+  logo: "https://sportsbytte.no/favicon.png",
+  description: "Norges markedsplass for brukt sportsutstyr, bygget rundt idrettsklubbene.",
+  email: "hei@sportsbytte.no",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Bergen",
+    addressCountry: "NO",
+  },
+  contactPoint: {
+    "@type": "ContactPoint",
+    email: "hei@sportsbytte.no",
+    contactType: "customer service",
+    availableLanguage: "Norwegian",
+  },
+  sameAs: ["https://sportsbytte.no"],
+};
+
 export const metadata: Metadata = {
   title: "Om oss — Sportsbytte",
   description:
@@ -9,6 +31,11 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
       {/* ─── HERO ─────────────────────────────────────────────────── */}
       <div className="max-w-2xl mb-12">
@@ -182,5 +209,6 @@ export default function AboutPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -59,6 +59,12 @@ export const metadata: Metadata = {
       "Brukt sportsutstyr fra klubbmedlemmer. Trygg kortbetaling og kjøperbeskyttelse.",
     images: ["/opengraph-image"],
   },
+  alternates: {
+    languages: {
+      "nb": "https://sportsbytte.no",
+      "x-default": "https://sportsbytte.no",
+    },
+  },
   robots: {
     index: true,
     follow: true,
@@ -74,7 +80,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="no"
+      lang="nb"
       className={`${fraunces.variable} ${dmSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
