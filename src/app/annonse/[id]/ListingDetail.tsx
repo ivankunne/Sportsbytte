@@ -28,6 +28,7 @@ export function ListingDetail({ id }: { id: string }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [demoCTAOpen, setDemoCTAOpen] = useState(false);
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingHover, setRatingHover] = useState(0);
   const [ratingName, setRatingName] = useState("");
@@ -274,6 +275,18 @@ export function ListingDetail({ id }: { id: string }) {
         <span className="text-ink">{listing.title}</span>
       </nav>
 
+      {listing.is_demo && (
+        <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 px-5 py-4 flex items-start gap-3">
+          <svg className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-yellow-800">Dette er en eksempel-annonse</p>
+            <p className="text-xs text-yellow-700 mt-0.5">Annonsen er kun for demonstrasjon og kan ikke kjøpes. Registrer klubben din for å legge ut ekte annonser.</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12">
         {/* Left: Photos */}
         <div className="lg:col-span-3">
@@ -294,6 +307,13 @@ export function ListingDetail({ id }: { id: string }) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
               </svg>
             </div>
+            {listing.is_demo && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                <span className="rotate-[-35deg] text-white/20 font-black text-7xl tracking-widest select-none">
+                  EKSEMPEL
+                </span>
+              </div>
+            )}
           </div>
 
           {images.length > 1 && (
@@ -365,7 +385,20 @@ export function ListingDetail({ id }: { id: string }) {
                 <p className="text-xs text-ink-light mb-5">Størrelser: {listing.size_range}</p>
               )}
 
-              {isSold ? (
+              {listing.is_demo ? (
+                <div className="mb-6">
+                  <button
+                    onClick={() => setDemoCTAOpen(true)}
+                    className="w-full rounded-lg bg-yellow-400 py-3.5 text-sm font-bold text-yellow-900 hover:bg-yellow-300 transition-colors duration-[120ms] flex items-center justify-center gap-2"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Registrer klubben din
+                  </button>
+                  <p className="text-xs text-ink-light text-center mt-2">Dette er en demo-annonse — kjøp er ikke mulig</p>
+                </div>
+              ) : isSold ? (
                 <div className="mb-6 space-y-4">
                   <div className="rounded-lg bg-ink-light/10 py-3.5 text-sm font-semibold text-ink-light text-center">
                     Solgt
@@ -614,6 +647,50 @@ export function ListingDetail({ id }: { id: string }) {
             ))}
           </div>
         </section>
+      )}
+
+      {/* Demo CTA modal */}
+      {demoCTAOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDemoCTAOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100">
+                <svg className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h2 className="font-display text-xl font-bold text-ink">Klar til å starte?</h2>
+            </div>
+            <p className="text-sm text-ink-mid leading-relaxed">
+              Dette er en eksempel-annonse som viser hvordan markedsplassen fungerer. Registrer klubben din gratis for å legge ut ekte annonser og nå alle klubbmedlemmene.
+            </p>
+            <ul className="space-y-2 text-sm text-ink-mid">
+              {["Gratis å komme i gang", "Enkel oppsett på under 5 minutter", "Trygg betaling via Stripe"].map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <svg className="h-4 w-4 text-forest flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                  </svg>
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-col gap-2 pt-1">
+              <Link
+                href="/registrer-klubb"
+                className="w-full rounded-lg bg-forest py-3 text-sm font-bold text-white hover:bg-forest-mid transition-colors text-center"
+              >
+                Registrer klubben din
+              </Link>
+              <button
+                onClick={() => setDemoCTAOpen(false)}
+                className="w-full rounded-lg border border-border py-2.5 text-sm font-medium text-ink-mid hover:bg-cream transition-colors"
+              >
+                Lukk
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Checkout confirmation */}

@@ -63,7 +63,20 @@ export function ListingCard({ listing }: Props) {
                 ★ Fremhevet
               </span>
             )}
+            {listing.is_demo && (
+              <span className="inline-flex items-center rounded-full bg-yellow-400/90 px-3 py-1 text-xs font-semibold text-yellow-900 backdrop-blur-sm">
+                Eksempel
+              </span>
+            )}
           </div>
+
+          {listing.is_demo && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+              <span className="rotate-[-35deg] text-white/20 font-black text-4xl tracking-widest select-none">
+                EKSEMPEL
+              </span>
+            </div>
+          )}
 
           {/* Heart */}
           <button

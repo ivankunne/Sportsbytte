@@ -222,6 +222,7 @@ export type Database = {
           id: number
           images: string[]
           is_boosted: boolean
+          is_demo: boolean
           is_sold: boolean
           listing_type: string
           members_only: boolean
@@ -246,6 +247,7 @@ export type Database = {
           id?: never
           images?: string[]
           is_boosted?: boolean
+          is_demo?: boolean
           is_sold?: boolean
           listing_type?: string
           members_only?: boolean
@@ -270,6 +272,7 @@ export type Database = {
           id?: never
           images?: string[]
           is_boosted?: boolean
+          is_demo?: boolean
           is_sold?: boolean
           listing_type?: string
           members_only?: boolean
