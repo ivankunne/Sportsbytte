@@ -87,17 +87,18 @@ export async function POST(req: NextRequest) {
 
   if (error || !data) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
 
-  if (filtered.club_id) {
+  const clubId = filtered.club_id as number | null | undefined;
+  if (clubId) {
     const { data: club } = await supabase
       .from("clubs")
       .select("active_listings")
-      .eq("id", filtered.club_id as number)
+      .eq("id", clubId)
       .maybeSingle();
     if (club) {
       await supabase
         .from("clubs")
         .update({ active_listings: club.active_listings + 1 })
-        .eq("id", filtered.club_id as number);
+        .eq("id", clubId);
     }
   }
 

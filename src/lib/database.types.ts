@@ -214,7 +214,7 @@ export type Database = {
           boosted_until: string | null
           buyer_profile_id: number | null
           category: string
-          club_id: number
+          club_id: number | null
           condition: string
           created_at: string
           delivery_method: string | null
@@ -239,7 +239,7 @@ export type Database = {
           boosted_until?: string | null
           buyer_profile_id?: number | null
           category: string
-          club_id: number
+          club_id?: number | null
           condition: string
           created_at?: string
           delivery_method?: string | null

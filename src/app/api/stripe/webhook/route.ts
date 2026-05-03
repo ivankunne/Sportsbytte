@@ -143,29 +143,31 @@ export async function POST(req: NextRequest) {
 
         // Keep club stats in sync (only decrement active_listings when fully sold)
         let clubIsPro = false;
-        if (qty === null || qty <= 1) {
-          const { data: club } = await admin
-            .from("clubs")
-            .select("total_sold, active_listings, is_pro")
-            .eq("id", listing.club_id)
-            .maybeSingle();
-          if (club) {
-            clubIsPro = club.is_pro ?? false;
-            await admin.from("clubs").update({
-              total_sold: club.total_sold + 1,
-              active_listings: Math.max(0, club.active_listings - 1),
-            }).eq("id", listing.club_id);
-          }
-        } else {
-          // Bulk: only increment total_sold
-          const { data: club } = await admin
-            .from("clubs")
-            .select("total_sold, is_pro")
-            .eq("id", listing.club_id)
-            .maybeSingle();
-          if (club) {
-            clubIsPro = club.is_pro ?? false;
-            await admin.from("clubs").update({ total_sold: club.total_sold + 1 }).eq("id", listing.club_id);
+        if (listing.club_id) {
+          if (qty === null || qty <= 1) {
+            const { data: club } = await admin
+              .from("clubs")
+              .select("total_sold, active_listings, is_pro")
+              .eq("id", listing.club_id)
+              .maybeSingle();
+            if (club) {
+              clubIsPro = club.is_pro ?? false;
+              await admin.from("clubs").update({
+                total_sold: club.total_sold + 1,
+                active_listings: Math.max(0, club.active_listings - 1),
+              }).eq("id", listing.club_id);
+            }
+          } else {
+            // Bulk: only increment total_sold
+            const { data: club } = await admin
+              .from("clubs")
+              .select("total_sold, is_pro")
+              .eq("id", listing.club_id)
+              .maybeSingle();
+            if (club) {
+              clubIsPro = club.is_pro ?? false;
+              await admin.from("clubs").update({ total_sold: club.total_sold + 1 }).eq("id", listing.club_id);
+            }
           }
         }
 

@@ -89,14 +89,17 @@ export function ListingDetail({ id }: { id: string }) {
 
       const cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
       const soldFilter = `is_sold.eq.false,and(is_sold.eq.true,updated_at.gt.${cutoff})`;
+      const clubQuery = l.club_id
+        ? supabase
+            .from("listings")
+            .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
+            .eq("club_id", l.club_id)
+            .neq("id", l.id)
+            .or(soldFilter)
+            .limit(4)
+        : Promise.resolve({ data: [] });
       const [{ data: club }, { data: seller }] = await Promise.all([
-        supabase
-          .from("listings")
-          .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
-          .eq("club_id", l.club_id)
-          .neq("id", l.id)
-          .or(soldFilter)
-          .limit(4),
+        clubQuery,
         supabase
           .from("listings")
           .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")

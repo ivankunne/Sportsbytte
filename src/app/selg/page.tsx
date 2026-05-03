@@ -153,7 +153,6 @@ export default function SellPage() {
 
     if (!selectedCategory) return setError("Velg en kategori");
     if (!form.title.trim()) return setError("Skriv inn en tittel");
-    if (!selectedClubId) return setError("Du må være tilknyttet en klubb for å publisere annonser.");
     if (listingType !== "iso" && !form.condition) return setError("Velg stand på utstyret");
     if (listingType !== "iso" && !form.price) return setError("Skriv inn pris");
 
@@ -509,19 +508,47 @@ export default function SellPage() {
             {/* Club display */}
             {userClub ? (
               <div className="bg-white rounded-xl p-6">
-                <label className="block text-sm font-medium text-ink mb-3">Din klubb</label>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-forest-light border-2 border-forest">
-                  <div
-                    className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                    style={{ backgroundColor: userClub.color }}
-                  >
-                    {userClub.initials}
-                  </div>
-                  <span className="font-medium text-ink text-sm flex-1">{userClub.name}</span>
-                  <svg className="h-4 w-4 text-forest flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
+                <label className="block text-sm font-medium text-ink mb-3">Publiser til klubb</label>
+                {selectedClubId ? (
+                  <>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-forest-light border-2 border-forest">
+                      <div
+                        className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                        style={{ backgroundColor: userClub.color }}
+                      >
+                        {userClub.initials}
+                      </div>
+                      <span className="font-medium text-ink text-sm flex-1">{userClub.name}</span>
+                      <svg className="h-4 w-4 text-forest flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedClubId(null)}
+                      className="mt-3 text-xs text-ink-light hover:text-ink underline"
+                    >
+                      Publiser kun på min profil (uten klubb)
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-ink-light mb-3">Annonsen publiseres kun på din profil.</p>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedClubId(userClub.id)}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-cream border-2 border-dashed border-border hover:border-forest/40 transition-colors duration-[120ms] w-full text-left"
+                    >
+                      <div
+                        className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 opacity-60"
+                        style={{ backgroundColor: userClub.color }}
+                      >
+                        {userClub.initials}
+                      </div>
+                      <span className="text-sm text-ink-light">Legg til {userClub.name}</span>
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               <div className="bg-white rounded-xl p-6">
