@@ -214,6 +214,8 @@ export default async function ClubPage({ params }: Props) {
           slug: club.slug,
           color: club.color,
           secondary_color: club.secondary_color,
+          logo_url: club.logo_url,
+          initials: club.initials,
         }}
         listings={listings}
         isoListings={isoListings}

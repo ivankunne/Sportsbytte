@@ -12,6 +12,8 @@ type ClubInfo = {
   slug: string;
   color: string;
   secondary_color: string | null;
+  logo_url?: string | null;
+  initials?: string;
 };
 
 type Props = {
@@ -23,6 +25,32 @@ type Props = {
 
 type TabId = "annonser" | "ettersok" | "selgere";
 
+function formatCategory(slug: string) {
+  return slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ");
+}
+
+function ClubAvatar({ club, size = "lg" }: { club: ClubInfo; size?: "sm" | "lg" }) {
+  const dim = size === "lg" ? "h-16 w-16 text-2xl" : "h-10 w-10 text-sm";
+  if (club.logo_url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={club.logo_url}
+        alt={club.name}
+        className={`${dim} rounded-xl object-cover`}
+      />
+    );
+  }
+  return (
+    <div
+      className={`${dim} rounded-xl flex items-center justify-center font-bold font-display text-white`}
+      style={{ backgroundColor: club.color }}
+    >
+      {club.initials ?? club.name.slice(0, 2).toUpperCase()}
+    </div>
+  );
+}
+
 export function ClubPageTabs({ club, listings, isoListings, sellers }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("annonser");
 
@@ -33,6 +61,17 @@ export function ClubPageTabs({ club, listings, isoListings, sellers }: Props) {
       : []),
     { id: "selgere", label: "Selgere", count: sellers.length },
   ];
+
+  // Category breakdown — top 4 by count
+  const categoryCounts = listings.reduce<Record<string, number>>((acc, l) => {
+    acc[l.category] = (acc[l.category] || 0) + 1;
+    return acc;
+  }, {});
+  const topCategories = Object.entries(categoryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+  const maxCount = topCategories[0]?.[1] ?? 1;
+  const showCategoryWidget = topCategories.length > 1;
 
   return (
     <div>
@@ -77,18 +116,74 @@ export function ClubPageTabs({ club, listings, isoListings, sellers }: Props) {
 
       {/* Tab content */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+
+        {/* ── Annonser ──────────────────────────────────────────────── */}
         {activeTab === "annonser" && (
-          <ClubListings
-            clubId={club.id}
-            clubName={club.name}
-            initialListings={listings}
-          />
+          listings.length === 0 ? (
+            <div className="py-20 flex flex-col items-center gap-4">
+              <ClubAvatar club={club} />
+              <p className="text-sm font-semibold text-ink">Ingen annonser ennå</p>
+              <p className="text-xs text-ink-light">
+                Bli den første til å legge ut utstyr fra {club.name}.
+              </p>
+              <Link
+                href="/selg"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white transition-colors"
+                style={{ backgroundColor: club.color }}
+              >
+                Legg ut utstyr
+              </Link>
+            </div>
+          ) : (
+            <div>
+              {showCategoryWidget && (
+                <div className="mb-8 bg-white rounded-xl border border-border p-5">
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wider mb-4"
+                    style={{ color: club.color }}
+                  >
+                    Til salgs i {club.name}
+                  </p>
+                  <div className="space-y-2.5">
+                    {topCategories.map(([cat, count]) => (
+                      <div key={cat} className="flex items-center gap-3">
+                        <span className="w-28 text-xs font-medium text-ink-mid truncate shrink-0">
+                          {formatCategory(cat)}
+                        </span>
+                        <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${(count / maxCount) * 100}%`,
+                              backgroundColor: club.color,
+                            }}
+                          />
+                        </div>
+                        <span className="w-6 text-right text-xs text-ink-light shrink-0">
+                          {count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <ClubListings
+                clubId={club.id}
+                clubName={club.name}
+                initialListings={listings}
+              />
+            </div>
+          )
         )}
 
+        {/* ── Ettersøk ──────────────────────────────────────────────── */}
         {activeTab === "ettersok" && (
           <div>
             <p className="text-sm text-ink-light mb-6">
-              {isoListings.length} {isoListings.length === 1 ? "medlem søker" : "medlemmer søker"} etter utstyr
+              <span className="font-bold" style={{ color: club.color }}>
+                {isoListings.length}
+              </span>{" "}
+              {isoListings.length === 1 ? "medlem søker" : "medlemmer søker"} etter utstyr
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {isoListings.map((iso) => (
@@ -109,7 +204,7 @@ export function ClubPageTabs({ club, listings, isoListings, sellers }: Props) {
                       {(iso.profiles as { name?: string } | null)?.name}
                     </p>
                     <p className="text-xs font-medium mt-1" style={{ color: club.color }}>
-                      {iso.category}
+                      {formatCategory(iso.category)}
                     </p>
                   </div>
                 </Link>
@@ -118,50 +213,63 @@ export function ClubPageTabs({ club, listings, isoListings, sellers }: Props) {
           </div>
         )}
 
+        {/* ── Selgere ───────────────────────────────────────────────── */}
         {activeTab === "selgere" && (
           sellers.length === 0 ? (
-            <div className="py-16 text-center text-sm text-ink-light">
-              Ingen aktive selgere ennå.
+            <div className="py-20 flex flex-col items-center gap-4">
+              <ClubAvatar club={club} />
+              <p className="text-sm font-semibold text-ink">Ingen aktive selgere ennå</p>
+              <p className="text-xs text-ink-light">
+                Medlemmer som legger ut utstyr vises her.
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {sellers.map((seller) => (
-                <Link
-                  key={seller.id}
-                  href={`/profil/${seller.slug}`}
-                  className="flex flex-col items-center gap-3 p-5 bg-white rounded-2xl border border-border hover:shadow-md hover:-translate-y-0.5 transition-all"
-                >
-                  {seller.avatar_url ? (
-                    <Image
-                      src={seller.avatar_url}
-                      alt={seller.name}
-                      width={56}
-                      height={56}
-                      className="h-14 w-14 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className="h-14 w-14 rounded-full flex items-center justify-center text-white font-bold font-display text-xl"
-                      style={{ backgroundColor: club.color }}
-                    >
-                      {seller.avatar}
-                    </div>
-                  )}
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-ink">{seller.name}</p>
-                    {seller.rating > 0 ? (
-                      <span className="flex items-center justify-center gap-0.5 text-xs text-ink-light mt-1">
-                        <svg className="h-3 w-3 text-amber" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        {seller.rating.toFixed(1)}
-                      </span>
+            <div>
+              <p
+                className="text-xs font-semibold uppercase tracking-wider mb-6"
+                style={{ color: club.color }}
+              >
+                {sellers.length} aktive {sellers.length === 1 ? "selger" : "selgere"}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {sellers.map((seller) => (
+                  <Link
+                    key={seller.id}
+                    href={`/profil/${seller.slug}`}
+                    className="flex flex-col items-center gap-3 p-5 bg-white rounded-2xl border border-border hover:shadow-md hover:-translate-y-0.5 transition-all"
+                  >
+                    {seller.avatar_url ? (
+                      <Image
+                        src={seller.avatar_url}
+                        alt={seller.name}
+                        width={56}
+                        height={56}
+                        className="h-14 w-14 rounded-full object-cover"
+                      />
                     ) : (
-                      <p className="text-xs text-ink-light mt-1">{seller.total_sold} solgt</p>
+                      <div
+                        className="h-14 w-14 rounded-full flex items-center justify-center text-white font-bold font-display text-xl"
+                        style={{ backgroundColor: club.color }}
+                      >
+                        {seller.avatar}
+                      </div>
                     )}
-                  </div>
-                </Link>
-              ))}
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-ink">{seller.name}</p>
+                      {seller.rating > 0 ? (
+                        <span className="flex items-center justify-center gap-0.5 text-xs text-ink-light mt-1">
+                          <svg className="h-3 w-3 text-amber" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          {seller.rating.toFixed(1)}
+                        </span>
+                      ) : (
+                        <p className="text-xs text-ink-light mt-1">{seller.total_sold} solgt</p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           )
         )}
