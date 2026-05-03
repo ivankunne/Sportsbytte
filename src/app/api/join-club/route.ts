@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { rateLimit, ipKey } from "@/lib/rate-limit";
 
 const admin = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,7 +9,11 @@ const admin = createClient<Database>(
 );
 
 export async function POST(req: NextRequest) {
-  let body: { clubId: number; name: string; email?: string; message?: string };
+  if (rateLimit(ipKey(req, "join-club"), { limit: 5, windowMs: 60 * 60 * 1000 })) {
+    return NextResponse.json({ error: "For mange forsøk. Prøv igjen senere." }, { status: 429 });
+  }
+
+  let body: { clubId: unknown; name: unknown; email?: unknown; message?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -17,9 +22,16 @@ export async function POST(req: NextRequest) {
 
   const { clubId, name, email, message } = body;
 
-  if (!clubId || !name?.trim()) {
+  if (
+    typeof clubId !== "number" || !Number.isInteger(clubId) || clubId <= 0 ||
+    typeof name !== "string" || !name.trim()
+  ) {
     return NextResponse.json({ error: "Mangler påkrevde felt" }, { status: 400 });
   }
+
+  const safeName = name.trim().slice(0, 100);
+  const safeEmail = typeof email === "string" ? email.trim().slice(0, 254) : undefined;
+  const safeMessage = typeof message === "string" ? message.trim().slice(0, 1000) : undefined;
 
   // Fetch club to get email domain setting — server-side, can't be spoofed by client
   const { data: club } = await admin
@@ -33,7 +45,7 @@ export async function POST(req: NextRequest) {
   // Compute status server-side — client never sends it
   const normalizedDomain = club.member_email_domain?.replace(/^@/, "").toLowerCase();
   const status: "pending" | "approved" =
-    normalizedDomain && email?.toLowerCase().endsWith(`@${normalizedDomain}`)
+    normalizedDomain && safeEmail?.toLowerCase().endsWith(`@${normalizedDomain}`)
       ? "approved"
       : "pending";
 
@@ -41,18 +53,18 @@ export async function POST(req: NextRequest) {
   let { data: profile } = await admin
     .from("profiles")
     .select("id")
-    .ilike("name", name.trim())
+    .ilike("name", safeName)
     .limit(1)
     .maybeSingle();
 
   if (!profile) {
     const slug =
-      name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") +
+      safeName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") +
       "-" +
       Date.now().toString(36);
     const { data: newProfile, error } = await admin
       .from("profiles")
-      .insert({ name: name.trim(), slug, avatar: name.trim().slice(0, 2).toUpperCase() })
+      .insert({ name: safeName, slug, avatar: safeName.slice(0, 2).toUpperCase() })
       .select("id")
       .maybeSingle();
     if (error) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
@@ -70,7 +82,7 @@ export async function POST(req: NextRequest) {
   const { error } = await admin.from("memberships").upsert({
     club_id: clubId,
     profile_id: profile!.id,
-    message: message?.trim() || null,
+    message: safeMessage || null,
     status,
   });
 

@@ -1,12 +1,16 @@
 import { Resend } from "resend";
 import { NextRequest, NextResponse } from "next/server";
 import { buildEmail, p, infoBox, escapeHtml, FROM, ADMIN_EMAIL } from "@/lib/email";
+import { rateLimit, ipKey } from "@/lib/rate-limit";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
+  if (rateLimit(ipKey(req, "contact"), { limit: 3, windowMs: 60 * 60 * 1000 })) {
+    return NextResponse.json({ error: "For mange forsøk. Prøv igjen senere." }, { status: 429 });
+  }
   let name: string, email: string, subject: string | undefined, message: string;
   try {
     ({ name, email, subject, message } = await req.json());

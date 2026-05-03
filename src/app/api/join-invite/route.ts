@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { rateLimit, ipKey } from "@/lib/rate-limit";
 
 const admin = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,7 +9,11 @@ const admin = createClient<Database>(
 );
 
 export async function POST(req: NextRequest) {
-  let body: { token: string; name: string; email?: string; message?: string };
+  if (rateLimit(ipKey(req, "join-invite"), { limit: 5, windowMs: 60 * 60 * 1000 })) {
+    return NextResponse.json({ error: "For mange forsøk. Prøv igjen senere." }, { status: 429 });
+  }
+
+  let body: { token: unknown; name: unknown; email?: unknown; message?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -16,32 +21,37 @@ export async function POST(req: NextRequest) {
   }
 
   const { token, name, email, message } = body;
-  if (!token || !name?.trim()) {
+
+  if (typeof token !== "string" || !token.trim() || typeof name !== "string" || !name.trim()) {
     return NextResponse.json({ error: "Mangler påkrevde felt" }, { status: 400 });
   }
+
+  const safeToken = token.trim().slice(0, 128);
+  const safeName = name.trim().slice(0, 100);
+  const safeMessage = typeof message === "string" ? message.trim().slice(0, 1000) : undefined;
 
   const { data: club } = await admin
     .from("clubs")
     .select("id, invite_token, members")
-    .eq("invite_token", token)
+    .eq("invite_token", safeToken)
     .maybeSingle();
   if (!club) return NextResponse.json({ error: "Ugyldig invitasjonslenke" }, { status: 404 });
 
   let { data: profile } = await admin
     .from("profiles")
     .select("id")
-    .ilike("name", name.trim())
+    .ilike("name", safeName)
     .limit(1)
     .maybeSingle();
 
   if (!profile) {
     const slug =
-      name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") +
+      safeName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") +
       "-" +
       Date.now().toString(36);
     const { data: newProfile, error } = await admin
       .from("profiles")
-      .insert({ name: name.trim(), slug, avatar: name.trim().slice(0, 2).toUpperCase(), club_id: club.id })
+      .insert({ name: safeName, slug, avatar: safeName.slice(0, 2).toUpperCase(), club_id: club.id })
       .select("id")
       .maybeSingle();
     if (error) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
@@ -56,11 +66,14 @@ export async function POST(req: NextRequest) {
     .eq("profile_id", profile!.id)
     .maybeSingle();
 
+  // email is only used for domain-match auto-approval, not stored
+  void email;
+
   const { error } = await admin.from("memberships").upsert({
     club_id: club.id,
     profile_id: profile!.id,
     status: "approved",
-    message: message?.trim() || null,
+    message: safeMessage || null,
   });
   if (error) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
 
