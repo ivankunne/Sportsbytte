@@ -86,15 +86,17 @@ export default function SellPage() {
       .eq("auth_user_id", authUserId)
       .maybeSingle();
 
-    if (profile?.club_id) {
+    if (profile) {
       setUserProfileId(profile.id);
-      setSelectedClubId(profile.club_id);
-      const { data: club } = await supabase
-        .from("clubs")
-        .select("id, name, color, initials")
-        .eq("id", profile.club_id)
-        .maybeSingle();
-      if (club) setUserClub(club);
+      if (profile.club_id) {
+        setSelectedClubId(profile.club_id);
+        const { data: club } = await supabase
+          .from("clubs")
+          .select("id, name, color, initials")
+          .eq("id", profile.club_id)
+          .maybeSingle();
+        if (club) setUserClub(club);
+      }
     }
     setAuthPhase("form");
   }
@@ -151,7 +153,7 @@ export default function SellPage() {
 
     if (!selectedCategory) return setError("Velg en kategori");
     if (!form.title.trim()) return setError("Skriv inn en tittel");
-    if (!selectedClubId || !userProfileId) return setError("Du må være tilknyttet en klubb for å publisere annonser.");
+    if (!selectedClubId) return setError("Du må være tilknyttet en klubb for å publisere annonser.");
     if (listingType !== "iso" && !form.condition) return setError("Velg stand på utstyret");
     if (listingType !== "iso" && !form.price) return setError("Skriv inn pris");
 
