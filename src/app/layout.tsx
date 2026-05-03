@@ -7,6 +7,7 @@ import { Toaster } from "@/components/Toaster";
 import { MobileNav } from "@/components/MobileNav";
 import { CookieBanner } from "@/components/CookieBanner";
 import { StripeOnboardingNudge } from "@/components/StripeOnboardingNudge";
+import { OnboardingNudge } from "@/components/OnboardingNudge";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -89,6 +90,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans">
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BRFN8K9" height="0" width="0" style={{ display: "none", visibility: "hidden" }} /></noscript>
         <Header />
+        <OnboardingNudge />
         <main className="flex-1 pb-16 md:pb-0">{children}</main>
         <Footer />
         <Toaster />

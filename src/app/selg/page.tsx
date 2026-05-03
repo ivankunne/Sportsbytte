@@ -552,29 +552,25 @@ export default function SellPage() {
               </div>
             ) : (
               <div className="bg-white rounded-xl p-6">
-                <div className="text-center py-2">
-                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber/10">
-                    <svg className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                <label className="block text-sm font-medium text-ink mb-3">Publiser til</label>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-forest-light border-2 border-forest">
+                  <div className="h-8 w-8 rounded-full bg-forest/10 flex items-center justify-center flex-shrink-0">
+                    <svg className="h-4 w-4 text-forest" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                     </svg>
                   </div>
-                  <h3 className="text-sm font-semibold text-ink mb-1">Du er ikke tilknyttet noen klubb ennå</h3>
-                  <p className="text-xs text-ink-light mb-4">For å legge ut annonser må du være med i en klubb.</p>
-                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                    <Link
-                      href="/klubber"
-                      className="rounded-lg border-2 border-forest px-4 py-2 text-sm font-semibold text-forest hover:bg-forest-light transition-colors duration-[120ms]"
-                    >
-                      Bli med i en klubb
-                    </Link>
-                    <Link
-                      href="/registrer-klubb"
-                      className="rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white hover:brightness-95 transition-all duration-[120ms]"
-                    >
-                      Registrer din klubb
-                    </Link>
-                  </div>
+                  <span className="font-medium text-ink text-sm flex-1">Min profil</span>
+                  <svg className="h-4 w-4 text-forest flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
                 </div>
+                <p className="mt-3 text-xs text-ink-light">
+                  Du er ikke med i noen klubb ennå — annonsen vises på din profil.{" "}
+                  <Link href="/klubber" className="text-forest hover:underline">Bli med i en klubb</Link>
+                  {" "}eller{" "}
+                  <Link href="/registrer-klubb" className="text-forest hover:underline">registrer din klubb</Link>{" "}
+                  for å nå enda flere.
+                </p>
               </div>
             )}
 

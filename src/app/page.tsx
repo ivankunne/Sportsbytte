@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { ClubSearch } from "@/components/ClubSearch";
 import { StatsBar } from "@/components/StatsBar";
 import { HomepageListings } from "@/components/HomepageListings";
-import { OnboardingNudge } from "@/components/OnboardingNudge";
 
 export const revalidate = 60;
 
@@ -130,9 +129,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* Onboarding nudge — only shown to logged-in users without a club */}
-      <OnboardingNudge />
 
       {/* Stats bar */}
       <StatsBar listings={stats.listings} clubs={stats.clubs} sold={stats.sold} />
