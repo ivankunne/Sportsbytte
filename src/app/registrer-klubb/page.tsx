@@ -1,5 +1,7 @@
 "use client";
 
+declare global { interface Window { dataLayer?: Record<string, unknown>[]; } }
+
 import { useState, Suspense, type ChangeEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -62,7 +64,10 @@ function RegisterClubPageInner() {
   }
 
   function goNext() {
-    if (validate(step)) setStep(step + 1);
+    if (validate(step)) {
+      window.dataLayer?.push({ event: "club_registration_step", step_completed: step, step_name: STEPS[step - 1]?.label });
+      setStep(step + 1);
+    }
   }
 
   async function handleLogoUpload(e: ChangeEvent<HTMLInputElement>) {
@@ -98,8 +103,10 @@ function RegisterClubPageInner() {
       if (!res.ok) throw new Error(data.error ?? "Sending feilet");
 
       if (plan === "pro" && data.checkoutUrl) {
+        window.dataLayer?.push({ event: "club_registration_submitted", plan: "pro", club_name: clubName, sport });
         router.push(data.checkoutUrl);
       } else {
+        window.dataLayer?.push({ event: "club_registration_submitted", plan: "free", club_name: clubName, sport });
         setSubmitted(true);
       }
     } catch (err) {
