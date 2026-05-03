@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import type { Category, Club, Profile } from "@/lib/queries";
+import Link from "next/link";
+import type { Category, Club } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { AuthForm } from "@/components/AuthForm";
 
@@ -38,10 +39,9 @@ export default function SellPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [deliveryMethod, setDeliveryMethod] = useState("both");
   const [categories, setCategories] = useState<Category[]>([]);
-  const [clubs, setClubs] = useState<Club[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [userClub, setUserClub] = useState<Pick<Club, "id" | "name" | "color" | "initials"> | null>(null);
   const [selectedClubId, setSelectedClubId] = useState<number | null>(null);
-  const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [userProfileId, setUserProfileId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -61,8 +61,6 @@ export default function SellPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const categoryRef = useRef<HTMLElement>(null);
   const detailsRef = useRef<HTMLElement>(null);
-  // Holds the profile ID to pre-select once club profiles load
-  const prefilledProfileIdRef = useRef<number | null>(null);
 
   function scrollTo(ref: React.RefObject<HTMLElement | null>) {
     setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -89,8 +87,14 @@ export default function SellPage() {
       .maybeSingle();
 
     if (profile?.club_id) {
-      prefilledProfileIdRef.current = profile.id;
+      setUserProfileId(profile.id);
       setSelectedClubId(profile.club_id);
+      const { data: club } = await supabase
+        .from("clubs")
+        .select("id, name, color, initials")
+        .eq("id", profile.club_id)
+        .maybeSingle();
+      if (club) setUserClub(club);
     }
     setAuthPhase("form");
   }
@@ -98,42 +102,10 @@ export default function SellPage() {
 
   useEffect(() => {
     if (authPhase !== "form") return;
-    Promise.all([
-      supabase.from("categories").select("*").order("id"),
-      supabase.from("clubs").select("*").order("members", { ascending: false }),
-    ]).then(([{ data: cats }, { data: clubsData }]) => {
+    supabase.from("categories").select("*").order("id").then(({ data: cats }) => {
       if (cats) setCategories(cats);
-      if (clubsData) {
-        setClubs(clubsData);
-        // Only set default club if not already pre-filled from auth
-        if (!selectedClubId && clubsData.length > 0) setSelectedClubId(clubsData[0].id);
-      }
     });
   }, [authPhase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!selectedClubId) {
-      setProfiles([]);
-      setSelectedProfileId(null);
-      return;
-    }
-    supabase
-      .from("profiles")
-      .select("*")
-      .eq("club_id", selectedClubId)
-      .then(({ data }) => {
-        if (data) {
-          setProfiles(data);
-          const prefilled = prefilledProfileIdRef.current;
-          if (prefilled && data.find((p) => p.id === prefilled)) {
-            setSelectedProfileId(prefilled);
-            prefilledProfileIdRef.current = null;
-          } else if (data.length > 0) {
-            setSelectedProfileId(data[0].id);
-          }
-        }
-      });
-  }, [selectedClubId]);
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const incoming = Array.from(e.target.files ?? []);
@@ -179,8 +151,7 @@ export default function SellPage() {
 
     if (!selectedCategory) return setError("Velg en kategori");
     if (!form.title.trim()) return setError("Skriv inn en tittel");
-    if (!selectedClubId) return setError("Velg din klubb");
-    if (!selectedProfileId) return setError("Velg din profil");
+    if (!selectedClubId || !userProfileId) return setError("Du må være tilknyttet en klubb for å publisere annonser.");
     if (listingType !== "iso" && !form.condition) return setError("Velg stand på utstyret");
     if (listingType !== "iso" && !form.price) return setError("Skriv inn pris");
 
@@ -533,61 +504,48 @@ export default function SellPage() {
           </div>
 
           <div className="space-y-5">
-            {/* Club selector */}
-            <div className="bg-white rounded-xl p-6">
-              <label className="block text-sm font-medium text-ink mb-3">Velg din klubb</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {clubs.map((club) => (
-                  <button
-                    key={club.id}
-                    onClick={() => setSelectedClubId(club.id)}
-                    className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all duration-[120ms] ${
-                      selectedClubId === club.id
-                        ? "bg-forest-light border-2 border-forest"
-                        : "bg-cream border-2 border-transparent hover:border-border"
-                    }`}
-                  >
-                    <div
-                      className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                      style={{ backgroundColor: club.color }}
-                    >
-                      {club.initials}
-                    </div>
-                    <span className="font-medium text-ink text-sm">{club.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Profile selector */}
-            {selectedClubId && (
+            {/* Club display */}
+            {userClub ? (
               <div className="bg-white rounded-xl p-6">
-                <label className="block text-sm font-medium text-ink mb-3">Velg din profil</label>
-                {profiles.length === 0 ? (
-                  <p className="text-sm text-ink-light">Ingen profiler funnet for denne klubben ennå.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {profiles.map((profile) => (
-                      <button
-                        key={profile.id}
-                        onClick={() => setSelectedProfileId(profile.id)}
-                        className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all duration-[120ms] ${
-                          selectedProfileId === profile.id
-                            ? "bg-forest-light border-2 border-forest"
-                            : "bg-cream border-2 border-transparent hover:border-border"
-                        }`}
-                      >
-                        <div className="h-8 w-8 rounded-full bg-forest-light flex items-center justify-center text-forest text-xs font-bold flex-shrink-0">
-                          {profile.avatar}
-                        </div>
-                        <div>
-                          <span className="font-medium text-ink text-sm block">{profile.name}</span>
-                          <span className="text-xs text-ink-light">{profile.total_sold} solgt</span>
-                        </div>
-                      </button>
-                    ))}
+                <label className="block text-sm font-medium text-ink mb-3">Din klubb</label>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-forest-light border-2 border-forest">
+                  <div
+                    className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    style={{ backgroundColor: userClub.color }}
+                  >
+                    {userClub.initials}
                   </div>
-                )}
+                  <span className="font-medium text-ink text-sm flex-1">{userClub.name}</span>
+                  <svg className="h-4 w-4 text-forest flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl p-6">
+                <div className="text-center py-2">
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber/10">
+                    <svg className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-semibold text-ink mb-1">Du er ikke tilknyttet noen klubb ennå</h3>
+                  <p className="text-xs text-ink-light mb-4">For å legge ut annonser må du være med i en klubb.</p>
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                    <Link
+                      href="/klubber"
+                      className="rounded-lg border-2 border-forest px-4 py-2 text-sm font-semibold text-forest hover:bg-forest-light transition-colors duration-[120ms]"
+                    >
+                      Bli med i en klubb
+                    </Link>
+                    <Link
+                      href="/registrer-klubb"
+                      className="rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white hover:brightness-95 transition-all duration-[120ms]"
+                    >
+                      Registrer din klubb
+                    </Link>
+                  </div>
+                </div>
               </div>
             )}
 
