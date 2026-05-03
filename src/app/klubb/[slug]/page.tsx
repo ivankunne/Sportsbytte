@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import {
   getAllClubs,
   getClubBySlug,
@@ -52,6 +53,7 @@ type Props = {
 
 export default async function ClubPage({ params }: Props) {
   const { slug } = await params;
+  if (!/^[a-z0-9-]+$/i.test(slug)) notFound();
 
   const club = await getClubBySlug(slug);
   if (!club) {

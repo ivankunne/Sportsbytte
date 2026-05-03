@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ListingDetail } from "./ListingDetail";
 
@@ -59,6 +60,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ListingPage({ params }: Props) {
   const { id } = await params;
+  if (!/^\d+$/.test(id)) notFound();
 
   const { data } = await supabase
     .from("listings")
