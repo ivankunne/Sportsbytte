@@ -9,9 +9,19 @@ const admin = createClient<Database>(
 
 export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
-  if (!id || isNaN(Number(id))) {
-    return NextResponse.json({ error: "Ugyldig ID" }, { status: 400 });
+  const email = req.nextUrl.searchParams.get("email");
+
+  if (!id || isNaN(Number(id)) || !email?.trim()) {
+    return NextResponse.json({ error: "Ugyldig forespørsel" }, { status: 400 });
   }
-  await admin.from("saved_searches").delete().eq("id", Number(id));
+
+  // Filter by both id AND notify_email — prevents IDOR where any user could
+  // delete another person's saved search by guessing the numeric id.
+  await admin
+    .from("saved_searches")
+    .delete()
+    .eq("id", Number(id))
+    .eq("notify_email", email.toLowerCase().trim());
+
   return NextResponse.json({ ok: true });
 }

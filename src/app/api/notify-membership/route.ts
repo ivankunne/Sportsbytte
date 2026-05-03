@@ -9,26 +9,15 @@ const admin = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-const anonClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export async function POST(req: NextRequest) {
-  // Accept a valid Supabase session (from authenticated clients)
-  // or the shared webhook secret (for future server-to-server use)
+  // Server-to-server only — requires the shared webhook secret.
+  // Never accept user bearer tokens: any logged-in user would otherwise be able
+  // to trigger notification emails to arbitrary members.
   const webhookSecret = req.headers.get("x-webhook-secret");
-  const bearerToken = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-
-  let authorized = false;
-  if (webhookSecret && webhookSecret === process.env.NOTIFY_WEBHOOK_SECRET) {
-    authorized = true;
-  } else if (bearerToken) {
-    const { data: { user } } = await anonClient.auth.getUser(bearerToken);
-    if (user) authorized = true;
+  if (!webhookSecret || webhookSecret !== process.env.NOTIFY_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let type: "submitted" | "approved" | "rejected", membership_id: number;
   try {

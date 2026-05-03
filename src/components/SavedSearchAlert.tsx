@@ -58,7 +58,7 @@ export function SavedSearchAlert({
   async function handleDelete() {
     if (!savedId) return;
     setDeleting(true);
-    await fetch(`/api/saved-searches?id=${savedId}`, { method: "DELETE" }).catch(() => {});
+    await fetch(`/api/saved-searches?id=${savedId}&email=${encodeURIComponent(form.email)}`, { method: "DELETE" }).catch(() => {});
     setSaved(false);
     setSavedId(null);
     setDeleting(false);
