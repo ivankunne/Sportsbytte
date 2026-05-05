@@ -24,6 +24,8 @@ type UserProfile = {
   stripe_subscription_id: string | null;
 };
 
+type UserClub = { id: number; name: string; slug: string };
+
 type ConvListing = { id: number; title: string; price: number };
 
 type Conversation = {
@@ -81,6 +83,7 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [userClub, setUserClub] = useState<UserClub | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const [inboxUnread, setInboxUnread] = useState(0);
   const initialTab = (searchParams.get("tab") as Tab | null) ?? "innboks";
@@ -103,7 +106,13 @@ function DashboardContent() {
         .eq("auth_user_id", session.user.id)
         .maybeSingle();
       if (!mounted) return;
-      setProfile(p as UserProfile ?? null);
+      const prof = p as UserProfile ?? null;
+      setProfile(prof);
+      if (prof?.club_id) {
+        const { data: club } = await supabase
+          .from("clubs").select("id, name, slug").eq("id", prof.club_id).maybeSingle();
+        if (mounted && club) setUserClub(club as UserClub);
+      }
       setLoading(false);
       localStorage.setItem("dashboard_last_visited", new Date().toISOString());
       if (stripeReturn === "success") {
@@ -184,7 +193,7 @@ function DashboardContent() {
       {tab === "innboks" && (
         <InboksTab profile={profile} userEmail={userEmail} onUnreadCount={setInboxUnread} />
       )}
-      {tab === "annonser" && <AnnonserTab profile={profile} />}
+      {tab === "annonser" && <AnnonserTab profile={profile} userClub={userClub} />}
       {tab === "anmeldelser" && <AnmedelserTab profile={profile} />}
       {tab === "profil" && (
         <ProfilTab
@@ -638,13 +647,60 @@ function ConversationView({
 
 // ─── Mine annonser ───────────────────────────────────────
 
-function AnnonserTab({ profile }: { profile: UserProfile }) {
+function AnnonserTab({ profile, userClub }: { profile: UserProfile; userClub: UserClub | null }) {
   const [listings, setListings] = useState<MyListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ title: "", price: "" });
   const [editSaving, setEditSaving] = useState(false);
   const [boosting, setBoosting] = useState<number | null>(null);
+  const [renewingId, setRenewingId] = useState<number | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkSolding, setBulkSolding] = useState(false);
+  const [clubLinkCopied, setClubLinkCopied] = useState(false);
+
+  async function handleRenew(listingId: number) {
+    setRenewingId(listingId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setRenewingId(null); return; }
+    const res = await fetch("/api/renew-listing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+      body: JSON.stringify({ listing_id: listingId }),
+    });
+    const json = await res.json();
+    if (json.ok) {
+      showSuccess("Annonsen er fornyet og vises øverst igjen!");
+      setListings((prev) => prev.map((l) => l.id === listingId ? { ...l, created_at: new Date().toISOString() } : l));
+    } else {
+      showError(json.error ?? "Kunne ikke fornye annonsen");
+    }
+    setRenewingId(null);
+  }
+
+  async function handleBulkSold() {
+    if (!selectedIds.size) return;
+    setBulkSolding(true);
+    const ids = Array.from(selectedIds);
+    await supabase.from("listings").update({ is_sold: true }).in("id", ids).eq("seller_id", profile.id);
+    setListings((prev) => prev.map((l) => selectedIds.has(l.id) ? { ...l, is_sold: true } : l));
+    setSelectedIds(new Set());
+    setSelectMode(false);
+    setBulkSolding(false);
+    showSuccess(`${ids.length} annonse${ids.length !== 1 ? "r" : ""} merket som solgt`);
+  }
+
+  async function shareClubPage() {
+    if (!userClub) return;
+    const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://sportsbytte.no"}/klubb/${userClub.slug}`;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try { await navigator.share({ title: userClub.name, text: `Sjekk utstyr til salgs fra ${userClub.name}`, url }); return; } catch {}
+    }
+    await navigator.clipboard.writeText(url);
+    setClubLinkCopied(true);
+    setTimeout(() => setClubLinkCopied(false), 2500);
+  }
 
   async function boostListing(listingId: number) {
     setBoosting(listingId);
@@ -736,9 +792,23 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
         <p className="text-sm text-ink-light">{listings.length} annonse{listings.length !== 1 ? "r" : ""}</p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {userClub && (
+            <button
+              onClick={shareClubPage}
+              className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-ink-mid hover:bg-cream transition-colors"
+            >
+              {clubLinkCopied ? "✓ Kopiert!" : "Del klubbside"}
+            </button>
+          )}
+          <button
+            onClick={() => { setSelectMode((s) => !s); setSelectedIds(new Set()); }}
+            className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${selectMode ? "border-forest text-forest bg-forest-light" : "border-border text-ink-mid hover:bg-cream"}`}
+          >
+            {selectMode ? "Avbryt" : "Velg"}
+          </button>
           <Link
             href="/selg/bulk-upload"
             className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-ink-mid hover:bg-cream transition-colors"
@@ -749,10 +819,23 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
             href="/selg"
             className="rounded-lg bg-forest px-4 py-2 text-xs font-semibold text-white hover:bg-forest-mid transition-colors"
           >
-            + Ny annonse
+            + Ny
           </Link>
         </div>
       </div>
+
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-2xl bg-ink px-5 py-3 shadow-2xl">
+          <span className="text-sm font-medium text-white">{selectedIds.size} valgt</span>
+          <button
+            onClick={handleBulkSold}
+            disabled={bulkSolding}
+            className="rounded-lg bg-red-500 px-4 py-2 text-xs font-bold text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+          >
+            {bulkSolding ? "Oppdaterer..." : "Merk som solgt"}
+          </button>
+        </div>
+      )}
 
       {listings.map((listing) => (
         <div key={listing.id} className="bg-white rounded-xl border border-border overflow-hidden">
@@ -795,6 +878,20 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
             </div>
           ) : (
             <div className="flex items-center gap-3 p-4">
+              {selectMode && (
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(listing.id)}
+                  onChange={(e) => {
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev);
+                      if (e.target.checked) next.add(listing.id); else next.delete(listing.id);
+                      return next;
+                    });
+                  }}
+                  className="h-4 w-4 rounded accent-forest flex-shrink-0"
+                />
+              )}
               {listing.images?.[0] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -851,16 +948,31 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
                 {!listing.is_sold && (() => {
                   const isActiveBoosted = listing.is_boosted && listing.boosted_until && new Date(listing.boosted_until) > new Date();
                   return isActiveBoosted ? (
-                    <span className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-amber-50 text-amber-700">
+                    <span className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-amber-50 text-amber-700 hidden sm:block">
                       ★ Fremhevet
                     </span>
                   ) : (
                     <button
                       onClick={() => boostListing(listing.id)}
                       disabled={boosting === listing.id}
-                      className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                      className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 hidden sm:block"
                     >
                       {boosting === listing.id ? "..." : "Fremhev"}
+                    </button>
+                  );
+                })()}
+                {!listing.is_sold && (() => {
+                  const ageMs = Date.now() - new Date(listing.created_at).getTime();
+                  const canRenew = ageMs > 7 * 24 * 60 * 60 * 1000;
+                  if (!canRenew) return null;
+                  return (
+                    <button
+                      onClick={() => handleRenew(listing.id)}
+                      disabled={renewingId === listing.id}
+                      className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-forest-light text-forest hover:bg-forest/20 transition-colors disabled:opacity-50 hidden sm:block"
+                      title="Forny annonsen — flytt den tilbake til toppen"
+                    >
+                      {renewingId === listing.id ? "..." : "Forny"}
                     </button>
                   );
                 })()}

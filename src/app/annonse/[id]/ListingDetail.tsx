@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/lib/supabase";
 import type { ListingWithRelations } from "@/lib/queries";
 import { formatDaysAgo } from "@/lib/queries";
@@ -12,6 +13,8 @@ import { ConditionBadge } from "@/components/ConditionBadge";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { ListingCard } from "@/components/ListingCard";
 import { ListingChat } from "@/components/ListingChat";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sportsbytte.no";
 
 export function ListingDetail({ id }: { id: string }) {
   const router = useRouter();
@@ -28,6 +31,9 @@ export function ListingDetail({ id }: { id: string }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [publishedModal, setPublishedModal] = useState(false);
+  const [canNativeShare, setCanNativeShare] = useState(false);
   const [demoCTAOpen, setDemoCTAOpen] = useState(false);
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingHover, setRatingHover] = useState(0);
@@ -115,10 +121,15 @@ export function ListingDetail({ id }: { id: string }) {
     })();
   }, [id]);
 
-  // Show success toast when redirected from /selg after publishing
+  // Detect native share support after mount
+  useEffect(() => {
+    setCanNativeShare(typeof navigator !== "undefined" && !!navigator.share);
+  }, []);
+
+  // Show publish success modal when redirected from /selg
   useEffect(() => {
     if (searchParams.get("published") === "1") {
-      showSuccess("Annonsen er publisert!");
+      setPublishedModal(true);
       router.replace(`/annonse/${id}`, { scroll: false });
     }
   }, [searchParams, id, router]);
@@ -159,15 +170,28 @@ export function ListingDetail({ id }: { id: string }) {
   const images = listing.images.length > 0 ? listing.images : ["/placeholder-listing.svg"];
   const specs = listing.specs as Record<string, string> | null;
 
+  const listingUrl = `${SITE_URL}/annonse/${id}`;
+
   async function copyLink() {
-    await navigator.clipboard.writeText(window.location.href);
+    await navigator.clipboard.writeText(listingUrl);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
   }
 
   function shareWhatsApp() {
-    const text = encodeURIComponent(`Sjekk denne annonsen på Sportsbytte: ${window.location.href}`);
+    const text = encodeURIComponent(`${listing!.title} — ${listing!.price.toLocaleString("nb-NO")} kr\n${listingUrl}`);
     window.open(`https://wa.me/?text=${text}`, "_blank");
+    setShareOpen(false);
+  }
+
+  async function handleNativeShare() {
+    try {
+      await navigator.share({
+        title: listing!.title,
+        text: `${listing!.title} — ${listing!.price.toLocaleString("nb-NO")} kr`,
+        url: listingUrl,
+      });
+    } catch {}
     setShareOpen(false);
   }
 
@@ -579,7 +603,7 @@ export function ListingDetail({ id }: { id: string }) {
                 </div>
                 <div className="relative" ref={shareRef}>
                   <button
-                    onClick={() => setShareOpen((o) => !o)}
+                    onClick={canNativeShare ? handleNativeShare : () => setShareOpen((o) => !o)}
                     aria-label="Del annonse"
                     className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-mid hover:bg-cream transition-colors duration-[120ms]"
                   >
@@ -589,7 +613,27 @@ export function ListingDetail({ id }: { id: string }) {
                     Del
                   </button>
                   {shareOpen && (
-                    <div className="absolute right-0 bottom-full mb-2 w-44 rounded-xl border border-border bg-white shadow-lg py-1 z-10">
+                    <div className="absolute right-0 bottom-full mb-2 w-52 rounded-xl border border-border bg-white shadow-lg py-1 z-10">
+                      {canNativeShare && (
+                        <button
+                          onClick={handleNativeShare}
+                          className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-ink hover:bg-cream transition-colors font-medium"
+                        >
+                          <svg className="h-4 w-4 text-forest" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+                          </svg>
+                          Del via Spond, Signal, WhatsApp...
+                        </button>
+                      )}
+                      <button
+                        onClick={shareWhatsApp}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-ink hover:bg-cream transition-colors"
+                      >
+                        <svg className="h-4 w-4 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        </svg>
+                        Del på WhatsApp
+                      </button>
                       <button
                         onClick={copyLink}
                         className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-ink hover:bg-cream transition-colors"
@@ -606,13 +650,14 @@ export function ListingDetail({ id }: { id: string }) {
                         {linkCopied ? "Kopiert!" : "Kopier lenke"}
                       </button>
                       <button
-                        onClick={shareWhatsApp}
+                        onClick={() => { setShareOpen(false); setQrOpen(true); }}
                         className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-ink hover:bg-cream transition-colors"
                       >
-                        <svg className="h-4 w-4 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        <svg className="h-4 w-4 text-ink-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 18.75h.75v.75h-.75v-.75zM18.75 13.5h.75v.75h-.75v-.75zM18.75 18.75h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
                         </svg>
-                        Del på WhatsApp
+                        Vis QR-kode
                       </button>
                     </div>
                   )}
@@ -830,6 +875,83 @@ export function ListingDetail({ id }: { id: string }) {
           open={chatOpen}
           onClose={() => setChatOpen(false)}
         />
+      )}
+
+      {/* QR code modal */}
+      {qrOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setQrOpen(false)} />
+          <div className="relative bg-white rounded-2xl p-7 max-w-xs w-full text-center space-y-4 shadow-2xl">
+            <h3 className="font-display text-lg font-bold text-ink">QR-kode</h3>
+            <div className="flex justify-center">
+              <QRCodeSVG value={listingUrl} size={200} includeMargin />
+            </div>
+            <p className="text-xs text-ink-light">Vis ved salgsarrangement — kjøpere skanner for å åpne og betale direkte</p>
+            <button
+              onClick={() => setQrOpen(false)}
+              className="w-full rounded-lg border border-border py-2.5 text-sm font-medium text-ink hover:bg-cream transition-colors"
+            >
+              Lukk
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Publish success modal */}
+      {publishedModal && listing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setPublishedModal(false)} />
+          <div className="relative bg-white rounded-2xl p-7 max-w-sm w-full text-center space-y-5 shadow-2xl">
+            <div className="text-5xl">🎉</div>
+            <div>
+              <h2 className="font-display text-2xl font-bold text-ink">Annonsen er publisert!</h2>
+              <p className="text-sm text-ink-mid mt-1">Del i klubbgruppen for å nå flest mulig kjøpere.</p>
+            </div>
+
+            <div className="space-y-2.5">
+              {canNativeShare && (
+                <button
+                  onClick={() => { handleNativeShare(); setPublishedModal(false); }}
+                  className="w-full rounded-lg bg-forest py-3 text-sm font-bold text-white hover:bg-forest-mid transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+                  </svg>
+                  Del via Spond, WhatsApp, Signal...
+                </button>
+              )}
+              <button
+                onClick={() => { shareWhatsApp(); }}
+                className="w-full rounded-lg border border-[#25D366] py-2.5 text-sm font-semibold text-[#25D366] hover:bg-[#25D366]/5 transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                Del på WhatsApp
+              </button>
+              <button
+                onClick={copyLink}
+                className="w-full rounded-lg border border-border py-2.5 text-sm font-medium text-ink-mid hover:bg-cream transition-colors"
+              >
+                {linkCopied ? "✓ Lenke kopiert!" : "Kopier lenke"}
+              </button>
+            </div>
+
+            <div className="pt-1 space-y-2">
+              <div className="flex justify-center">
+                <QRCodeSVG value={listingUrl} size={140} includeMargin />
+              </div>
+              <p className="text-xs text-ink-light">QR-kode for salgsarrangement</p>
+            </div>
+
+            <button
+              onClick={() => setPublishedModal(false)}
+              className="text-xs text-ink-light hover:text-ink transition-colors"
+            >
+              Gå til annonsen →
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -31,6 +31,14 @@ type DraftData = {
 };
 
 const DRAFT_KEY = "selg_draft_v1";
+const TEMPLATE_KEY = "selg_template_v1";
+
+type TemplateData = {
+  category: string;
+  condition: string;
+  deliveryMethod: string;
+  membersOnly: boolean;
+};
 
 const INITIAL_FORM: FormState = {
   title: "",
@@ -117,6 +125,7 @@ function SellPageContent() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [savedTemplate, setSavedTemplate] = useState<TemplateData | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const categoryRef = useRef<HTMLElement>(null);
@@ -162,6 +171,10 @@ function SellPageContent() {
           setShowDraftBanner(true);
         }
       }
+    } catch {}
+    try {
+      const tpl = localStorage.getItem(TEMPLATE_KEY);
+      if (tpl) setSavedTemplate(JSON.parse(tpl) as TemplateData);
     } catch {}
 
     setAuthPhase("form");
@@ -230,6 +243,24 @@ function SellPageContent() {
     localStorage.removeItem(DRAFT_KEY);
     setShowDraftBanner(false);
     setPendingDraft(null);
+  }
+
+  function saveTemplate() {
+    const tpl: TemplateData = {
+      category: selectedCategory,
+      condition: form.condition,
+      deliveryMethod,
+      membersOnly: form.membersOnly,
+    };
+    localStorage.setItem(TEMPLATE_KEY, JSON.stringify(tpl));
+    setSavedTemplate(tpl);
+  }
+
+  function applyTemplate() {
+    if (!savedTemplate) return;
+    if (savedTemplate.category) setSelectedCategory(savedTemplate.category);
+    if (savedTemplate.condition) setForm((f) => ({ ...f, condition: savedTemplate.condition, membersOnly: savedTemplate.membersOnly }));
+    setDeliveryMethod(savedTemplate.deliveryMethod);
   }
 
   function scrollTo(ref: React.RefObject<HTMLElement | null>) {
@@ -529,6 +560,17 @@ function SellPageContent() {
   // ── Submit button ─────────────────────────────────────────────────
   const submitButton = (
     <div className="pt-2 pb-8">
+      {(selectedCategory || form.condition || deliveryMethod !== "both") && (
+        <div className="mb-4 text-center">
+          <button
+            type="button"
+            onClick={saveTemplate}
+            className="text-xs text-ink-light hover:text-ink transition-colors underline underline-offset-2"
+          >
+            {savedTemplate ? "Oppdater mal med gjeldende innstillinger" : "Lagre kategori og innstillinger som mal"}
+          </button>
+        </div>
+      )}
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
           {error}
@@ -592,6 +634,21 @@ function SellPageContent() {
             Detaljert
           </button>
         </div>
+
+        {/* Saved template chip */}
+        {savedTemplate?.category && (
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <button
+              onClick={applyTemplate}
+              className="inline-flex items-center gap-1.5 rounded-full bg-forest-light border border-forest/20 px-3 py-1 text-xs font-medium text-forest hover:bg-forest/10 transition-colors"
+            >
+              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+              </svg>
+              Mal: {savedTemplate.category}{savedTemplate.condition ? ` · ${savedTemplate.condition}` : ""}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Draft restore banner */}
