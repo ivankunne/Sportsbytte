@@ -3,16 +3,18 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 import type { ListingWithRelations } from "@/lib/queries";
 import { formatDaysAgo, thumbnailUrl } from "@/lib/queries";
 
 type Props = {
   listing: ListingWithRelations;
   showSeller?: boolean;
+  initialSaved?: boolean;
 };
 
-export function ListingCard({ listing }: Props) {
-  const [saved, setSaved] = useState(false);
+export function ListingCard({ listing, initialSaved = false }: Props) {
+  const [saved, setSaved] = useState(initialSaved);
   const isSold = listing.is_sold;
   const seller = listing.profiles;
   const isBoosted =
@@ -81,9 +83,19 @@ export function ListingCard({ listing }: Props) {
           {/* Heart */}
           <button
             className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm transition-colors hover:bg-white"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
+              const { data: { session } } = await supabase.auth.getSession();
+              if (!session) return;
               setSaved((s) => !s);
+              await fetch("/api/toggle-saved", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ listing_id: listing.id }),
+              });
             }}
             aria-label={saved ? "Fjern fra lagrede" : "Lagre annonse"}
           >
@@ -116,6 +128,12 @@ export function ListingCard({ listing }: Props) {
           <p className="text-[17px] font-bold text-ink mb-2.5">
             kr {listing.price.toLocaleString("nb-NO")}
           </p>
+
+          {listing.size_range && (
+            <span className="inline-flex items-center rounded-full bg-cream border border-border px-2 py-0.5 text-[11px] font-medium text-ink-mid mb-2">
+              str. {listing.size_range}
+            </span>
+          )}
 
           {/* Location + time */}
           <div className="flex items-center gap-1 text-xs text-ink-light mb-3">

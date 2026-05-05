@@ -208,6 +208,11 @@ export default async function ClubPage({ params }: Props) {
         </div>
       </section>
 
+      {/* ── Announcements (pinned above tabs) ─────────────────────── */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8">
+        <ClubAnnouncements clubId={club.id} isAdmin={false} />
+      </div>
+
       {/* ── Tabs: Annonser / Ettersøk / Selgere ──────────────────── */}
       <ClubPageTabs
         club={{
@@ -223,11 +228,6 @@ export default async function ClubPage({ params }: Props) {
         isoListings={isoListings}
         sellers={sellers}
       />
-
-      {/* ── Announcements ─────────────────────────────────────────── */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-        <ClubAnnouncements clubId={club.id} isAdmin={false} />
-      </div>
     </>
   );
 }

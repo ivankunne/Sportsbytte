@@ -54,15 +54,17 @@ function ExplorePage() {
   const [geoError, setGeoError] = useState("");
   const [geoErrorPersist, setGeoErrorPersist] = useState("");
 
-  // Debounced filters (text / price — wait 350ms after last change)
+  // Debounced filters (text / price / size — wait 350ms after last change)
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [minPrice, setMinPrice] = useState(searchParams.get("fra") ?? "");
   const [maxPrice, setMaxPrice] = useState(searchParams.get("til") ?? "");
+  const [sizeFilter, setSizeFilter] = useState(searchParams.get("str") ?? "");
 
   // Debounced versions used for the actual fetch
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const [debouncedMin, setDebouncedMin] = useState("");
   const [debouncedMax, setDebouncedMax] = useState("");
+  const [debouncedSize, setDebouncedSize] = useState("");
 
   // Load categories once
   useEffect(() => {
@@ -81,6 +83,12 @@ function ExplorePage() {
     const id = setTimeout(() => { setDebouncedMin(minPrice); setDebouncedMax(maxPrice); }, 600);
     return () => clearTimeout(id);
   }, [minPrice, maxPrice]);
+
+  // Debounce size filter
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSize(sizeFilter), 350);
+    return () => clearTimeout(id);
+  }, [sizeFilter]);
 
   // Request geolocation when "nær-meg" sort is selected
   useEffect(() => {
@@ -117,9 +125,10 @@ function ExplorePage() {
     if (condition) params.set("tilstand", condition);
     if (debouncedMin) params.set("fra", debouncedMin);
     if (debouncedMax) params.set("til", debouncedMax);
+    if (debouncedSize) params.set("str", debouncedSize);
     const str = params.toString();
     router.replace(`/utforsk${str ? `?${str}` : ""}`, { scroll: false });
-  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, router]);
+  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, router]);
 
   // Fetch — depends only on settled (debounced) values + instant filters
   const categoriesReady = categories.length > 0;
@@ -147,6 +156,7 @@ function ExplorePage() {
       }
 
       if (condition) q = q.ilike("condition", condition);
+      if (debouncedSize.trim()) q = q.ilike("size_range", `%${debouncedSize.trim()}%`);
 
       const min = parseInt(debouncedMin);
       const max = parseInt(debouncedMax);
@@ -179,7 +189,7 @@ function ExplorePage() {
       setVisibleCount(PAGE_SIZE);
       setLoading(false);
     })();
-  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, categories, categoriesReady, userLocation]);
+  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, categories, categoriesReady, userLocation]);
 
   function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
     const R = 6371;
@@ -193,11 +203,11 @@ function ExplorePage() {
 
   function resetAll() {
     setQuery(""); setActiveCategory(""); setSort("nyeste");
-    setCondition(""); setMinPrice(""); setMaxPrice("");
+    setCondition(""); setMinPrice(""); setMaxPrice(""); setSizeFilter("");
     setUserLocation(null); setGeoError(""); setGeoErrorPersist("");
   }
 
-  const hasActiveFilters = query || activeCategory || condition || minPrice || maxPrice || sort !== "nyeste";
+  const hasActiveFilters = query || activeCategory || condition || minPrice || maxPrice || sizeFilter || sort !== "nyeste";
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -274,7 +284,18 @@ function ExplorePage() {
           </button>
         ))}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">Str:</span>
+          <input
+            type="text"
+            value={sizeFilter}
+            onChange={(e) => setSizeFilter(e.target.value)}
+            placeholder="F.eks. M, 42"
+            className="w-24 rounded-lg border border-border bg-white px-3 py-1.5 text-xs text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">Pris:</span>
           <input
             type="number"
@@ -299,6 +320,7 @@ function ExplorePage() {
           )}
         </div>
       </div>
+
 
       {/* Geo status */}
       {geoErrorPersist && (

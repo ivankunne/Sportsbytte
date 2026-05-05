@@ -551,6 +551,138 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_listings: {
+        Row: {
+          created_at: string
+          id: number
+          listing_id: number
+          profile_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          listing_id: number
+          profile_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          listing_id?: number
+          profile_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_listings_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_listings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers: {
+        Row: {
+          amount: number
+          buyer_profile_id: number
+          counter_amount: number | null
+          created_at: string
+          id: number
+          listing_id: number
+          message: string | null
+          seller_profile_id: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          buyer_profile_id: number
+          counter_amount?: number | null
+          created_at?: string
+          id?: never
+          listing_id: number
+          message?: string | null
+          seller_profile_id: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          buyer_profile_id?: number
+          counter_amount?: number | null
+          created_at?: string
+          id?: never
+          listing_id?: number
+          message?: string | null
+          seller_profile_id?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_buyer_profile_id_fkey"
+            columns: ["buyer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: number
+          p256dh: string
+          profile_id: number
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: never
+          p256dh: string
+          profile_id: number
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: never
+          p256dh?: string
+          profile_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_searches: {
         Row: {
           category: string | null

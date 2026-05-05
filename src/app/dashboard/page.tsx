@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { showSuccess, showError } from "@/components/Toaster";
 
-type Tab = "innboks" | "annonser" | "anmeldelser" | "profil";
+type Tab = "innboks" | "annonser" | "tilbud" | "anmeldelser" | "profil";
 
 type UserProfile = {
   id: number;
@@ -168,6 +168,7 @@ function DashboardContent() {
         {([
           { id: "innboks" as Tab, label: "Innboks" },
           { id: "annonser" as Tab, label: "Mine annonser" },
+          { id: "tilbud" as Tab, label: "Tilbud" },
           { id: "anmeldelser" as Tab, label: "Anmeldelser" },
           { id: "profil" as Tab, label: "Profil" },
         ]).map((t) => (
@@ -194,6 +195,7 @@ function DashboardContent() {
         <InboksTab profile={profile} userEmail={userEmail} onUnreadCount={setInboxUnread} />
       )}
       {tab === "annonser" && <AnnonserTab profile={profile} userClub={userClub} />}
+      {tab === "tilbud" && <TilbudTab profile={profile} />}
       {tab === "anmeldelser" && <AnmedelserTab profile={profile} />}
       {tab === "profil" && (
         <ProfilTab
@@ -1430,6 +1432,8 @@ function ProfilTab({
 
       <SelgerProCard profile={profile} />
 
+      <PushNotificationCard />
+
       <div className="bg-white rounded-xl p-6">
         <h2 className="font-display text-base font-semibold text-ink mb-4">Din statistikk</h2>
         <div className="grid grid-cols-2 gap-3">
@@ -1494,6 +1498,268 @@ function ProfilTab({
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Push notification card ───────────────────────────────
+
+function PushNotificationCard() {
+  const [status, setStatus] = useState<"idle" | "subscribed" | "denied" | "unsupported">("idle");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setStatus("unsupported");
+      return;
+    }
+    if (Notification.permission === "denied") { setStatus("denied"); return; }
+    navigator.serviceWorker.getRegistration("/sw.js").then((reg) => {
+      reg?.pushManager.getSubscription().then((sub) => { if (sub) setStatus("subscribed"); });
+    });
+  }, []);
+
+  async function subscribe() {
+    setLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") { setStatus("denied"); return; }
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
+      const padding = "=".repeat((4 - (vapidKey.length % 4)) % 4);
+      const base64 = (vapidKey + padding).replace(/-/g, "+").replace(/_/g, "/");
+      const rawData = window.atob(base64);
+      const appServerKey = new Uint8Array([...rawData].map((c) => c.charCodeAt(0)));
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: appServerKey });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ subscription: sub.toJSON() }),
+      });
+      setStatus("subscribed");
+    } catch { /* ignore */ } finally { setLoading(false); }
+  }
+
+  async function unsubscribe() {
+    setLoading(true);
+    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+    const sub = await reg?.pushManager.getSubscription();
+    if (sub) {
+      await sub.unsubscribe();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await fetch("/api/push/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ subscription: sub.toJSON(), action: "unsubscribe" }),
+        });
+      }
+    }
+    setStatus("idle");
+    setLoading(false);
+  }
+
+  if (status === "unsupported") return null;
+
+  return (
+    <div className="bg-white rounded-xl p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-base font-semibold text-ink">Push-varsler</h2>
+          <p className="text-xs text-ink-light mt-0.5">
+            {status === "subscribed"
+              ? "Du mottar varsler om nye bud og meldinger"
+              : status === "denied"
+              ? "Blokkert — endre tillatelse i nettleserinnstillinger"
+              : "Få varsling om nye bud og meldinger direkte i nettleseren"}
+          </p>
+        </div>
+        {status !== "denied" && (
+          <button
+            onClick={status === "subscribed" ? unsubscribe : subscribe}
+            disabled={loading}
+            className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
+              status === "subscribed" ? "border border-border text-ink-mid hover:bg-cream" : "bg-forest text-white hover:bg-forest-mid"
+            }`}
+          >
+            {loading ? "..." : status === "subscribed" ? "Skru av" : "Slå på"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Tilbud tab ───────────────────────────────────────────
+
+type Offer = {
+  id: number;
+  listing_id: number;
+  amount: number;
+  counter_amount: number | null;
+  status: string;
+  message: string | null;
+  created_at: string;
+  listings: { id: number; title: string; price: number; images: string[] } | null;
+  buyer?: { id: number; name: string; avatar: string } | null;
+  seller?: { id: number; name: string; avatar: string } | null;
+};
+
+function TilbudTab({ profile }: { profile: UserProfile }) {
+  const [received, setReceived] = useState<Offer[]>([]);
+  const [sent, setSent] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<"received" | "sent">("received");
+  const [responding, setResponding] = useState<number | null>(null);
+  const [counterAmount, setCounterAmount] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    async function load() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setLoading(false); return; }
+      const res = await fetch("/api/offers", { headers: { Authorization: `Bearer ${session.access_token}` } });
+      if (res.ok) {
+        const json = await res.json();
+        setReceived(json.received ?? []);
+        setSent(json.sent ?? []);
+      }
+      setLoading(false);
+    }
+    load();
+  }, [profile]);
+
+  async function respond(offerId: number, action: "accept" | "decline" | "counter", counterAmt?: number) {
+    setResponding(offerId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setResponding(null); return; }
+    const res = await fetch(`/api/offers/${offerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action, counter_amount: counterAmt }),
+    });
+    if (res.ok) {
+      setReceived((prev) => prev.map((o) => o.id === offerId
+        ? { ...o, status: action === "counter" ? "countered" : action === "accept" ? "accepted" : "declined", counter_amount: counterAmt ?? o.counter_amount }
+        : o
+      ));
+    }
+    setResponding(null);
+  }
+
+  async function retract(offerId: number) {
+    setResponding(offerId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setResponding(null); return; }
+    await fetch(`/api/offers/${offerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: "retract" }),
+    });
+    setSent((prev) => prev.map((o) => o.id === offerId ? { ...o, status: "declined" } : o));
+    setResponding(null);
+  }
+
+  const statusLabel: Record<string, { label: string; classes: string }> = {
+    pending: { label: "Venter", classes: "bg-amber-100 text-amber-800" },
+    accepted: { label: "Akseptert", classes: "bg-green-100 text-green-800" },
+    declined: { label: "Avslått", classes: "bg-red-100 text-red-700" },
+    countered: { label: "Motbud", classes: "bg-blue-100 text-blue-800" },
+  };
+
+  if (loading) {
+    return <div className="flex justify-center py-12"><div className="h-6 w-6 rounded-full border-2 border-forest border-t-transparent animate-spin" /></div>;
+  }
+
+  const activeOffers = view === "received" ? received : sent;
+
+  return (
+    <div className="space-y-5">
+      <div className="flex gap-1 rounded-xl bg-cream p-1 w-fit">
+        {(["received", "sent"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${view === v ? "bg-white text-ink shadow-sm" : "text-ink-light hover:text-ink"}`}
+          >
+            {v === "received" ? `Mottatt (${received.length})` : `Sendt (${sent.length})`}
+          </button>
+        ))}
+      </div>
+
+      {activeOffers.length === 0 ? (
+        <div className="text-center py-12 text-sm text-ink-light">
+          {view === "received" ? "Ingen mottatte bud ennå" : "Du har ikke sendt noen bud ennå"}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {activeOffers.map((offer) => {
+            const sl = statusLabel[offer.status] ?? statusLabel.pending;
+            const listing = offer.listings;
+            const person = view === "received" ? offer.buyer : offer.seller;
+            return (
+              <div key={offer.id} className="bg-white rounded-xl border border-border p-5 space-y-4">
+                <div className="flex items-start gap-3">
+                  {listing?.images?.[0] && (
+                    <img src={listing.images[0]} alt="" className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <Link href={`/annonse/${offer.listing_id}`} className="text-sm font-semibold text-ink hover:text-forest transition-colors line-clamp-1">
+                          {listing?.title ?? "Ukjent annonse"}
+                        </Link>
+                        <p className="text-xs text-ink-light mt-0.5">{view === "received" ? "Fra" : "Til"}: {person?.name ?? "Ukjent"}</p>
+                      </div>
+                      <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full flex-shrink-0 ${sl.classes}`}>{sl.label}</span>
+                    </div>
+                    <p className="text-base font-bold text-forest mt-1.5">
+                      {offer.amount.toLocaleString("nb-NO")} kr
+                      {listing?.price && <span className="text-xs font-normal text-ink-light ml-1.5">· Prisantydning: {listing.price.toLocaleString("nb-NO")} kr</span>}
+                    </p>
+                    {offer.counter_amount && offer.status === "countered" && (
+                      <p className="text-xs text-blue-700 mt-0.5">Motbud: {offer.counter_amount.toLocaleString("nb-NO")} kr</p>
+                    )}
+                    {offer.message && <p className="text-xs text-ink-mid mt-1 italic">&ldquo;{offer.message}&rdquo;</p>}
+                  </div>
+                </div>
+
+                {view === "received" && offer.status === "pending" && (
+                  <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
+                    <button onClick={() => respond(offer.id, "accept")} disabled={responding === offer.id}
+                      className="rounded-lg bg-forest px-4 py-2 text-xs font-semibold text-white hover:bg-forest-mid transition-colors disabled:opacity-50">
+                      Aksepter
+                    </button>
+                    <button onClick={() => respond(offer.id, "decline")} disabled={responding === offer.id}
+                      className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-ink-mid hover:bg-cream transition-colors disabled:opacity-50">
+                      Avslå
+                    </button>
+                    <div className="flex items-center gap-1.5 ml-auto">
+                      <input type="number" value={counterAmount[offer.id] ?? ""} onChange={(e) => setCounterAmount((p) => ({ ...p, [offer.id]: e.target.value }))}
+                        placeholder="Motbud kr" className="w-28 rounded-lg border border-border px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-forest/20" />
+                      <button onClick={() => respond(offer.id, "counter", parseInt(counterAmount[offer.id] ?? "0"))}
+                        disabled={responding === offer.id || !counterAmount[offer.id] || parseInt(counterAmount[offer.id]) <= 0}
+                        className="rounded-lg bg-ink/10 px-3 py-2 text-xs font-medium text-ink hover:bg-ink/15 transition-colors disabled:opacity-40">
+                        Send motbud
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {view === "sent" && offer.status === "pending" && (
+                  <div className="pt-1 border-t border-border">
+                    <button onClick={() => retract(offer.id)} disabled={responding === offer.id}
+                      className="text-xs text-ink-light hover:text-red-600 transition-colors">
+                      Trekk tilbake bud
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

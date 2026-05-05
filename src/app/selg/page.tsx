@@ -371,7 +371,7 @@ function SellPageContent() {
           listing_type: effectiveListingType,
           members_only: form.membersOnly,
           quantity: isBulk ? parseInt(form.quantity || "2") : null,
-          size_range: isBulk ? form.sizeRange || null : null,
+          size_range: isISO ? null : form.sizeRange || null,
           delivery_method: isISO ? null : deliveryMethod,
           is_sold: false,
         }),
@@ -897,17 +897,17 @@ function SellPageContent() {
                 </div>
               )}
 
-              {isBulk && (
+              {!isISO && (
                 <div>
                   <label htmlFor="sizeRange" className="block text-sm font-medium text-ink mb-1.5">
-                    Størrelser tilgjengelig
+                    {isBulk ? "Størrelser tilgjengelig" : "Størrelse (valgfritt)"}
                   </label>
                   <input
                     id="sizeRange"
                     type="text"
                     value={form.sizeRange}
                     onChange={(e) => setForm({ ...form, sizeRange: e.target.value })}
-                    placeholder="F.eks. XS, S, M, L, XL eller 160–180 cm"
+                    placeholder={isBulk ? "F.eks. XS, S, M, L, XL eller 160–180 cm" : "F.eks. M, 42, 180 cm"}
                     className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
                   />
                 </div>
