@@ -12,6 +12,27 @@ const anonClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+async function insertOfferStatusMessage(
+  offerId: number,
+  type: string,
+  content: Record<string, unknown>,
+  isFromSeller: boolean,
+) {
+  const { data: offerMsg } = await admin
+    .from("messages")
+    .select("conversation_id")
+    .eq("type", "offer")
+    .filter("content", "ilike", `%"offer_id":${offerId}%`)
+    .maybeSingle();
+  if (!offerMsg) return;
+  await admin.from("messages").insert({
+    conversation_id: offerMsg.conversation_id,
+    is_from_seller: isFromSeller,
+    type,
+    content: JSON.stringify(content),
+  });
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
@@ -42,6 +63,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (action === "accept" && isSeller) {
     await admin.from("offers").update({ status: "accepted", updated_at: new Date().toISOString() }).eq("id", offer.id);
+    await insertOfferStatusMessage(offer.id, "offer_accepted", { offer_id: offer.id, amount: offer.amount }, true);
     await sendPushToProfile(offer.buyer_profile_id, {
       title: "Bud akseptert!",
       body: `Selgeren aksepterte budet ditt på ${offer.amount.toLocaleString("nb-NO")} kr for "${listingTitle}"`,
@@ -49,6 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
   } else if (action === "decline" && isSeller) {
     await admin.from("offers").update({ status: "declined", updated_at: new Date().toISOString() }).eq("id", offer.id);
+    await insertOfferStatusMessage(offer.id, "offer_declined", { offer_id: offer.id }, true);
     await sendPushToProfile(offer.buyer_profile_id, {
       title: "Bud avslått",
       body: `Selgeren avslo budet ditt på "${listingTitle}"`,
@@ -60,13 +83,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       counter_amount,
       updated_at: new Date().toISOString(),
     }).eq("id", offer.id);
+    await insertOfferStatusMessage(offer.id, "offer_countered", { offer_id: offer.id, counter_amount }, true);
     await sendPushToProfile(offer.buyer_profile_id, {
       title: "Motbud mottatt",
       body: `Selgeren vil ha ${counter_amount.toLocaleString("nb-NO")} kr for "${listingTitle}"`,
-      url: "/dashboard?tab=tilbud",
+      url: `/annonse/${offer.listing_id}`,
     });
   } else if (action === "retract" && isBuyer) {
     await admin.from("offers").update({ status: "declined", updated_at: new Date().toISOString() }).eq("id", offer.id);
+    await insertOfferStatusMessage(offer.id, "offer_retracted", { offer_id: offer.id }, false);
   } else {
     return NextResponse.json({ error: "Ugyldig handling" }, { status: 400 });
   }

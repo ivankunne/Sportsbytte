@@ -47,7 +47,6 @@ export function ListingDetail({ id }: { id: string }) {
   const [offerAmount, setOfferAmount] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
   const [offerSubmitting, setOfferSubmitting] = useState(false);
-  const [offerSent, setOfferSent] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
 
   // Close share dropdown on outside click
@@ -289,7 +288,11 @@ export function ListingDetail({ id }: { id: string }) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Noe gikk galt");
-      setOfferSent(true);
+      // Close the offer modal and open the chat where the bid message now lives
+      setOfferOpen(false);
+      setOfferAmount("");
+      setOfferMessage("");
+      setChatOpen(true);
     } catch (err) {
       showError(err instanceof Error ? err.message : "Noe gikk galt");
     } finally {
@@ -994,65 +997,49 @@ export function ListingDetail({ id }: { id: string }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { if (!offerSubmitting) setOfferOpen(false); }} />
           <div className="relative bg-white rounded-2xl p-7 max-w-sm w-full shadow-2xl space-y-5">
-            {offerSent ? (
-              <div className="text-center space-y-3 py-2">
-                <div className="text-4xl">🤝</div>
-                <h3 className="font-display text-xl font-bold text-ink">Bud sendt!</h3>
-                <p className="text-sm text-ink-mid">Selgeren vil svare deg snart. Du får varsling om svaret.</p>
-                <button
-                  onClick={() => { setOfferOpen(false); setOfferSent(false); setOfferAmount(""); setOfferMessage(""); }}
-                  className="w-full rounded-lg bg-forest py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors"
-                >
-                  Lukk
-                </button>
+            <div>
+              <h3 className="font-display text-xl font-bold text-ink">Gi bud</h3>
+              <p className="text-sm text-ink-mid mt-1">Prisantydning: {listing.price.toLocaleString("nb-NO")} kr</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">Ditt bud (NOK)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={offerAmount}
+                  onChange={(e) => setOfferAmount(e.target.value)}
+                  placeholder="0"
+                  className="w-full rounded-lg border border-border px-4 py-3 text-2xl font-bold text-forest placeholder:text-ink-light/40 focus:outline-none focus:ring-2 focus:ring-forest/20"
+                  autoFocus
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg text-ink-light">kr</span>
               </div>
-            ) : (
-              <>
-                <div>
-                  <h3 className="font-display text-xl font-bold text-ink">Gi bud</h3>
-                  <p className="text-sm text-ink-mid mt-1">Prisantydning: {listing.price.toLocaleString("nb-NO")} kr</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-1.5">Ditt bud (NOK)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={offerAmount}
-                      onChange={(e) => setOfferAmount(e.target.value)}
-                      placeholder="0"
-                      className="w-full rounded-lg border border-border px-4 py-3 text-2xl font-bold text-forest placeholder:text-ink-light/40 focus:outline-none focus:ring-2 focus:ring-forest/20"
-                      autoFocus
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg text-ink-light">kr</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-1.5">Melding (valgfritt)</label>
-                  <textarea
-                    value={offerMessage}
-                    onChange={(e) => setOfferMessage(e.target.value)}
-                    rows={2}
-                    placeholder="Begrunn budet ditt, spør om detaljer..."
-                    className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 resize-none"
-                  />
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => setOfferOpen(false)}
-                    className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-ink-mid hover:bg-cream transition-colors"
-                  >
-                    Avbryt
-                  </button>
-                  <button
-                    onClick={handleSubmitOffer}
-                    disabled={offerSubmitting || !offerAmount || parseInt(offerAmount) <= 0}
-                    className="flex-1 rounded-lg bg-forest py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors disabled:opacity-50"
-                  >
-                    {offerSubmitting ? "Sender..." : "Send bud"}
-                  </button>
-                </div>
-              </>
-            )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">Melding (valgfritt)</label>
+              <textarea
+                value={offerMessage}
+                onChange={(e) => setOfferMessage(e.target.value)}
+                rows={2}
+                placeholder="Begrunn budet ditt, spør om detaljer..."
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 resize-none"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setOfferOpen(false)}
+                className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-ink-mid hover:bg-cream transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleSubmitOffer}
+                disabled={offerSubmitting || !offerAmount || parseInt(offerAmount) <= 0}
+                className="flex-1 rounded-lg bg-forest py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors disabled:opacity-50"
+              >
+                {offerSubmitting ? "Sender..." : "Send bud"}
+              </button>
+            </div>
           </div>
         </div>
       )}

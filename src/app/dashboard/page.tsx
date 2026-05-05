@@ -462,7 +462,21 @@ function ConversationView({
   const [sendError, setSendError] = useState("");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [offerResponding, setOfferResponding] = useState<number | null>(null);
+  const [counterInputs, setCounterInputs] = useState<Record<number, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  async function handleOfferAction(offerId: number, action: "accept" | "decline" | "counter", counterAmt?: number) {
+    setOfferResponding(offerId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setOfferResponding(null); return; }
+    await fetch(`/api/offers/${offerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action, counter_amount: counterAmt }),
+    });
+    setOfferResponding(null);
+  }
 
   const scrollToBottom = useCallback(() => {
     setTimeout(
@@ -606,24 +620,119 @@ function ConversationView({
         )}
         {messages.map((msg) => {
           const isMe = isSeller ? msg.is_from_seller : !msg.is_from_seller;
-          const isSpecial = msg.type === "bring_request";
+
+          if (msg.type === "bring_request") {
+            return (
+              <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                <div className="rounded-2xl bg-cream border border-border px-4 py-2.5 max-w-[75%] text-sm text-ink-mid italic">
+                  Sendte en Bring-fraktforespørsel
+                </div>
+              </div>
+            );
+          }
+
+          if (msg.type === "offer") {
+            try {
+              const data = JSON.parse(msg.content) as { offer_id: number; amount: number; note?: string | null };
+              const isResponded = messages.some((m) => {
+                if (new Date(m.created_at) <= new Date(msg.created_at)) return false;
+                if (m.type !== "offer_accepted" && m.type !== "offer_declined" && m.type !== "offer_countered") return false;
+                try { return (JSON.parse(m.content) as { offer_id: number }).offer_id === data.offer_id; } catch { return false; }
+              });
+              return (
+                <div key={msg.id} className="flex justify-start">
+                  <div className="rounded-2xl border-2 border-amber/40 bg-amber-light px-4 py-3.5 max-w-[85%] space-y-2.5">
+                    <p className="text-[10px] font-bold text-amber-dark uppercase tracking-wider">Bud mottatt</p>
+                    <p className="text-2xl font-bold text-forest">{data.amount.toLocaleString("nb-NO")} kr</p>
+                    {data.note && <p className="text-xs text-ink-mid italic">&ldquo;{data.note}&rdquo;</p>}
+                    {isSeller && !isResponded && (
+                      <div className="space-y-2 pt-2 border-t border-amber/30">
+                        <div className="flex gap-2">
+                          <button onClick={() => handleOfferAction(data.offer_id, "accept")} disabled={offerResponding === data.offer_id}
+                            className="rounded-lg bg-forest px-3 py-1.5 text-xs font-semibold text-white hover:bg-forest-mid transition-colors disabled:opacity-50">
+                            Aksepter
+                          </button>
+                          <button onClick={() => handleOfferAction(data.offer_id, "decline")} disabled={offerResponding === data.offer_id}
+                            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-mid hover:bg-cream transition-colors disabled:opacity-50">
+                            Avslå
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input type="number" value={counterInputs[data.offer_id] ?? ""}
+                            onChange={(e) => setCounterInputs((p) => ({ ...p, [data.offer_id]: e.target.value }))}
+                            placeholder="Motbud kr"
+                            className="w-24 rounded-lg border border-border px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-forest/20"
+                          />
+                          <button
+                            onClick={() => handleOfferAction(data.offer_id, "counter", parseInt(counterInputs[data.offer_id] ?? "0"))}
+                            disabled={offerResponding === data.offer_id || !counterInputs[data.offer_id] || parseInt(counterInputs[data.offer_id] ?? "0") <= 0}
+                            className="rounded-lg bg-ink/10 px-2.5 py-1.5 text-xs font-medium text-ink hover:bg-ink/15 transition-colors disabled:opacity-40">
+                            Send motbud
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {isResponded && <p className="text-xs text-amber-dark/50">Besvart</p>}
+                  </div>
+                </div>
+              );
+            } catch {}
+          }
+
+          if (msg.type === "offer_accepted") {
+            try {
+              const data = JSON.parse(msg.content) as { amount: number };
+              return (
+                <div key={msg.id} className="flex justify-end">
+                  <div className="rounded-2xl border border-forest/30 bg-forest-light px-4 py-3 max-w-[80%]">
+                    <p className="text-sm font-bold text-forest">✓ Bud akseptert</p>
+                    <p className="text-xs text-forest/70 mt-0.5">{data.amount.toLocaleString("nb-NO")} kr — avtal overlevering her</p>
+                  </div>
+                </div>
+              );
+            } catch {}
+          }
+
+          if (msg.type === "offer_declined") {
+            return (
+              <div key={msg.id} className="flex justify-end">
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 max-w-[80%]">
+                  <p className="text-sm font-semibold text-red-600">Bud avslått</p>
+                </div>
+              </div>
+            );
+          }
+
+          if (msg.type === "offer_countered") {
+            try {
+              const data = JSON.parse(msg.content) as { counter_amount: number };
+              return (
+                <div key={msg.id} className="flex justify-end">
+                  <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 max-w-[80%]">
+                    <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Motbud sendt</p>
+                    <p className="text-xl font-bold text-blue-800">{data.counter_amount.toLocaleString("nb-NO")} kr</p>
+                  </div>
+                </div>
+              );
+            } catch {}
+          }
+
+          if (msg.type === "offer_retracted") {
+            return (
+              <div key={msg.id} className="flex justify-start">
+                <div className="rounded-2xl border border-border bg-cream px-4 py-2 max-w-[80%]">
+                  <p className="text-xs text-ink-light italic">Kjøper trakk tilbake budet</p>
+                </div>
+              </div>
+            );
+          }
+
           return (
-            <div
-              key={msg.id}
-              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`rounded-2xl px-4 py-2.5 max-w-[75%] text-sm leading-relaxed ${
-                  isSpecial
-                    ? "bg-cream border border-border text-ink-mid italic"
-                    : isMe
-                    ? "bg-forest text-white rounded-br-sm"
-                    : "bg-cream text-ink rounded-bl-sm"
-                }`}
-              >
-                {msg.type === "bring_request"
-                  ? "Sendte en Bring-fraktforespørsel"
-                  : msg.content}
+            <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+              <div className={`rounded-2xl px-4 py-2.5 max-w-[75%] text-sm leading-relaxed ${
+                isMe ? "bg-forest text-white rounded-br-sm" : "bg-cream text-ink rounded-bl-sm"
+              }`}>
+                {msg.content}
               </div>
             </div>
           );

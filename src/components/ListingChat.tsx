@@ -450,7 +450,6 @@ export function ListingChat({
 
 function MessageBubble({
   message,
-  listingPrice,
 }: {
   message: Message;
   listingPrice: number;
@@ -462,26 +461,80 @@ function MessageBubble({
       <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
         <div className="rounded-2xl border border-border bg-white p-4 max-w-[75%]">
           <div className="flex items-center gap-2 mb-2">
-            <svg
-              className="h-4 w-4 text-[#CC0000] flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"
-              />
+            <svg className="h-4 w-4 text-[#CC0000] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
             </svg>
-            <span className="text-xs font-bold text-[#CC0000] uppercase tracking-wide">
-              Bring frakt
-            </span>
+            <span className="text-xs font-bold text-[#CC0000] uppercase tracking-wide">Bring frakt</span>
           </div>
-          <p className="text-sm text-ink whitespace-pre-line">
-            {message.content}
-          </p>
+          <p className="text-sm text-ink whitespace-pre-line">{message.content}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === "offer") {
+    try {
+      const data = JSON.parse(message.content) as { offer_id: number; amount: number; note?: string | null };
+      return (
+        <div className="flex justify-end">
+          <div className="rounded-2xl border-2 border-amber/40 bg-amber-light px-4 py-3 max-w-[80%]">
+            <p className="text-[10px] font-bold text-amber-dark uppercase tracking-wider mb-1">Bud sendt</p>
+            <p className="text-xl font-bold text-forest">{data.amount.toLocaleString("nb-NO")} kr</p>
+            {data.note && <p className="text-xs text-ink-mid mt-1 italic">&ldquo;{data.note}&rdquo;</p>}
+            <p className="text-xs text-amber-dark/60 mt-1.5">Venter på svar fra selger...</p>
+          </div>
+        </div>
+      );
+    } catch {}
+  }
+
+  if (message.type === "offer_accepted") {
+    try {
+      const data = JSON.parse(message.content) as { amount: number };
+      return (
+        <div className="flex justify-start">
+          <div className="rounded-2xl border border-forest/30 bg-forest-light px-4 py-3 max-w-[80%]">
+            <p className="text-sm font-bold text-forest">✓ Bud akseptert!</p>
+            <p className="text-xs text-forest/70 mt-0.5">
+              Budet på {data.amount.toLocaleString("nb-NO")} kr ble akseptert. Avtal overlevering her i chatten.
+            </p>
+          </div>
+        </div>
+      );
+    } catch {}
+  }
+
+  if (message.type === "offer_declined") {
+    return (
+      <div className="flex justify-start">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 max-w-[80%]">
+          <p className="text-sm font-semibold text-red-600">Bud avslått</p>
+          <p className="text-xs text-red-500/70 mt-0.5">Selgeren avslo budet.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === "offer_countered") {
+    try {
+      const data = JSON.parse(message.content) as { counter_amount: number };
+      return (
+        <div className="flex justify-start">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 max-w-[80%]">
+            <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Motbud fra selger</p>
+            <p className="text-xl font-bold text-blue-800">{data.counter_amount.toLocaleString("nb-NO")} kr</p>
+            <p className="text-xs text-blue-600/60 mt-1">Svar i chatten om du aksepterer.</p>
+          </div>
+        </div>
+      );
+    } catch {}
+  }
+
+  if (message.type === "offer_retracted") {
+    return (
+      <div className="flex justify-end">
+        <div className="rounded-2xl border border-border bg-cream px-4 py-2 max-w-[80%]">
+          <p className="text-xs text-ink-light italic">Bud trukket tilbake</p>
         </div>
       </div>
     );
@@ -491,9 +544,7 @@ function MessageBubble({
     <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
       <div
         className={`rounded-2xl px-4 py-2.5 max-w-[75%] text-sm leading-relaxed ${
-          isMe
-            ? "bg-forest text-white rounded-br-sm"
-            : "bg-cream text-ink rounded-bl-sm"
+          isMe ? "bg-forest text-white rounded-br-sm" : "bg-cream text-ink rounded-bl-sm"
         }`}
       >
         {message.content}

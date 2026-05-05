@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
 
   const { data: { user }, error: authError } = await anonClient.auth.getUser(token);
   if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user.email) return NextResponse.json({ error: "Ingen e-post på konto" }, { status: 400 });
 
   const { data: buyerProfile } = await admin
     .from("profiles").select("id, name").eq("auth_user_id", user.id).maybeSingle();
@@ -46,10 +47,46 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Find or create conversation so the bid lands in the chat
+  const { data: existingConv } = await admin
+    .from("conversations")
+    .select("id")
+    .eq("listing_id", listingId)
+    .eq("buyer_email", user.email)
+    .maybeSingle();
+
+  let conversationId: string;
+  if (existingConv) {
+    conversationId = existingConv.id;
+  } else {
+    const { data: newConv } = await admin
+      .from("conversations")
+      .insert({
+        listing_id: listingId,
+        seller_id: listing.seller_id,
+        buyer_name: buyerProfile.name,
+        buyer_email: user.email,
+      })
+      .select("id")
+      .single();
+    conversationId = newConv!.id;
+  }
+
+  await admin.from("messages").insert({
+    conversation_id: conversationId,
+    is_from_seller: false,
+    type: "offer",
+    content: JSON.stringify({
+      offer_id: offer.id,
+      amount,
+      note: body.message?.trim() || null,
+    }),
+  });
+
   await sendPushToProfile(listing.seller_id, {
     title: "Nytt bud mottatt",
     body: `${buyerProfile.name} bød ${amount.toLocaleString("nb-NO")} kr på "${listing.title}"`,
-    url: "/dashboard?tab=tilbud",
+    url: "/dashboard",
   });
 
   return NextResponse.json({ ok: true, offer_id: offer.id });
