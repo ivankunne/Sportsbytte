@@ -15,6 +15,7 @@ type Props = {
 
 export function ListingCard({ listing, initialSaved = false }: Props) {
   const [saved, setSaved] = useState(initialSaved);
+  const [nudge, setNudge] = useState(false);
   const isSold = listing.is_sold;
   const seller = listing.profiles;
   const isBoosted =
@@ -80,13 +81,24 @@ export function ListingCard({ listing, initialSaved = false }: Props) {
             </div>
           )}
 
+          {/* Login nudge toast */}
+          {nudge && (
+            <div className="absolute bottom-12 right-2 z-10 rounded-full bg-ink/80 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm whitespace-nowrap pointer-events-none">
+              Logg inn for å lagre
+            </div>
+          )}
+
           {/* Heart */}
           <button
             className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm transition-colors hover:bg-white"
             onClick={async (e) => {
               e.preventDefault();
               const { data: { session } } = await supabase.auth.getSession();
-              if (!session) return;
+              if (!session) {
+                setNudge(true);
+                setTimeout(() => setNudge(false), 2500);
+                return;
+              }
               setSaved((s) => !s);
               await fetch("/api/toggle-saved", {
                 method: "POST",

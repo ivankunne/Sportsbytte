@@ -38,6 +38,7 @@ type TemplateData = {
   condition: string;
   deliveryMethod: string;
   membersOnly: boolean;
+  sizeRange?: string;
 };
 
 const INITIAL_FORM: FormState = {
@@ -106,7 +107,7 @@ function SellPageContent() {
   const searchParams = useSearchParams();
 
   const [authPhase, setAuthPhase] = useState<AuthPhase>("checking");
-  const [fastMode, setFastMode] = useState(true);
+  const [fastMode, setFastMode] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<DraftData | null>(null);
 
@@ -251,6 +252,7 @@ function SellPageContent() {
       condition: form.condition,
       deliveryMethod,
       membersOnly: form.membersOnly,
+      sizeRange: form.sizeRange || undefined,
     };
     localStorage.setItem(TEMPLATE_KEY, JSON.stringify(tpl));
     setSavedTemplate(tpl);
@@ -259,7 +261,12 @@ function SellPageContent() {
   function applyTemplate() {
     if (!savedTemplate) return;
     if (savedTemplate.category) setSelectedCategory(savedTemplate.category);
-    if (savedTemplate.condition) setForm((f) => ({ ...f, condition: savedTemplate.condition, membersOnly: savedTemplate.membersOnly }));
+    setForm((f) => ({
+      ...f,
+      condition: savedTemplate.condition || f.condition,
+      membersOnly: savedTemplate.membersOnly,
+      sizeRange: savedTemplate.sizeRange ?? f.sizeRange,
+    }));
     setDeliveryMethod(savedTemplate.deliveryMethod);
   }
 
@@ -759,6 +766,21 @@ function SellPageContent() {
                 </div>
               </>
             )}
+          </div>
+
+          {/* Size */}
+          <div className="bg-white rounded-xl p-6">
+            <label htmlFor="fast-size" className="block text-sm font-medium text-ink mb-1.5">
+              Størrelse <span className="text-ink-light font-normal">(valgfritt)</span>
+            </label>
+            <input
+              id="fast-size"
+              type="text"
+              value={form.sizeRange}
+              onChange={(e) => setForm({ ...form, sizeRange: e.target.value })}
+              placeholder="F.eks. M, 42, 180 cm"
+              className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+            />
           </div>
 
           {/* Club */}

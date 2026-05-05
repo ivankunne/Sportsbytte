@@ -86,6 +86,7 @@ function DashboardContent() {
   const [userClub, setUserClub] = useState<UserClub | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const [inboxUnread, setInboxUnread] = useState(0);
+  const [tilbudPending, setTilbudPending] = useState(0);
   const initialTab = (searchParams.get("tab") as Tab | null) ?? "innboks";
   const [tab, setTab] = useState<Tab>(initialTab);
   const stripeReturn = searchParams.get("stripe");
@@ -113,6 +114,16 @@ function DashboardContent() {
           .from("clubs").select("id, name, slug").eq("id", prof.club_id).maybeSingle();
         if (mounted && club) setUserClub(club as UserClub);
       }
+      // Fetch pending received offer count for tab badge
+      if (prof?.id) {
+        supabase
+          .from("offers")
+          .select("id", { count: "exact", head: true })
+          .eq("seller_profile_id", prof.id)
+          .eq("status", "pending")
+          .then(({ count }) => { if (mounted) setTilbudPending(count ?? 0); });
+      }
+
       setLoading(false);
       localStorage.setItem("dashboard_last_visited", new Date().toISOString());
       if (stripeReturn === "success") {
@@ -185,6 +196,11 @@ function DashboardContent() {
             {t.id === "innboks" && inboxUnread > 0 && (
               <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
                 {inboxUnread > 9 ? "9+" : inboxUnread}
+              </span>
+            )}
+            {t.id === "tilbud" && tilbudPending > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
+                {tilbudPending > 9 ? "9+" : tilbudPending}
               </span>
             )}
           </button>
