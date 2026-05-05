@@ -52,6 +52,8 @@ type MyListing = {
   price: number;
   category: string;
   condition: string;
+  description: string | null;
+  listing_type: string | null;
   is_sold: boolean;
   is_boosted: boolean;
   boosted_until: string | null;
@@ -664,7 +666,7 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
   useEffect(() => {
     supabase
       .from("listings")
-      .select("id, title, price, category, condition, is_sold, is_boosted, boosted_until, views, images, created_at")
+      .select("id, title, price, category, condition, description, listing_type, is_sold, is_boosted, boosted_until, views, images, created_at")
       .eq("seller_id", profile.id)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
@@ -736,12 +738,20 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-1">
         <p className="text-sm text-ink-light">{listings.length} annonse{listings.length !== 1 ? "r" : ""}</p>
-        <Link
-          href="/selg"
-          className="rounded-lg bg-forest px-4 py-2 text-xs font-semibold text-white hover:bg-forest-mid transition-colors"
-        >
-          + Ny annonse
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/selg/bulk-upload"
+            className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-ink-mid hover:bg-cream transition-colors"
+          >
+            CSV-import
+          </Link>
+          <Link
+            href="/selg"
+            className="rounded-lg bg-forest px-4 py-2 text-xs font-semibold text-white hover:bg-forest-mid transition-colors"
+          >
+            + Ny annonse
+          </Link>
+        </div>
       </div>
 
       {listings.map((listing) => (
@@ -825,6 +835,12 @@ function AnnonserTab({ profile }: { profile: UserProfile }) {
                   className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-mid hover:bg-cream transition-colors hidden sm:block"
                 >
                   Se
+                </Link>
+                <Link
+                  href={`/selg?title=${encodeURIComponent(listing.title)}&category=${encodeURIComponent(listing.category ?? "")}&condition=${encodeURIComponent(listing.condition ?? "")}&price=${listing.price}`}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-mid hover:bg-cream transition-colors hidden sm:block"
+                >
+                  Dupliser
                 </Link>
                 <button
                   onClick={() => startEdit(listing)}
