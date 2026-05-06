@@ -7,7 +7,6 @@ import type { ListingWithRelations, Category } from "@/lib/queries";
 import { ListingCard } from "@/components/ListingCard";
 import { ListingCardSkeleton } from "@/components/Skeleton";
 import { SavedSearchAlert } from "@/components/SavedSearchAlert";
-import { NORWEGIAN_CITIES } from "@/lib/norwegian-cities";
 
 const CONDITIONS = [
   { value: "", label: "Alle" },
@@ -50,7 +49,8 @@ function ExplorePage() {
   const [activeCategory, setActiveCategory] = useState(searchParams.get("kategori") ?? "");
   const [sort, setSort] = useState(searchParams.get("sorter") ?? "nyeste");
   const [condition, setCondition] = useState(searchParams.get("tilstand") ?? "");
-  const [locationFilter, setLocationFilter] = useState(searchParams.get("sted") ?? "");
+  const [nearMeFilter, setNearMeFilter] = useState(false);
+  const [radiusKm, setRadiusKm] = useState(25);
   const [giBortOnly, setGiBortOnly] = useState(searchParams.get("gi_bort") === "1");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -93,12 +93,13 @@ function ExplorePage() {
     return () => clearTimeout(id);
   }, [sizeFilter]);
 
-  // Request geolocation when "nær-meg" sort is selected
+  // Request geolocation when "nær-meg" sort OR nearMeFilter is active
   useEffect(() => {
-    if (sort !== "nær-meg") return;
+    if (sort !== "nær-meg" && !nearMeFilter) return;
     if (userLocation) return;
     if (!navigator.geolocation) {
       setGeoError("Nettleseren din støtter ikke posisjonsdata.");
+      if (nearMeFilter) setNearMeFilter(false);
       return;
     }
     setGeoLoading(true);
@@ -114,10 +115,11 @@ function ExplorePage() {
         setGeoError(msg);
         setGeoErrorPersist(msg);
         setGeoLoading(false);
-        setSort("nyeste");
+        if (sort === "nær-meg") setSort("nyeste");
+        if (nearMeFilter) setNearMeFilter(false);
       }
     );
-  }, [sort, userLocation]);
+  }, [sort, nearMeFilter, userLocation]);
 
   // Sync URL (including condition and price so filters survive back navigation)
   useEffect(() => {
@@ -129,11 +131,10 @@ function ExplorePage() {
     if (debouncedMin) params.set("fra", debouncedMin);
     if (debouncedMax) params.set("til", debouncedMax);
     if (debouncedSize) params.set("str", debouncedSize);
-    if (locationFilter) params.set("sted", locationFilter);
     if (giBortOnly) params.set("gi_bort", "1");
     const str = params.toString();
     router.replace(`/utforsk${str ? `?${str}` : ""}`, { scroll: false });
-  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, locationFilter, giBortOnly, router]);
+  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, giBortOnly, router]);
 
   // Fetch — depends only on settled (debounced) values + instant filters
   const categoriesReady = categories.length > 0;
@@ -162,7 +163,16 @@ function ExplorePage() {
 
       if (condition) q = q.ilike("condition", condition);
       if (debouncedSize.trim()) q = q.ilike("size_range", `%${debouncedSize.trim()}%`);
-      if (locationFilter) q = q.ilike("location", `%${locationFilter}%`);
+      if (nearMeFilter && userLocation && radiusKm > 0) {
+        const latDelta = radiusKm / 111.32;
+        const lngDelta = radiusKm / (111.32 * Math.cos(userLocation.lat * Math.PI / 180));
+        q = q
+          .gte("lat", userLocation.lat - latDelta)
+          .lte("lat", userLocation.lat + latDelta)
+          .gte("lng", userLocation.lng - lngDelta)
+          .lte("lng", userLocation.lng + lngDelta)
+          .not("lat", "is", null);
+      }
       if (giBortOnly) q = q.eq("listing_type", "gi_bort");
 
       const min = parseInt(debouncedMin);
@@ -196,7 +206,7 @@ function ExplorePage() {
       setVisibleCount(PAGE_SIZE);
       setLoading(false);
     })();
-  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, locationFilter, giBortOnly, categories, categoriesReady, userLocation]);
+  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, nearMeFilter, radiusKm, giBortOnly, categories, categoriesReady, userLocation]);
 
   function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
     const R = 6371;
@@ -211,11 +221,11 @@ function ExplorePage() {
   function resetAll() {
     setQuery(""); setActiveCategory(""); setSort("nyeste");
     setCondition(""); setMinPrice(""); setMaxPrice(""); setSizeFilter("");
-    setLocationFilter(""); setGiBortOnly(false);
+    setNearMeFilter(false); setRadiusKm(25); setGiBortOnly(false);
     setUserLocation(null); setGeoError(""); setGeoErrorPersist("");
   }
 
-  const hasActiveFilters = query || activeCategory || condition || minPrice || maxPrice || sizeFilter || locationFilter || giBortOnly || sort !== "nyeste";
+  const hasActiveFilters = query || activeCategory || condition || minPrice || maxPrice || sizeFilter || nearMeFilter || giBortOnly || sort !== "nyeste";
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -324,17 +334,31 @@ function ExplorePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">Sted:</span>
-          <select
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            className="rounded-lg border border-border bg-white px-3 py-1.5 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-forest/20"
+          <button
+            onClick={() => setNearMeFilter((v) => !v)}
+            className={`flex items-center gap-1.5 rounded-[20px] px-3 py-1 text-xs font-medium transition-colors duration-[120ms] ${nearMeFilter ? "bg-forest text-white" : "bg-cream text-ink-mid hover:bg-border"}`}
           >
-            <option value="">Alle steder</option>
-            {NORWEGIAN_CITIES.map((c) => (
-              <option key={c.name} value={c.name}>{c.name}</option>
-            ))}
-          </select>
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Nær meg
+          </button>
+          {nearMeFilter && (
+            geoLoading ? (
+              <div className="h-3.5 w-3.5 rounded-full border-2 border-forest border-t-transparent animate-spin" />
+            ) : userLocation ? (
+              <select
+                value={radiusKm}
+                onChange={(e) => setRadiusKm(Number(e.target.value))}
+                className="rounded-lg border border-border bg-white px-2 py-1 text-xs text-ink focus:outline-none"
+              >
+                <option value={10}>10 km</option>
+                <option value={25}>25 km</option>
+                <option value={50}>50 km</option>
+                <option value={100}>100 km</option>
+              </select>
+            ) : null
+          )}
         </div>
 
         <button

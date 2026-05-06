@@ -1,7 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { Resend } from "resend";
 import type { Database } from "@/lib/database.types";
 import { rateLimit, ipKey } from "@/lib/rate-limit";
+import { buildEmail, p, FROM, SITE_URL } from "@/lib/email";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const REASON_LABELS: Record<string, string> = {
+  scam: "Svindel / falsk annonse",
+  wrong_category: "Feil kategori",
+  inappropriate: "Upassende innhold",
+  already_sold: "Allerede solgt",
+  other: "Annet",
+};
 
 const admin = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,5 +63,28 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
+
+  // Notify admin by email (fire and forget)
+  const reasonLabel = REASON_LABELS[body.reason!] ?? body.reason;
+  const html = buildEmail({
+    heading: "Ny annonse-rapport",
+    kicker: "Moderering",
+    body: `
+      ${p(`En annonse har blitt rapportert på Sportsbytte.`)}
+      ${p(`<strong>Annonse ID:</strong> ${listingId}<br/>
+           <strong>Årsak:</strong> ${reasonLabel}<br/>
+           ${body.description ? `<strong>Kommentar:</strong> ${body.description}<br/>` : ""}
+           <strong>Rapportert av:</strong> ${reporterEmail ?? "Anonym"}`)}
+    `,
+    cta: { href: `${SITE_URL}/annonse/${listingId}`, label: "Se annonsen" },
+    footerNote: "Administrer rapporten i Supabase under tabellen reports.",
+  });
+  resend.emails.send({
+    from: FROM,
+    to: "Ivan@box.no",
+    subject: `[Rapport] Annonse #${listingId} — ${reasonLabel}`,
+    html,
+  }).catch(() => {});
+
   return NextResponse.json({ ok: true });
 }

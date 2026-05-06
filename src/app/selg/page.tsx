@@ -153,10 +153,80 @@ function SellPageContent() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [savedTemplate, setSavedTemplate] = useState<TemplateData | null>(null);
 
+  const [locationSuggestions, setLocationSuggestions] = useState<typeof NORWEGIAN_CITIES>([]);
+  const [showLocationSugs, setShowLocationSugs] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const categoryRef = useRef<HTMLElement>(null);
   const detailsRef = useRef<HTMLElement>(null);
   const urlPrefillApplied = useRef(false);
+
+  function handleLocationChange(val: string) {
+    setForm((prev) => ({ ...prev, location: val }));
+    if (val.length >= 1) {
+      const matches = NORWEGIAN_CITIES.filter((c) =>
+        c.name.toLowerCase().startsWith(val.toLowerCase())
+      ).slice(0, 6);
+      setLocationSuggestions(matches);
+      setShowLocationSugs(matches.length > 0);
+    } else {
+      setShowLocationSugs(false);
+    }
+  }
+
+  function selectLocationSuggestion(name: string) {
+    setForm((prev) => ({ ...prev, location: name }));
+    setShowLocationSugs(false);
+  }
+
+  const locationInputJSX = (id: string) => (
+    <div className="relative">
+      <div className="flex items-center rounded-lg border border-border bg-white focus-within:ring-2 focus-within:ring-forest/20 focus-within:border-forest">
+        <svg className="ml-3 h-4 w-4 text-ink-light flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <input
+          id={id}
+          type="text"
+          value={form.location}
+          onChange={(e) => handleLocationChange(e.target.value)}
+          onFocus={() => form.location.length >= 1 && setShowLocationSugs(locationSuggestions.length > 0)}
+          onBlur={() => setTimeout(() => setShowLocationSugs(false), 150)}
+          placeholder="F.eks. Oslo, Bergen, Trondheim..."
+          autoComplete="off"
+          className="flex-1 px-3 py-2.5 text-sm text-ink bg-transparent focus:outline-none"
+        />
+        {form.location && (
+          <button
+            type="button"
+            onClick={() => { setForm((prev) => ({ ...prev, location: "" })); setShowLocationSugs(false); }}
+            className="mr-2 text-ink-light hover:text-ink"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+      {showLocationSugs && locationSuggestions.length > 0 && (
+        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white rounded-lg border border-border shadow-lg overflow-hidden">
+          {locationSuggestions.map((city) => (
+            <button
+              key={city.name}
+              type="button"
+              onMouseDown={() => selectLocationSuggestion(city.name)}
+              className="w-full text-left px-4 py-2.5 text-sm text-ink hover:bg-cream transition-colors flex items-center gap-2"
+            >
+              <svg className="h-3.5 w-3.5 text-ink-light flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {city.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   useEffect(() => {
     async function checkAuth() {
@@ -859,17 +929,7 @@ function SellPageContent() {
             <label htmlFor="fast-location" className="block text-sm font-medium text-ink mb-1.5">
               Sted <span className="text-ink-light font-normal">(valgfritt)</span>
             </label>
-            <select
-              id="fast-location"
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
-              className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-            >
-              <option value="">Velg by / sted</option>
-              {NORWEGIAN_CITIES.map((c) => (
-                <option key={c.name} value={c.name}>{c.name}</option>
-              ))}
-            </select>
+            {locationInputJSX("fast-location")}
           </div>
 
           {/* Club */}
@@ -1087,17 +1147,7 @@ function SellPageContent() {
                 <label htmlFor="location" className="block text-sm font-medium text-ink mb-1.5">
                   Sted <span className="text-ink-light font-normal">(valgfritt)</span>
                 </label>
-                <select
-                  id="location"
-                  value={form.location}
-                  onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                >
-                  <option value="">Velg by / sted</option>
-                  {NORWEGIAN_CITIES.map((c) => (
-                    <option key={c.name} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
+                {locationInputJSX("location")}
               </div>
 
               {/* Sport-specific attributes */}

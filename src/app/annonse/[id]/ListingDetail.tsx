@@ -48,6 +48,9 @@ export function ListingDetail({ id }: { id: string }) {
   const [offerAmount, setOfferAmount] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
   const [offerSubmitting, setOfferSubmitting] = useState(false);
+  const [myProfileId, setMyProfileId] = useState<number | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
 
   // Close share dropdown on outside click
@@ -138,6 +141,25 @@ export function ListingDetail({ id }: { id: string }) {
       router.replace(`/annonse/${id}`, { scroll: false });
     }
   }, [searchParams, id, router]);
+
+  // Load viewer's profile + blocked status once listing is available
+  useEffect(() => {
+    if (!listing) return;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data: prof } = await supabase.from("profiles").select("id").eq("auth_user_id", session.user.id).maybeSingle();
+      if (!prof || prof.id === listing.profiles.id) return;
+      setMyProfileId(prof.id);
+      const { data: blockRow } = await supabase
+        .from("blocked_users")
+        .select("id")
+        .eq("blocker_id", prof.id)
+        .eq("blocked_id", listing.profiles.id)
+        .maybeSingle();
+      setIsBlocked(!!blockRow);
+    })();
+  }, [listing?.profiles.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Realtime: update quantity / sold state when webhook fires
   useEffect(() => {
@@ -272,6 +294,26 @@ export function ListingDetail({ id }: { id: string }) {
     } catch {
       showError("Noe gikk galt");
       setCheckingOut(false);
+    }
+  }
+
+  async function handleBlockUser() {
+    if (!myProfileId) return;
+    setBlockLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch("/api/block-user", {
+        method: isBlocked ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ blocked_id: listing!.profiles.id }),
+      });
+      setIsBlocked((v) => !v);
+      showSuccess(isBlocked ? "Blokkering fjernet." : "Bruker blokkert.");
+    } catch {
+      showError("Noe gikk galt.");
+    } finally {
+      setBlockLoading(false);
     }
   }
 
@@ -734,7 +776,19 @@ export function ListingDetail({ id }: { id: string }) {
                   )}
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-border flex justify-end">
+              <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+                {myProfileId ? (
+                  <button
+                    onClick={handleBlockUser}
+                    disabled={blockLoading}
+                    className="flex items-center gap-1.5 text-xs text-ink-light hover:text-red-500 transition-colors disabled:opacity-50"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    {isBlocked ? "Fjern blokkering" : "Blokker bruker"}
+                  </button>
+                ) : <span />}
                 <ReportListingButton listingId={Number(id)} />
               </div>
             </div>
