@@ -8,6 +8,14 @@ import { ListingCard } from "@/components/ListingCard";
 import { ListingCardSkeleton } from "@/components/Skeleton";
 import { SavedSearchAlert } from "@/components/SavedSearchAlert";
 
+type KartverketResult = {
+  name: string;
+  kommune: string;
+  type: string;
+  lat: number;
+  lng: number;
+};
+
 const CONDITIONS = [
   { value: "", label: "Alle" },
   { value: "Som ny", label: "Som ny" },
@@ -45,83 +53,129 @@ function ExplorePage() {
   const PAGE_SIZE = 24;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  // Instant filters (fire fetch immediately)
+  // Instant filters
   const [activeCategory, setActiveCategory] = useState(searchParams.get("kategori") ?? "");
   const [sort, setSort] = useState(searchParams.get("sorter") ?? "nyeste");
   const [condition, setCondition] = useState(searchParams.get("tilstand") ?? "");
-  const [nearMeFilter, setNearMeFilter] = useState(false);
   const [radiusKm, setRadiusKm] = useState(25);
   const [giBortOnly, setGiBortOnly] = useState(searchParams.get("gi_bort") === "1");
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Location filter
+  const [locationInput, setLocationInput] = useState("");
+  const [locationLat, setLocationLat] = useState<number | null>(null);
+  const [locationLng, setLocationLng] = useState<number | null>(null);
+  const [locationSuggestions, setLocationSuggestions] = useState<KartverketResult[]>([]);
+  const [showLocationSugs, setShowLocationSugs] = useState(false);
+  const [locationFetching, setLocationFetching] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState("");
-  const [geoErrorPersist, setGeoErrorPersist] = useState("");
+  const locationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounced filters (text / price / size — wait 350ms after last change)
+  // Debounced filters
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [minPrice, setMinPrice] = useState(searchParams.get("fra") ?? "");
   const [maxPrice, setMaxPrice] = useState(searchParams.get("til") ?? "");
   const [sizeFilter, setSizeFilter] = useState(searchParams.get("str") ?? "");
 
-  // Debounced versions used for the actual fetch
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const [debouncedMin, setDebouncedMin] = useState("");
   const [debouncedMax, setDebouncedMax] = useState("");
   const [debouncedSize, setDebouncedSize] = useState("");
 
-  // Load categories once
   useEffect(() => {
     supabase.from("categories").select("*").order("id")
       .then(({ data }) => setCategories(data ?? []));
   }, []);
 
-  // Debounce text query
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(query), 350);
     return () => clearTimeout(id);
   }, [query]);
 
-  // Debounce price inputs
   useEffect(() => {
     const id = setTimeout(() => { setDebouncedMin(minPrice); setDebouncedMax(maxPrice); }, 600);
     return () => clearTimeout(id);
   }, [minPrice, maxPrice]);
 
-  // Debounce size filter
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSize(sizeFilter), 350);
     return () => clearTimeout(id);
   }, [sizeFilter]);
 
-  // Request geolocation when "nær-meg" sort OR nearMeFilter is active
-  useEffect(() => {
-    if (sort !== "nær-meg" && !nearMeFilter) return;
-    if (userLocation) return;
+  function handleLocationInput(val: string) {
+    setLocationInput(val);
+    setLocationLat(null);
+    setLocationLng(null);
+    setGeoError("");
+    if (locationDebounceRef.current) clearTimeout(locationDebounceRef.current);
+    if (!val.trim()) {
+      setLocationSuggestions([]);
+      setShowLocationSugs(false);
+      return;
+    }
+    locationDebounceRef.current = setTimeout(async () => {
+      setLocationFetching(true);
+      try {
+        const res = await fetch(
+          `https://ws.geonorge.no/stedsnavn/v1/navn?sok=${encodeURIComponent(val)}*&fuzzy=true&treffPerSide=8&utkoordsys=4258`
+        );
+        const json = await res.json();
+        const results: KartverketResult[] = (json.navn ?? []).map((item: Record<string, unknown>) => ({
+          name: item.skrivemåte as string,
+          kommune: (item.kommuner as Array<{ kommunenavn: string }>)?.[0]?.kommunenavn ?? "",
+          type: item.navneobjekttype as string ?? "",
+          lat: (item.representasjonspunkt as { nord: number })?.nord ?? 0,
+          lng: (item.representasjonspunkt as { øst: number })?.øst ?? 0,
+        }));
+        setLocationSuggestions(results);
+        setShowLocationSugs(results.length > 0);
+      } catch {
+        setLocationSuggestions([]);
+      } finally {
+        setLocationFetching(false);
+      }
+    }, 250);
+  }
+
+  function selectLocationSuggestion(result: KartverketResult) {
+    setLocationInput(result.name);
+    setLocationLat(result.lat);
+    setLocationLng(result.lng);
+    setShowLocationSugs(false);
+    setLocationSuggestions([]);
+  }
+
+  function handleUseMyLocation() {
     if (!navigator.geolocation) {
       setGeoError("Nettleseren din støtter ikke posisjonsdata.");
-      if (nearMeFilter) setNearMeFilter(false);
       return;
     }
     setGeoLoading(true);
     setGeoError("");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocationLat(pos.coords.latitude);
+        setLocationLng(pos.coords.longitude);
+        setLocationInput("Min posisjon");
         setGeoLoading(false);
-        setGeoErrorPersist("");
       },
       () => {
-        const msg = "Kunne ikke hente posisjon — sjekk at du har gitt tillatelse i nettleseren.";
-        setGeoError(msg);
-        setGeoErrorPersist(msg);
+        setGeoError("Kunne ikke hente posisjon — sjekk tillatelse i nettleseren.");
         setGeoLoading(false);
-        if (sort === "nær-meg") setSort("nyeste");
-        if (nearMeFilter) setNearMeFilter(false);
       }
     );
-  }, [sort, nearMeFilter, userLocation]);
+  }
 
-  // Sync URL (including condition and price so filters survive back navigation)
+  function clearLocation() {
+    setLocationInput("");
+    setLocationLat(null);
+    setLocationLng(null);
+    setLocationSuggestions([]);
+    setShowLocationSugs(false);
+    setGeoError("");
+  }
+
+  // Sync URL
   useEffect(() => {
     const params = new URLSearchParams();
     if (debouncedQuery) params.set("q", debouncedQuery);
@@ -136,7 +190,6 @@ function ExplorePage() {
     router.replace(`/utforsk${str ? `?${str}` : ""}`, { scroll: false });
   }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, giBortOnly, router]);
 
-  // Fetch — depends only on settled (debounced) values + instant filters
   const categoriesReady = categories.length > 0;
   const fetchRef = useRef(0);
 
@@ -163,16 +216,18 @@ function ExplorePage() {
 
       if (condition) q = q.ilike("condition", condition);
       if (debouncedSize.trim()) q = q.ilike("size_range", `%${debouncedSize.trim()}%`);
-      if (nearMeFilter && userLocation && radiusKm > 0) {
+
+      if (locationLat !== null && locationLng !== null && radiusKm > 0) {
         const latDelta = radiusKm / 111.32;
-        const lngDelta = radiusKm / (111.32 * Math.cos(userLocation.lat * Math.PI / 180));
+        const lngDelta = radiusKm / (111.32 * Math.cos(locationLat * Math.PI / 180));
         q = q
-          .gte("lat", userLocation.lat - latDelta)
-          .lte("lat", userLocation.lat + latDelta)
-          .gte("lng", userLocation.lng - lngDelta)
-          .lte("lng", userLocation.lng + lngDelta)
+          .gte("lat", locationLat - latDelta)
+          .lte("lat", locationLat + latDelta)
+          .gte("lng", locationLng - lngDelta)
+          .lte("lng", locationLng + lngDelta)
           .not("lat", "is", null);
       }
+
       if (giBortOnly) q = q.eq("listing_type", "gi_bort");
 
       const min = parseInt(debouncedMin);
@@ -183,7 +238,6 @@ function ExplorePage() {
       switch (sort) {
         case "pris-lav": q = q.order("price", { ascending: true }); break;
         case "pris-hoy": q = q.order("price", { ascending: false }); break;
-        case "nær-meg": q = q.order("created_at", { ascending: false }); break;
         default: q = q.order("created_at", { ascending: false });
       }
 
@@ -192,13 +246,14 @@ function ExplorePage() {
 
       let result = (data ?? []) as ListingWithRelations[];
 
-      if (sort === "nær-meg" && userLocation) {
+      if (sort === "nær-meg" && locationLat !== null && locationLng !== null) {
         result = result
-          .filter((l) => l.clubs?.lat != null && l.clubs?.lng != null)
+          .filter((l) => (l as unknown as { lat: number }).lat != null)
           .sort((a, b) => {
-            const da = haversineKm(userLocation.lat, userLocation.lng, a.clubs.lat!, a.clubs.lng!);
-            const db = haversineKm(userLocation.lat, userLocation.lng, b.clubs.lat!, b.clubs.lng!);
-            return da - db;
+            const la = a as unknown as { lat: number; lng: number };
+            const lb = b as unknown as { lat: number; lng: number };
+            return haversineKm(locationLat, locationLng!, la.lat, la.lng)
+              - haversineKm(locationLat, locationLng!, lb.lat, lb.lng);
           });
       }
 
@@ -206,7 +261,7 @@ function ExplorePage() {
       setVisibleCount(PAGE_SIZE);
       setLoading(false);
     })();
-  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, nearMeFilter, radiusKm, giBortOnly, categories, categoriesReady, userLocation]);
+  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, locationLat, locationLng, radiusKm, giBortOnly, categories, categoriesReady]);
 
   function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
     const R = 6371;
@@ -221,11 +276,11 @@ function ExplorePage() {
   function resetAll() {
     setQuery(""); setActiveCategory(""); setSort("nyeste");
     setCondition(""); setMinPrice(""); setMaxPrice(""); setSizeFilter("");
-    setNearMeFilter(false); setRadiusKm(25); setGiBortOnly(false);
-    setUserLocation(null); setGeoError(""); setGeoErrorPersist("");
+    setRadiusKm(25); setGiBortOnly(false);
+    clearLocation();
   }
 
-  const hasActiveFilters = query || activeCategory || condition || minPrice || maxPrice || sizeFilter || nearMeFilter || giBortOnly || sort !== "nyeste";
+  const hasActiveFilters = query || activeCategory || condition || minPrice || maxPrice || sizeFilter || locationLat !== null || giBortOnly || sort !== "nyeste";
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -259,7 +314,7 @@ function ExplorePage() {
             <option value="nyeste">Nyeste</option>
             <option value="pris-lav">Laveste pris</option>
             <option value="pris-hoy">Høyeste pris</option>
-            <option value="nær-meg">Nær meg</option>
+            {locationLat !== null && <option value="nær-meg">Nær meg</option>}
           </select>
         </div>
       </div>
@@ -283,8 +338,10 @@ function ExplorePage() {
         ))}
       </div>
 
-      {/* Condition + price row */}
+      {/* Filters row */}
       <div className="flex flex-wrap items-center gap-3 mb-8 pt-4 border-t border-border">
+
+        {/* Condition */}
         <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">Tilstand:</span>
         {CONDITIONS.map(({ value, label }) => (
           <button
@@ -302,6 +359,7 @@ function ExplorePage() {
           </button>
         ))}
 
+        {/* Size */}
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">Str:</span>
           <input
@@ -313,6 +371,7 @@ function ExplorePage() {
           />
         </div>
 
+        {/* Price */}
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">Pris:</span>
           <input
@@ -333,34 +392,89 @@ function ExplorePage() {
           <span className="text-xs text-ink-light">kr</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setNearMeFilter((v) => !v)}
-            className={`flex items-center gap-1.5 rounded-[20px] px-3 py-1 text-xs font-medium transition-colors duration-[120ms] ${nearMeFilter ? "bg-forest text-white" : "bg-cream text-ink-mid hover:bg-border"}`}
-          >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Nær meg
-          </button>
-          {nearMeFilter && (
-            geoLoading ? (
-              <div className="h-3.5 w-3.5 rounded-full border-2 border-forest border-t-transparent animate-spin" />
-            ) : userLocation ? (
-              <select
-                value={radiusKm}
-                onChange={(e) => setRadiusKm(Number(e.target.value))}
-                className="rounded-lg border border-border bg-white px-2 py-1 text-xs text-ink focus:outline-none"
+        {/* Location filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">Sted:</span>
+          <div className="relative">
+            <input
+              type="text"
+              value={locationInput}
+              onChange={(e) => handleLocationInput(e.target.value)}
+              onFocus={() => locationSuggestions.length > 0 && setShowLocationSugs(true)}
+              onBlur={() => setTimeout(() => setShowLocationSugs(false), 150)}
+              placeholder="Søk etter sted..."
+              className="w-40 rounded-lg border border-border bg-white pl-3 pr-7 py-1.5 text-xs text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20"
+            />
+            {locationFetching && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 rounded-full border-2 border-forest border-t-transparent animate-spin" />
+            )}
+            {locationInput && !locationFetching && (
+              <button
+                type="button"
+                onClick={clearLocation}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-ink-light hover:text-ink text-xs leading-none"
               >
-                <option value={10}>10 km</option>
-                <option value={25}>25 km</option>
-                <option value={50}>50 km</option>
-                <option value={100}>100 km</option>
-              </select>
-            ) : null
+                ✕
+              </button>
+            )}
+            {showLocationSugs && locationSuggestions.length > 0 && (
+              <ul className="absolute z-50 top-full mt-1 w-64 bg-white border border-border rounded-lg shadow-lg py-1 max-h-52 overflow-y-auto text-left">
+                {locationSuggestions.map((r, i) => (
+                  <li key={i}>
+                    <button
+                      type="button"
+                      onMouseDown={() => selectLocationSuggestion(r)}
+                      className="w-full px-3 py-2 text-left hover:bg-cream transition-colors duration-[80ms]"
+                    >
+                      <p className="text-xs font-medium text-ink">{r.name}</p>
+                      <p className="text-[10px] text-ink-light">{r.kommune}{r.type ? ` · ${r.type}` : ""}</p>
+                    </button>
+                  </li>
+                ))}
+                <li className="px-3 pt-1 pb-1.5 text-[9px] text-ink-light border-t border-border mt-0.5">
+                  © Kartverket Stedsnavn
+                </li>
+              </ul>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleUseMyLocation}
+            disabled={geoLoading}
+            title="Bruk min posisjon"
+            className="flex items-center gap-1.5 rounded-[20px] px-3 py-1 text-xs font-medium bg-cream text-ink-mid hover:bg-border transition-colors duration-[120ms] disabled:opacity-60"
+          >
+            {geoLoading ? (
+              <div className="h-3 w-3 rounded-full border-2 border-forest border-t-transparent animate-spin" />
+            ) : (
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            Min posisjon
+          </button>
+
+          {locationLat !== null && (
+            <select
+              value={radiusKm}
+              onChange={(e) => setRadiusKm(Number(e.target.value))}
+              className="rounded-lg border border-border bg-white px-2 py-1 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-forest/20"
+            >
+              <option value={10}>10 km</option>
+              <option value={25}>25 km</option>
+              <option value={50}>50 km</option>
+              <option value={100}>100 km</option>
+              <option value={250}>250 km</option>
+            </select>
+          )}
+
+          {geoError && (
+            <p className="text-[10px] text-red-500">{geoError}</p>
           )}
         </div>
 
+        {/* Gratis toggle */}
         <button
           onClick={() => setGiBortOnly((v) => !v)}
           className={`rounded-[20px] px-3 py-1 text-xs font-medium transition-colors duration-[120ms] ${
@@ -377,33 +491,13 @@ function ExplorePage() {
         )}
       </div>
 
-
-      {/* Geo status */}
-      {geoErrorPersist && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2">
-          <svg className="h-4 w-4 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+      {/* Active location indicator */}
+      {locationLat !== null && locationInput && (
+        <div className="mb-4 flex items-center gap-2 text-xs text-forest">
+          <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-xs text-red-600">{geoErrorPersist}</p>
-          <button onClick={() => setGeoErrorPersist("")} className="ml-auto text-red-400 hover:text-red-600 text-xs">✕</button>
-        </div>
-      )}
-      {sort === "nær-meg" && !geoErrorPersist && (geoLoading || userLocation) && (
-        <div className="mb-4">
-          {geoLoading && (
-            <div className="flex items-center gap-2 text-xs text-ink-light">
-              <div className="h-3.5 w-3.5 rounded-full border-2 border-forest border-t-transparent animate-spin" />
-              Henter posisjon...
-            </div>
-          )}
-          {userLocation && !geoLoading && (
-            <div className="flex items-center gap-1.5 text-xs text-forest">
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Sortert etter avstand fra deg
-            </div>
-          )}
+          Viser annonser innen {radiusKm} km fra {locationInput}
         </div>
       )}
 
