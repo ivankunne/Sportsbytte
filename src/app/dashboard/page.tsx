@@ -6,8 +6,10 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { showSuccess, showError } from "@/components/Toaster";
+import { ListingCard } from "@/components/ListingCard";
+import type { ListingWithRelations } from "@/lib/queries";
 
-type Tab = "innboks" | "annonser" | "tilbud" | "kjøpshistorikk" | "anmeldelser" | "profil";
+type Tab = "innboks" | "annonser" | "tilbud" | "kjøpshistorikk" | "lagrede" | "anmeldelser" | "profil";
 
 type UserProfile = {
   id: number;
@@ -182,6 +184,7 @@ function DashboardContent() {
           { id: "annonser" as Tab, label: "Mine annonser" },
           { id: "tilbud" as Tab, label: "Tilbud" },
           { id: "kjøpshistorikk" as Tab, label: "Kjøpshistorikk" },
+          { id: "lagrede" as Tab, label: "Lagrede" },
           { id: "anmeldelser" as Tab, label: "Anmeldelser" },
           { id: "profil" as Tab, label: "Profil" },
         ]).map((t) => (
@@ -215,6 +218,7 @@ function DashboardContent() {
       {tab === "annonser" && <AnnonserTab profile={profile} userClub={userClub} />}
       {tab === "tilbud" && <TilbudTab profile={profile} />}
       {tab === "kjøpshistorikk" && <KjøpshistorikkTab profile={profile} />}
+      {tab === "lagrede" && <LagretTab profile={profile} />}
       {tab === "anmeldelser" && <AnmedelserTab profile={profile} />}
       {tab === "profil" && (
         <ProfilTab
@@ -1302,6 +1306,73 @@ function KjøpshistorikkTab({ profile }: { profile: UserProfile }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ─── Lagrede ─────────────────────────────────────────────
+
+function LagretTab({ profile }: { profile: UserProfile }) {
+  const [items, setItems] = useState<ListingWithRelations[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data: savedRows } = await supabase
+        .from("saved_listings")
+        .select("listing_id")
+        .eq("profile_id", profile.id)
+        .order("created_at", { ascending: false });
+
+      if (!savedRows || savedRows.length === 0) { setLoading(false); return; }
+
+      const ids = savedRows.map((r) => r.listing_id as number);
+      const { data: listingsData } = await supabase
+        .from("listings")
+        .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
+        .in("id", ids);
+
+      const idOrder = new Map(ids.map((id, i) => [id, i]));
+      const sorted = ((listingsData ?? []) as ListingWithRelations[])
+        .sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0));
+      setItems(sorted);
+      setLoading(false);
+    })();
+  }, [profile.id]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-6 w-6 rounded-full border-2 border-forest border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <svg className="mx-auto h-10 w-10 text-border mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+        </svg>
+        <p className="text-ink-light text-sm mb-4">Du har ikke lagret noen annonser ennå.</p>
+        <Link
+          href="/utforsk"
+          className="rounded-lg bg-forest px-5 py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors"
+        >
+          Utforsk annonser
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-ink-light mb-4">{items.length} lagret annonse{items.length !== 1 ? "r" : ""}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {items.map((listing) => (
+          <ListingCard key={listing.id} listing={listing} initialSaved />
+        ))}
+      </div>
     </div>
   );
 }

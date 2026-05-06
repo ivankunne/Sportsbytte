@@ -23,6 +23,7 @@ export function ListingDetail({ id }: { id: string }) {
   const [listing, setListing] = useState<ListingWithRelations | null>(null);
   const [clubListings, setClubListings] = useState<ListingWithRelations[]>([]);
   const [sellerListings, setSellerListings] = useState<ListingWithRelations[]>([]);
+  const [relatedListings, setRelatedListings] = useState<ListingWithRelations[]>([]);
   const [activeImage, setActiveImage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isSold, setIsSold] = useState(false);
@@ -112,7 +113,12 @@ export function ListingDetail({ id }: { id: string }) {
             .or(soldFilter)
             .limit(4)
         : Promise.resolve({ data: [] });
-      const [{ data: club }, { data: seller }] = await Promise.all([
+      const listingLat = (l as unknown as { lat: number | null }).lat;
+      const listingLng = (l as unknown as { lat: number | null; lng: number | null }).lng;
+      const latDelta = 50 / 111.32;
+      const lngDelta = listingLat ? 50 / (111.32 * Math.cos(listingLat * Math.PI / 180)) : latDelta;
+
+      const [{ data: club }, { data: seller }, { data: relClub }, { data: relNearby }] = await Promise.all([
         clubQuery,
         supabase
           .from("listings")
@@ -121,10 +127,45 @@ export function ListingDetail({ id }: { id: string }) {
           .neq("id", l.id)
           .or(soldFilter)
           .limit(2),
+        l.club_id
+          ? supabase
+              .from("listings")
+              .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
+              .eq("category", l.category)
+              .eq("club_id", l.club_id)
+              .eq("is_sold", false)
+              .neq("id", l.id)
+              .limit(4)
+          : Promise.resolve({ data: [] as unknown[] }),
+        listingLat && listingLng
+          ? supabase
+              .from("listings")
+              .select("*, clubs(*), profiles!listings_seller_id_fkey(*)")
+              .eq("category", l.category)
+              .eq("is_sold", false)
+              .neq("id", l.id)
+              .gte("lat", listingLat - latDelta)
+              .lte("lat", listingLat + latDelta)
+              .gte("lng", listingLng - lngDelta)
+              .lte("lng", listingLng + lngDelta)
+              .not("lat", "is", null)
+              .limit(4)
+          : Promise.resolve({ data: [] as unknown[] }),
       ]);
 
       setClubListings((club ?? []) as ListingWithRelations[]);
       setSellerListings((seller ?? []) as ListingWithRelations[]);
+
+      const seen = new Set<number>([l.id]);
+      const related: ListingWithRelations[] = [];
+      for (const item of [...(relClub ?? []), ...(relNearby ?? [])]) {
+        const r = item as ListingWithRelations;
+        if (!seen.has(r.id) && related.length < 4) {
+          seen.add(r.id);
+          related.push(r);
+        }
+      }
+      setRelatedListings(related);
       setLoading(false);
     })();
   }, [id]);
@@ -822,6 +863,19 @@ export function ListingDetail({ id }: { id: string }) {
           <h2 className="font-display text-2xl font-semibold text-ink mb-8">Selger også</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {sellerListings.map((l) => (
+              <ListingCard key={l.id} listing={l} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {relatedListings.length > 0 && (
+        <section className="mt-12 mb-4">
+          <h2 className="font-display text-2xl font-semibold text-ink mb-8">
+            Andre {listing.category.toLowerCase()} i nærheten
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {relatedListings.map((l) => (
               <ListingCard key={l.id} listing={l} />
             ))}
           </div>
