@@ -1,24 +1,41 @@
 {
   "name": "Sportsbytte",
   "short_name": "Sportsbytte",
-  "description": "Norges markedsplass for brukt sportsutstyr",
+  "description": "Norges markedsplass for brukt sportsutstyr — kjøp og selg direkte mellom klubbmedlemmer",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#134e4a",
   "orientation": "portrait-primary",
+  "categories": ["shopping", "sports"],
+  "lang": "nb",
   "icons": [
     {
       "src": "/favicon.png",
-      "sizes": "192x192",
+      "sizes": "245x245",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/favicon.png",
-      "sizes": "512x512",
+      "sizes": "245x245",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Utforsk utstyr",
+      "short_name": "Utforsk",
+      "url": "/utforsk",
+      "description": "Se alle annonser"
+    },
+    {
+      "name": "Legg ut utstyr",
+      "short_name": "Selg",
+      "url": "/selg",
+      "description": "Opprett ny annonse"
     }
   ]
 }
