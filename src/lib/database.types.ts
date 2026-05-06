@@ -850,6 +850,96 @@ export type Database = {
         }
         Relationships: []
       }
+      teams: {
+        Row: {
+          id: number
+          club_id: number
+          name: string
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          club_id: number
+          name: string
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          club_id?: number
+          name?: string
+          description?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      loan_items: {
+        Row: {
+          id: number
+          club_id: number
+          name: string
+          description: string | null
+          condition: string | null
+          image_url: string | null
+          available: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          club_id: number
+          name: string
+          description?: string | null
+          condition?: string | null
+          image_url?: string | null
+          available?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          club_id?: number
+          name?: string
+          description?: string | null
+          condition?: string | null
+          image_url?: string | null
+          available?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      loan_requests: {
+        Row: {
+          id: number
+          loan_item_id: number
+          requester_name: string
+          requester_email: string
+          message: string | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          loan_item_id: number
+          requester_name: string
+          requester_email: string
+          message?: string | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          loan_item_id?: number
+          requester_name?: string
+          requester_email?: string
+          message?: string | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

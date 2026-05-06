@@ -1,10 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ClubListings } from "./ClubListings";
+import { supabase } from "@/lib/supabase";
 import type { ListingWithRelations, Profile } from "@/lib/queries";
+
+type LoanItem = {
+  id: number;
+  name: string;
+  description: string | null;
+  condition: string | null;
+  available: boolean;
+};
+
+type BorrowFormState = {
+  name: string;
+  email: string;
+  message: string;
+  submitting: boolean;
+  done: boolean;
+  error: string;
+};
 
 type ClubInfo = {
   id: number;
@@ -23,7 +41,7 @@ type Props = {
   sellers: Profile[];
 };
 
-type TabId = "annonser" | "ettersok" | "selgere";
+type TabId = "annonser" | "ettersok" | "selgere" | "utlan";
 
 function formatCategory(slug: string) {
   return slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ");
@@ -53,11 +71,54 @@ function ClubAvatar({ club, size = "lg" }: { club: ClubInfo; size?: "sm" | "lg" 
 
 export function ClubPageTabs({ club, listings, isoListings, sellers }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("annonser");
+  const [loanItems, setLoanItems] = useState<LoanItem[]>([]);
+  const [loanLoaded, setLoanLoaded] = useState(false);
+  const [borrowForms, setBorrowForms] = useState<Record<number, BorrowFormState>>({});
+
+  useEffect(() => {
+    supabase
+      .from("loan_items")
+      .select("id, name, description, condition, available")
+      .eq("club_id", club.id)
+      .order("created_at")
+      .then(({ data }) => {
+        setLoanItems((data ?? []) as LoanItem[]);
+        setLoanLoaded(true);
+      });
+  }, [club.id]);
+
+  function getBorrowForm(id: number): BorrowFormState {
+    return borrowForms[id] ?? { name: "", email: "", message: "", submitting: false, done: false, error: "" };
+  }
+
+  function updateBorrowForm(id: number, patch: Partial<BorrowFormState>) {
+    setBorrowForms((prev) => ({ ...prev, [id]: { ...getBorrowForm(id), ...patch } }));
+  }
+
+  async function submitBorrowRequest(item: LoanItem) {
+    const form = getBorrowForm(item.id);
+    if (!form.name.trim() || !form.email.trim()) return;
+    updateBorrowForm(item.id, { submitting: true, error: "" });
+    const { error } = await supabase.from("loan_requests").insert({
+      loan_item_id: item.id,
+      requester_name: form.name.trim(),
+      requester_email: form.email.trim(),
+      message: form.message.trim() || null,
+    });
+    if (error) {
+      updateBorrowForm(item.id, { submitting: false, error: "Noe gikk galt. Prøv igjen." });
+    } else {
+      updateBorrowForm(item.id, { submitting: false, done: true });
+    }
+  }
 
   const tabs: Array<{ id: TabId; label: string; count: number }> = [
     { id: "annonser", label: "Annonser", count: listings.length },
     ...(isoListings.length > 0
       ? [{ id: "ettersok" as TabId, label: "Ettersøk", count: isoListings.length }]
+      : []),
+    ...(loanLoaded && loanItems.length > 0
+      ? [{ id: "utlan" as TabId, label: "Utlån", count: loanItems.filter((i) => i.available).length }]
       : []),
     { id: "selgere", label: "Selgere", count: sellers.length },
   ];
@@ -209,6 +270,82 @@ export function ClubPageTabs({ club, listings, isoListings, sellers }: Props) {
                   </div>
                 </Link>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Utlån ─────────────────────────────────────────────────── */}
+        {activeTab === "utlan" && (
+          <div>
+            <p className="text-sm text-ink-light mb-6">
+              Klubben tilbyr <span className="font-bold" style={{ color: club.color }}>{loanItems.filter((i) => i.available).length}</span> gjenstander til utlån.
+              Fyll inn skjemaet under for å sende en låneforespørsel.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {loanItems.map((item) => {
+                const form = getBorrowForm(item.id);
+                return (
+                  <div
+                    key={item.id}
+                    className={`bg-white rounded-2xl border p-5 flex flex-col gap-3 ${item.available ? "border-border" : "border-border opacity-60"}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-ink">{item.name}</p>
+                        {item.description && (
+                          <p className="text-xs text-ink-light mt-0.5">{item.description}</p>
+                        )}
+                      </div>
+                      <span className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${item.available ? "bg-forest-light text-forest" : "bg-amber-light text-amber"}`}>
+                        {item.available ? "Ledig" : "Utlånt"}
+                      </span>
+                    </div>
+                    {item.condition && (
+                      <p className="text-xs text-ink-light">Stand: {item.condition}</p>
+                    )}
+                    {item.available && !form.done && (
+                      <div className="space-y-2 border-t border-border pt-3">
+                        <input
+                          type="text"
+                          placeholder="Ditt navn"
+                          value={form.name}
+                          onChange={(e) => updateBorrowForm(item.id, { name: e.target.value })}
+                          className="w-full rounded-lg border border-border px-3 py-2 text-xs text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                        />
+                        <input
+                          type="email"
+                          placeholder="Din e-post"
+                          value={form.email}
+                          onChange={(e) => updateBorrowForm(item.id, { email: e.target.value })}
+                          className="w-full rounded-lg border border-border px-3 py-2 text-xs text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                        />
+                        <textarea
+                          rows={2}
+                          placeholder="Melding (valgfritt)"
+                          value={form.message}
+                          onChange={(e) => updateBorrowForm(item.id, { message: e.target.value })}
+                          className="w-full rounded-lg border border-border px-3 py-2 text-xs text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
+                        />
+                        {form.error && <p className="text-xs text-red-600">{form.error}</p>}
+                        <button
+                          type="button"
+                          disabled={form.submitting || !form.name.trim() || !form.email.trim()}
+                          onClick={() => submitBorrowRequest(item)}
+                          className="w-full rounded-lg py-2 text-xs font-semibold text-white transition-colors disabled:opacity-50"
+                          style={{ backgroundColor: club.color }}
+                        >
+                          {form.submitting ? "Sender..." : "Send låneforespørsel"}
+                        </button>
+                      </div>
+                    )}
+                    {form.done && (
+                      <div className="rounded-lg bg-forest-light border border-forest/20 px-3 py-2 text-xs font-medium text-forest">
+                        Forespørselen er sendt! Klubben tar kontakt.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

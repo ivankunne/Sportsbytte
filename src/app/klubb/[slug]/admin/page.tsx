@@ -12,7 +12,7 @@ import { contrastColor } from "@/lib/color";
 import type { Club, ListingWithRelations, Profile } from "@/lib/queries";
 import type { MembershipWithProfile } from "@/lib/queries";
 
-type Tab = "oversikt" | "analyse" | "oppslag" | "annonser" | "medlemmer" | "foresporsler" | "utseende";
+type Tab = "oversikt" | "analyse" | "oppslag" | "annonser" | "medlemmer" | "foresporsler" | "utseende" | "utlan" | "lag";
 
 const FREE_CSV_LIMIT = 20;
 
@@ -33,6 +33,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "annonser", label: "Annonser" },
   { id: "medlemmer", label: "Medlemmer" },
   { id: "foresporsler", label: "Forespørsler" },
+  { id: "utlan", label: "Utlån" },
+  { id: "lag", label: "Lag" },
   { id: "utseende", label: "Utseende" },
 ];
 
@@ -313,6 +315,88 @@ function CsvImportSection({
   );
 }
 
+// ── Bulk Email Invite Section ─────────────────────────────────────
+function BulkEmailInviteSection({ club }: { club: Club }) {
+  const [emailText, setEmailText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ sent: number; errors: string[] } | null>(null);
+
+  const emails = emailText
+    .split(/[\n,;]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.includes("@"));
+
+  async function handleSend() {
+    if (emails.length === 0) return;
+    setSending(true);
+    setResult(null);
+    const inviteUrl = club.invite_token
+      ? `${window.location.origin}/join/${club.invite_token}`
+      : `${window.location.origin}/klubb/${club.slug}`;
+    try {
+      const res = await fetch("/api/club-bulk-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": _adminSecret },
+        body: JSON.stringify({ clubName: club.name, inviteUrl, emails }),
+      });
+      const data = await res.json();
+      setResult(data);
+      if (data.sent > 0) setEmailText("");
+    } catch {
+      setResult({ sent: 0, errors: ["Nettverksfeil – prøv igjen"] });
+    }
+    setSending(false);
+  }
+
+  return (
+    <div>
+      <div className="mb-5">
+        <h2 className="font-display text-xl font-semibold text-ink">Inviter via e-post</h2>
+        <p className="text-sm text-ink-light mt-1">
+          Lim inn e-postadresser (én per linje, komma eller semikolon). Hver person får en invitasjonslenke på e-post.
+        </p>
+      </div>
+      <div className="bg-white rounded-xl border border-border p-6 space-y-4">
+        <textarea
+          rows={6}
+          value={emailText}
+          onChange={(e) => setEmailText(e.target.value)}
+          placeholder={"navn@example.com\nandre@example.com\ntredje@example.com"}
+          className="w-full rounded-lg border border-border px-4 py-3 text-sm text-ink font-mono placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
+        />
+        {emails.length > 0 && (
+          <p className="text-xs text-ink-light">
+            {emails.length} gyldig{emails.length === 1 ? "" : "e"} e-postadresse{emails.length === 1 ? "" : "r"} funnet
+          </p>
+        )}
+        {result && (
+          <div className={`rounded-lg px-4 py-3 text-sm ${result.sent > 0 ? "bg-forest-light border border-forest/20 text-forest" : "bg-red-50 border border-red-200 text-red-700"}`}>
+            {result.sent > 0 ? (
+              <span className="flex items-center gap-1.5">
+                <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                {result.sent} invitasjon{result.sent === 1 ? "" : "er"} sendt
+                {result.errors.length > 0 && ` (${result.errors.length} feilet)`}
+              </span>
+            ) : (
+              <span>Sending feilet: {result.errors.join(", ")}</span>
+            )}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={sending || emails.length === 0}
+          className="px-5 py-2.5 rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] disabled:opacity-50"
+        >
+          {sending ? "Sender..." : `Send ${emails.length > 0 ? emails.length : ""} invitasjon${emails.length === 1 ? "" : "er"}`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Module-level: never embedded in JSX or logged — cleared on page unload
 let _adminSecret = "";
 
@@ -335,6 +419,19 @@ export default function ClubAdminPage({
   const [loading, setLoading] = useState(true);
   const [slug, setSlug] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("oversikt");
+
+  // Teams & loans state
+  type Team = { id: number; name: string; description: string | null; created_at: string };
+  type LoanItem = { id: number; name: string; description: string | null; condition: string | null; available: boolean };
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loanItems, setLoanItems] = useState<LoanItem[]>([]);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamDesc, setNewTeamDesc] = useState("");
+  const [addingTeam, setAddingTeam] = useState(false);
+  const [newLoanName, setNewLoanName] = useState("");
+  const [newLoanDesc, setNewLoanDesc] = useState("");
+  const [newLoanCondition, setNewLoanCondition] = useState("God");
+  const [addingLoan, setAddingLoan] = useState(false);
 
   // Branding form state
   const [branding, setBranding] = useState({
@@ -412,6 +509,14 @@ export default function ClubAdminPage({
         )
         .order("created_at", { ascending: false });
       setInquiries((inquiriesData ?? []) as Inquiry[]);
+
+      // Fetch teams and loan items
+      const [{ data: teamsData }, { data: loansData }] = await Promise.all([
+        supabase.from("teams").select("*").eq("club_id", clubData.id).order("created_at"),
+        supabase.from("loan_items").select("id, name, description, condition, available").eq("club_id", clubData.id).order("created_at"),
+      ]);
+      setTeams((teamsData ?? []) as Team[]);
+      setLoanItems((loansData ?? []) as LoanItem[]);
 
       setLoading(false);
     });
@@ -1014,6 +1119,9 @@ export default function ClubAdminPage({
       {activeTab === "medlemmer" && (
         <div className="space-y-10">
 
+          {/* Bulk email invite */}
+          <BulkEmailInviteSection club={club} />
+
           {/* Invite link */}
           <InviteLinkSection
             club={club}
@@ -1163,6 +1271,235 @@ export default function ClubAdminPage({
                   </a>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Utlån ── */}
+      {activeTab === "utlan" && (
+        <div className="max-w-2xl space-y-8">
+          <div>
+            <h2 className="font-display text-xl font-semibold text-ink">Utstyr til utlån</h2>
+            <p className="text-sm text-ink-light mt-1">
+              Legg inn klubbutstyr som medlemmer kan låne. Utlånsoversikten vises på klubbsiden.
+            </p>
+          </div>
+
+          {/* Add loan item form */}
+          <div className="bg-white rounded-xl border border-border p-6 space-y-4">
+            <h3 className="font-display text-base font-semibold text-ink">Legg til utlånsobjekt</h3>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1.5">Navn *</label>
+              <input
+                type="text"
+                value={newLoanName}
+                onChange={(e) => setNewLoanName(e.target.value)}
+                placeholder="f.eks. Keeperhansker str. M"
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1.5">Beskrivelse</label>
+              <textarea
+                rows={2}
+                value={newLoanDesc}
+                onChange={(e) => setNewLoanDesc(e.target.value)}
+                placeholder="Kort beskrivelse..."
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1.5">Stand</label>
+              <select
+                value={newLoanCondition}
+                onChange={(e) => setNewLoanCondition(e.target.value)}
+                className="rounded-lg border border-border px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+              >
+                {["Ny", "Meget god", "God", "OK"].map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              disabled={addingLoan || !newLoanName.trim()}
+              onClick={async () => {
+                if (!club || !newLoanName.trim()) return;
+                setAddingLoan(true);
+                const { data, error } = await supabase.from("loan_items").insert({
+                  club_id: club.id,
+                  name: newLoanName.trim(),
+                  description: newLoanDesc.trim() || null,
+                  condition: newLoanCondition,
+                  available: true,
+                }).select().maybeSingle();
+                if (!error && data) {
+                  setLoanItems((prev) => [...prev, data as LoanItem]);
+                  setNewLoanName("");
+                  setNewLoanDesc("");
+                  setNewLoanCondition("God");
+                  showSuccess("Utlånsobjekt lagt til");
+                } else {
+                  showError("Kunne ikke legge til utlånsobjekt");
+                }
+                setAddingLoan(false);
+              }}
+              className="px-5 py-2.5 rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] disabled:opacity-50"
+            >
+              {addingLoan ? "Legger til..." : "Legg til"}
+            </button>
+          </div>
+
+          {/* Loan items list */}
+          {loanItems.length > 0 && (
+            <div className="bg-white rounded-xl border border-border divide-y divide-border">
+              {loanItems.map((item) => (
+                  <div key={item.id} className="px-6 py-4 flex items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium text-ink">{item.name}</p>
+                        {item.condition && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-cream text-ink-light px-2 py-0.5 rounded-full">{item.condition}</span>
+                        )}
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${item.available ? "bg-forest-light text-forest" : "bg-amber-light text-amber"}`}>
+                          {item.available ? "Tilgjengelig" : "Utlånt"}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="text-xs text-ink-light mt-0.5">{item.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await supabase.from("loan_items").update({ available: !item.available }).eq("id", item.id);
+                          setLoanItems((prev) => prev.map((i) => i.id === item.id ? { ...i, available: !i.available } : i));
+                        }}
+                        className="text-xs text-ink-light hover:text-ink transition-colors"
+                      >
+                        {item.available ? "Merk utlånt" : "Merk tilgjengelig"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await supabase.from("loan_items").delete().eq("id", item.id);
+                          setLoanItems((prev) => prev.filter((i) => i.id !== item.id));
+                        }}
+                        className="text-xs text-ink-light hover:text-red-500 transition-colors"
+                      >
+                        Slett
+                      </button>
+                    </div>
+                  </div>
+              ))}
+            </div>
+          )}
+
+          {loanItems.length === 0 && (
+            <div className="rounded-xl bg-white border border-border px-6 py-12 text-center">
+              <p className="text-sm text-ink-light">Ingen utlånsobjekter ennå. Legg til det første over.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Lag ── */}
+      {activeTab === "lag" && (
+        <div className="max-w-2xl space-y-8">
+          <div>
+            <h2 className="font-display text-xl font-semibold text-ink">Lag og grupper</h2>
+            <p className="text-sm text-ink-light mt-1">
+              Organiser klubben i lag (f.eks. Herrelaget, Juniorlaget, G16). Lag vises på klubbsiden.
+            </p>
+          </div>
+
+          {/* Add team form */}
+          <div className="bg-white rounded-xl border border-border p-6 space-y-4">
+            <h3 className="font-display text-base font-semibold text-ink">Opprett nytt lag</h3>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1.5">Lagnavn *</label>
+              <input
+                type="text"
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+                placeholder="f.eks. Herrelaget A"
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1.5">Beskrivelse (valgfritt)</label>
+              <input
+                type="text"
+                value={newTeamDesc}
+                onChange={(e) => setNewTeamDesc(e.target.value)}
+                placeholder="Kort beskrivelse av laget"
+                className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+              />
+            </div>
+            <button
+              type="button"
+              disabled={addingTeam || !newTeamName.trim()}
+              onClick={async () => {
+                if (!club || !newTeamName.trim()) return;
+                setAddingTeam(true);
+                const { data, error } = await supabase.from("teams").insert({
+                  club_id: club.id,
+                  name: newTeamName.trim(),
+                  description: newTeamDesc.trim() || null,
+                }).select().maybeSingle();
+                if (!error && data) {
+                  setTeams((prev) => [...prev, data as Team]);
+                  setNewTeamName("");
+                  setNewTeamDesc("");
+                  showSuccess("Lag opprettet");
+                } else {
+                  showError("Kunne ikke opprette lag");
+                }
+                setAddingTeam(false);
+              }}
+              className="px-5 py-2.5 rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-mid transition-colors duration-[120ms] disabled:opacity-50"
+            >
+              {addingTeam ? "Oppretter..." : "Opprett lag"}
+            </button>
+          </div>
+
+          {/* Teams list */}
+          {teams.length > 0 && (
+            <div className="bg-white rounded-xl border border-border divide-y divide-border">
+              {teams.map((team) => (
+                <div key={team.id} className="px-6 py-4 flex items-center gap-4">
+                  <div
+                    className="h-9 w-9 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0"
+                    style={{ backgroundColor: club.color }}
+                  >
+                    {team.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-ink">{team.name}</p>
+                    {team.description && (
+                      <p className="text-xs text-ink-light mt-0.5">{team.description}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await supabase.from("teams").delete().eq("id", team.id);
+                      setTeams((prev) => prev.filter((t) => t.id !== team.id));
+                    }}
+                    className="text-xs text-ink-light hover:text-red-500 transition-colors flex-shrink-0"
+                  >
+                    Slett
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {teams.length === 0 && (
+            <div className="rounded-xl bg-white border border-border px-6 py-12 text-center">
+              <p className="text-sm text-ink-light">Ingen lag ennå. Opprett det første over.</p>
             </div>
           )}
         </div>
