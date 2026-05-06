@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="bg-forest text-white/60">
+    <footer className="bg-forest text-white/60 pb-16 md:pb-0">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           {/* Brand column */}
@@ -97,8 +97,8 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <div className="flex flex-col items-center sm:items-start gap-1">
+        <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex flex-col items-start gap-1">
             <p className="text-xs text-white/40">
               © 2026 Sportsbytte · Alle rettigheter reservert.
             </p>

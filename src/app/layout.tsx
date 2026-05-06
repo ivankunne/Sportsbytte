@@ -92,7 +92,7 @@ export default function RootLayout({
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5BRFN8K9" height="0" width="0" style={{ display: "none", visibility: "hidden" }} /></noscript>
         <Header />
         <OnboardingNudge />
-        <main className="flex-1 pb-16 md:pb-0">{children}</main>
+        <main className="flex-1">{children}</main>
         <Footer />
         <Toaster />
         <InstallBanner />
