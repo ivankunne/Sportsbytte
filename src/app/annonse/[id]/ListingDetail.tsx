@@ -452,9 +452,9 @@ export function ListingDetail({ id }: { id: string }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12">
         {/* Left: Photos */}
-        <div className="lg:col-span-3">
+        <div className="md:col-span-2 lg:col-span-3">
           <div
             className="relative aspect-[4/3] rounded-xl overflow-hidden bg-white cursor-zoom-in"
             onClick={() => setLightboxOpen(true)}
@@ -526,7 +526,7 @@ export function ListingDetail({ id }: { id: string }) {
         </div>
 
         {/* Right: Purchase panel */}
-        <div className="lg:col-span-2">
+        <div className="md:col-span-1 lg:col-span-2">
           <div className="lg:sticky lg:top-24 space-y-6">
             <div className="bg-white rounded-xl p-6 border border-border">
               <div className="flex gap-2 mb-2">
