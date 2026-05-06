@@ -117,7 +117,7 @@ function ExplorePage() {
       setLocationFetching(true);
       try {
         const res = await fetch(
-          `https://ws.geonorge.no/stedsnavn/v1/navn?sok=${encodeURIComponent(val)}*&fuzzy=true&treffPerSide=8&utkoordsys=4258`
+          `https://ws.geonorge.no/stedsnavn/v1/navn?sok=${encodeURIComponent(val)}*&fuzzy=true&treffPerSide=8&utkoordsys=4258&navneobjekttype=By,Tettsted,Grend,Bygd,Bydel,Bosted,Gate,Veg`
         );
         const json = await res.json();
         const results: KartverketResult[] = (json.navn ?? []).map((item: Record<string, unknown>) => ({

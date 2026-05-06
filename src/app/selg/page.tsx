@@ -185,7 +185,7 @@ function SellPageContent() {
     locationDebounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://ws.geonorge.no/stedsnavn/v1/navn?sok=${encodeURIComponent(val)}*&fuzzy=true&treffPerSide=8&utkoordsys=4258`
+          `https://ws.geonorge.no/stedsnavn/v1/navn?sok=${encodeURIComponent(val)}*&fuzzy=true&treffPerSide=8&utkoordsys=4258&navneobjekttype=By,Tettsted,Grend,Bygd,Bydel,Bosted,Gate,Veg`
         );
         const json = await res.json();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
