@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { ClubSearch } from "@/components/ClubSearch";
 import { StatsBar } from "@/components/StatsBar";
 import { HomepageListings } from "@/components/HomepageListings";
+import { RecentlyViewed } from "@/components/RecentlyViewed";
 
 export const revalidate = 60;
 
@@ -148,6 +149,9 @@ export default async function HomePage() {
         </div>
         <HomepageListings initialCategories={categories} />
       </section>
+
+      {/* Recently viewed */}
+      <RecentlyViewed />
 
       {/* Categories */}
       <section className="bg-white border-y border-border">

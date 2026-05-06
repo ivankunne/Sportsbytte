@@ -47,9 +47,11 @@ export function ListingChat({
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const defaultOpeningMsg = useCallback(
     () =>
@@ -240,6 +242,32 @@ export function ListingChat({
     }
   }
 
+  async function handleImageSend(file: File) {
+    if (!conversation) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Bildet er for stort — maks 5 MB.");
+      return;
+    }
+    setImageUploading(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${conversation.id}/${Date.now()}.${ext}`;
+      const { data: uploaded, error: uploadErr } = await supabase.storage
+        .from("chat-images")
+        .upload(path, file, { contentType: file.type });
+      if (uploadErr) throw uploadErr;
+      const { data: { publicUrl } } = supabase.storage
+        .from("chat-images")
+        .getPublicUrl(uploaded.path);
+      await sendMessage(publicUrl, "image");
+    } catch {
+      alert("Kunne ikke laste opp bildet. Prøv igjen.");
+    } finally {
+      setImageUploading(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    }
+  }
+
   async function sendMessage(content: string, type = "text", metadata?: Json) {
     if (!conversation || !content.trim()) return;
     setSending(true);
@@ -408,6 +436,31 @@ export function ListingChat({
             {/* Text input */}
             <div className="px-4 py-3 border-t border-border flex gap-2 items-center flex-shrink-0">
               <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageSend(file);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={imageUploading || sending}
+                title="Send bilde"
+                className="h-9 w-9 flex-shrink-0 rounded-full border border-border flex items-center justify-center text-ink-light hover:text-forest hover:border-forest transition-colors disabled:opacity-40"
+              >
+                {imageUploading ? (
+                  <div className="h-3.5 w-3.5 rounded-full border-2 border-forest border-t-transparent animate-spin" />
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                  </svg>
+                )}
+              </button>
+              <input
                 ref={inputRef}
                 type="text"
                 value={text}
@@ -426,18 +479,8 @@ export function ListingChat({
                 disabled={sending || !text.trim()}
                 className="h-9 w-9 flex-shrink-0 rounded-full bg-forest flex items-center justify-center text-white hover:bg-forest-mid transition-colors disabled:opacity-40"
               >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5"
-                  />
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5" />
                 </svg>
               </button>
             </div>
@@ -455,6 +498,21 @@ function MessageBubble({
   listingPrice: number;
 }) {
   const isMe = !message.is_from_seller;
+
+  if (message.type === "image") {
+    return (
+      <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+        <a href={message.content} target="_blank" rel="noopener noreferrer" className="block max-w-[70%]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={message.content}
+            alt="Bilde"
+            className={`rounded-2xl object-cover max-h-64 w-auto border border-border ${isMe ? "rounded-br-sm" : "rounded-bl-sm"}`}
+          />
+        </a>
+      </div>
+    );
+  }
 
   if (message.type === "bring_request") {
     return (

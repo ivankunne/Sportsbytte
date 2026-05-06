@@ -14,6 +14,21 @@ import { CategoryBadge } from "@/components/CategoryBadge";
 import { ListingCard } from "@/components/ListingCard";
 import { ListingChat } from "@/components/ListingChat";
 import { ReportListingButton } from "@/components/ReportListingButton";
+import { saveRecentlyViewed } from "@/components/RecentlyViewed";
+
+function getCO2SavedKg(category: string): number {
+  const c = category.toLowerCase();
+  if (c.includes("sykkel")) return 45;
+  if (c.includes("ski") || c.includes("alpint") || c.includes("snowboard")) return 35;
+  if (c.includes("langrenn")) return 30;
+  if (c.includes("klatring") || c.includes("friluft")) return 20;
+  if (c.includes("hockey") || c.includes("ishockey")) return 15;
+  if (c.includes("løp") || c.includes("friidrett")) return 12;
+  if (c.includes("fotball") || c.includes("håndball") || c.includes("basket")) return 8;
+  if (c.includes("tennis") || c.includes("padel") || c.includes("badminton")) return 6;
+  if (c.includes("svøm")) return 5;
+  return 10;
+}
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sportsbytte.no";
 
@@ -81,6 +96,15 @@ export function ListingDetail({ id }: { id: string }) {
       const l = data as ListingWithRelations;
       setListing(l);
       setIsSold(l.is_sold);
+
+      // Save to recently viewed
+      saveRecentlyViewed({
+        id: l.id,
+        title: l.title,
+        price: l.price,
+        image: l.images?.[0] ?? "",
+        listing_type: l.listing_type ?? undefined,
+      });
 
       // Fire-and-forget view increment
       fetch("/api/listing-view", {
@@ -706,6 +730,18 @@ export function ListingDetail({ id }: { id: string }) {
                   </div>
                 );
               })()}
+
+              {/* Carbon savings badge */}
+              {listing.listing_type !== "iso" && !listing.is_sold && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200 text-xs text-green-800 mt-3">
+                  <span className="text-base leading-none">🌱</span>
+                  <span>
+                    Kjøp brukt sparer ca.{" "}
+                    <strong>{getCO2SavedKg(listing.category)} kg CO₂</strong>{" "}
+                    sammenlignet med nytt
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Seller card */}
