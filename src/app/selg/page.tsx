@@ -190,7 +190,7 @@ function SellPageContent() {
         const json = await res.json();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const results: KartverketResult[] = (json.navn ?? []).map((item: any) => ({
-          name: item.stedsnavn?.[0]?.skrivemåte ?? "",
+          name: item.skrivemåte ?? "",
           kommune: item.kommuner?.[0]?.kommunenavn ?? "",
           type: item.navneobjekttype ?? "",
           lat: item.representasjonspunkt?.nord ?? 0,
