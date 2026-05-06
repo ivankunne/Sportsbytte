@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Toaster } from "@/components/Toaster";
 import { MobileNav } from "@/components/MobileNav";
+import { InstallBanner } from "@/components/InstallBanner";
 import { CookieBanner } from "@/components/CookieBanner";
 import { StripeOnboardingNudge } from "@/components/StripeOnboardingNudge";
 import { OnboardingNudge } from "@/components/OnboardingNudge";
@@ -94,6 +95,7 @@ export default function RootLayout({
         <main className="flex-1 pb-16 md:pb-0">{children}</main>
         <Footer />
         <Toaster />
+        <InstallBanner />
         <MobileNav />
         <CookieBanner />
         <StripeOnboardingNudge />
