@@ -6,7 +6,7 @@ import Image from "next/image";
 const DISMISSED_KEY = "pwa_install_dismissed_until";
 const DISMISS_DAYS = 14;
 
-type Platform = "android" | "ios" | null;
+type Platform = "android" | "ios" | "ios-other" | null;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
@@ -34,10 +34,9 @@ export function InstallBanner() {
     if (!isMobile) return;
 
     if (isIOS) {
-      // Only show on Safari — Chrome/Firefox on iOS can't install PWAs
       const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
-      if (!isSafari) return;
-      setPlatform("ios");
+      // Chrome/Firefox on iOS can't install PWAs directly — suggest opening in Safari
+      setPlatform(isSafari ? "ios" : "ios-other");
       setTimeout(() => setVisible(true), 2500);
     }
 
@@ -88,7 +87,11 @@ export function InstallBanner() {
 
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-ink leading-tight">Legg til Sportsbytte</p>
-            <p className="text-xs text-ink-light mt-0.5 leading-snug">Raskere tilgang — fungerer som en app</p>
+            <p className="text-xs text-ink-light mt-0.5 leading-snug">
+              {platform === "ios-other"
+                ? "Åpne i Safari for å installere"
+                : "Raskere tilgang — fungerer som en app"}
+            </p>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -110,6 +113,15 @@ export function InstallBanner() {
               </button>
             )}
 
+            {platform === "ios-other" && (
+              <button
+                onClick={() => setShowIOSSteps((s) => !s)}
+                className="rounded-lg bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-forest-mid transition-colors duration-[120ms]"
+              >
+                Hvordan
+              </button>
+            )}
+
             <button
               onClick={dismiss}
               aria-label="Lukk"
@@ -122,7 +134,7 @@ export function InstallBanner() {
           </div>
         </div>
 
-        {/* iOS step-by-step instructions */}
+        {/* iOS Safari step-by-step instructions */}
         {platform === "ios" && showIOSSteps && (
           <div className="border-t border-border bg-cream px-4 py-3 space-y-2">
             <p className="text-xs font-semibold text-ink mb-2">Slik legger du til på hjemskjermen:</p>
@@ -130,6 +142,28 @@ export function InstallBanner() {
               { n: "1", text: "Trykk på del-knappen", icon: "↑", desc: "nederst i Safari" },
               { n: "2", text: "Rull ned og velg", icon: "＋", desc: "«Legg til på hjemskjerm»" },
               { n: "3", text: "Trykk", icon: "✓", desc: "«Legg til» øverst til høyre" },
+            ].map((step) => (
+              <div key={step.n} className="flex items-center gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-forest text-white text-[10px] font-bold">
+                  {step.n}
+                </span>
+                <p className="text-xs text-ink-mid">
+                  {step.text}{" "}
+                  <span className="font-semibold text-ink">{step.icon} {step.desc}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* iOS Chrome/Firefox — redirect to Safari */}
+        {platform === "ios-other" && showIOSSteps && (
+          <div className="border-t border-border bg-cream px-4 py-3 space-y-2">
+            <p className="text-xs font-semibold text-ink mb-2">Installering krever Safari på iPhone:</p>
+            {[
+              { n: "1", text: "Kopier lenken", icon: "⎘", desc: "sportsbytte.no" },
+              { n: "2", text: "Åpne", icon: "🧭", desc: "Safari" },
+              { n: "3", text: "Lim inn lenken og trykk", icon: "↑", desc: "del-knappen → «Legg til på hjemskjerm»" },
             ].map((step) => (
               <div key={step.n} className="flex items-center gap-3">
                 <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-forest text-white text-[10px] font-bold">
