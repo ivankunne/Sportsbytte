@@ -412,12 +412,6 @@ export function Header() {
               Utforsk
             </Link>
             <Link
-              href="/kart"
-              className={`text-sm font-medium transition-colors duration-[120ms] ${pathname.startsWith("/kart") ? "text-forest font-semibold" : "text-ink-mid hover:text-forest"}`}
-            >
-              Kart
-            </Link>
-            <Link
               href="/klubber"
               className={`text-sm font-medium transition-colors duration-[120ms] ${pathname.startsWith("/klubber") || pathname.startsWith("/klubb") ? "text-forest font-semibold" : "text-ink-mid hover:text-forest"}`}
             >
