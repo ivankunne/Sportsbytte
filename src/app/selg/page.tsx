@@ -6,7 +6,13 @@ import Link from "next/link";
 import type { Category, Club } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { AuthForm } from "@/components/AuthForm";
-import { NORWEGIAN_CITIES } from "@/lib/norwegian-cities";
+type KartverketResult = {
+  name: string;
+  kommune: string;
+  type: string;
+  lat: number;
+  lng: number;
+};
 
 type AuthPhase = "checking" | "auth" | "form";
 type ListingType = "regular" | "iso" | "bulk" | "gi_bort";
@@ -153,8 +159,12 @@ function SellPageContent() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [savedTemplate, setSavedTemplate] = useState<TemplateData | null>(null);
 
-  const [locationSuggestions, setLocationSuggestions] = useState<typeof NORWEGIAN_CITIES>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<KartverketResult[]>([]);
   const [showLocationSugs, setShowLocationSugs] = useState(false);
+  const [locationFetching, setLocationFetching] = useState(false);
+  const [selectedLat, setSelectedLat] = useState<number | null>(null);
+  const [selectedLng, setSelectedLng] = useState<number | null>(null);
+  const locationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const categoryRef = useRef<HTMLElement>(null);
@@ -163,19 +173,44 @@ function SellPageContent() {
 
   function handleLocationChange(val: string) {
     setForm((prev) => ({ ...prev, location: val }));
-    if (val.length >= 1) {
-      const matches = NORWEGIAN_CITIES.filter((c) =>
-        c.name.toLowerCase().startsWith(val.toLowerCase())
-      ).slice(0, 6);
-      setLocationSuggestions(matches);
-      setShowLocationSugs(matches.length > 0);
-    } else {
+    setSelectedLat(null);
+    setSelectedLng(null);
+    if (locationDebounceRef.current) clearTimeout(locationDebounceRef.current);
+    if (val.length < 2) {
+      setLocationSuggestions([]);
       setShowLocationSugs(false);
+      return;
     }
+    setLocationFetching(true);
+    locationDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://ws.geonorge.no/stedsnavn/v1/navn?sok=${encodeURIComponent(val)}*&fuzzy=true&treffPerSide=8&utkoordsys=4258`
+        );
+        const json = await res.json();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const results: KartverketResult[] = (json.navn ?? []).map((item: any) => ({
+          name: item.stedsnavn?.[0]?.skrivemåte ?? "",
+          kommune: item.kommuner?.[0]?.kommunenavn ?? "",
+          type: item.navneobjekttype ?? "",
+          lat: item.representasjonspunkt?.nord ?? 0,
+          lng: item.representasjonspunkt?.øst ?? 0,
+        })).filter((r: KartverketResult) => r.name && r.lat && r.lng);
+        setLocationSuggestions(results);
+        setShowLocationSugs(results.length > 0);
+      } catch {
+        setLocationSuggestions([]);
+        setShowLocationSugs(false);
+      } finally {
+        setLocationFetching(false);
+      }
+    }, 250);
   }
 
-  function selectLocationSuggestion(name: string) {
-    setForm((prev) => ({ ...prev, location: name }));
+  function selectLocationSuggestion(result: KartverketResult) {
+    setForm((prev) => ({ ...prev, location: result.name }));
+    setSelectedLat(result.lat);
+    setSelectedLng(result.lng);
     setShowLocationSugs(false);
   }
 
@@ -190,17 +225,20 @@ function SellPageContent() {
           type="text"
           value={form.location}
           onChange={(e) => handleLocationChange(e.target.value)}
-          onFocus={() => form.location.length >= 1 && setShowLocationSugs(locationSuggestions.length > 0)}
+          onFocus={() => locationSuggestions.length > 0 && setShowLocationSugs(true)}
           onBlur={() => setTimeout(() => setShowLocationSugs(false), 150)}
-          placeholder="F.eks. Oslo, Bergen, Trondheim..."
+          placeholder="F.eks. Oslo, Frogner, Lillehammer..."
           autoComplete="off"
           className="flex-1 px-3 py-2.5 text-sm text-ink bg-transparent focus:outline-none"
         />
-        {form.location && (
+        {locationFetching && (
+          <div className="mr-2 h-3.5 w-3.5 rounded-full border-2 border-forest border-t-transparent animate-spin flex-shrink-0" />
+        )}
+        {form.location && !locationFetching && (
           <button
             type="button"
-            onClick={() => { setForm((prev) => ({ ...prev, location: "" })); setShowLocationSugs(false); }}
-            className="mr-2 text-ink-light hover:text-ink"
+            onClick={() => { setForm((prev) => ({ ...prev, location: "" })); setSelectedLat(null); setSelectedLng(null); setShowLocationSugs(false); }}
+            className="mr-2 text-ink-light hover:text-ink flex-shrink-0"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -210,19 +248,27 @@ function SellPageContent() {
       </div>
       {showLocationSugs && locationSuggestions.length > 0 && (
         <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white rounded-lg border border-border shadow-lg overflow-hidden">
-          {locationSuggestions.map((city) => (
+          {locationSuggestions.map((result) => (
             <button
-              key={city.name}
+              key={`${result.name}-${result.lat}-${result.lng}`}
               type="button"
-              onMouseDown={() => selectLocationSuggestion(city.name)}
-              className="w-full text-left px-4 py-2.5 text-sm text-ink hover:bg-cream transition-colors flex items-center gap-2"
+              onMouseDown={() => selectLocationSuggestion(result)}
+              className="w-full text-left px-4 py-2.5 hover:bg-cream transition-colors flex items-center justify-between gap-3"
             >
-              <svg className="h-3.5 w-3.5 text-ink-light flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {city.name}
+              <div className="flex items-center gap-2 min-w-0">
+                <svg className="h-3.5 w-3.5 text-ink-light flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm text-ink font-medium truncate">{result.name}</span>
+              </div>
+              <span className="text-xs text-ink-light flex-shrink-0">
+                {result.kommune}{result.type && result.type !== result.kommune ? ` · ${result.type}` : ""}
+              </span>
             </button>
           ))}
+          <div className="px-4 py-1.5 border-t border-border bg-cream/50">
+            <p className="text-[10px] text-ink-light">Stedsnavn fra Kartverket</p>
+          </div>
         </div>
       )}
     </div>
@@ -491,8 +537,7 @@ function SellPageContent() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Ikke innlogget");
 
-      // Resolve lat/lng for location
-      const cityCoords = NORWEGIAN_CITIES.find((c) => c.name === form.location);
+      // lat/lng set when user picks a Kartverket suggestion
 
       const res = await fetch("/api/create-listing", {
         method: "POST",
@@ -516,8 +561,8 @@ function SellPageContent() {
           delivery_method: isISO ? null : deliveryMethod,
           is_sold: false,
           location: form.location || null,
-          lat: cityCoords?.lat ?? null,
-          lng: cityCoords?.lng ?? null,
+          lat: selectedLat,
+          lng: selectedLng,
         }),
       });
 
