@@ -972,7 +972,7 @@ function SellPageContent() {
           {/* Location */}
           <div className="bg-white rounded-xl p-6">
             <label htmlFor="fast-location" className="block text-sm font-medium text-ink mb-1.5">
-              Sted <span className="text-ink-light font-normal">(valgfritt)</span>
+              Hentested <span className="text-ink-light font-normal">(valgfritt)</span>
             </label>
             {locationInputJSX("fast-location")}
           </div>
@@ -1190,7 +1190,7 @@ function SellPageContent() {
               {/* Location */}
               <div>
                 <label htmlFor="location" className="block text-sm font-medium text-ink mb-1.5">
-                  Sted <span className="text-ink-light font-normal">(valgfritt)</span>
+                  Hentested <span className="text-ink-light font-normal">(valgfritt)</span>
                 </label>
                 {locationInputJSX("location")}
               </div>

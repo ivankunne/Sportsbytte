@@ -487,11 +487,14 @@ export function ListingDetail({ id }: { id: string }) {
                 )}
               </div>
               {listing.location && (
-                <div className="flex items-center gap-1.5 text-sm text-ink-mid mb-2">
-                  <svg className="h-4 w-4 text-ink-light flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <div className="flex items-center gap-2 mt-3 mb-1 px-3 py-2 rounded-lg bg-cream border border-border">
+                  <svg className="h-4 w-4 text-forest flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {listing.location}
+                  <div>
+                    <p className="text-[10px] font-semibold text-ink-light uppercase tracking-wider">Hentested</p>
+                    <p className="text-sm font-medium text-ink">{listing.location}</p>
+                  </div>
                 </div>
               )}
               {listing.listing_type === "bulk" && listing.quantity !== null && listing.quantity > 0 && (
