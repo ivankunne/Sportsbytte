@@ -7,6 +7,7 @@ import type { ListingWithRelations, Category } from "@/lib/queries";
 import { ListingCard } from "@/components/ListingCard";
 import { ListingCardSkeleton } from "@/components/Skeleton";
 import { SavedSearchAlert } from "@/components/SavedSearchAlert";
+import { NORWEGIAN_CITIES } from "@/lib/norwegian-cities";
 
 const CONDITIONS = [
   { value: "", label: "Alle" },
@@ -49,6 +50,8 @@ function ExplorePage() {
   const [activeCategory, setActiveCategory] = useState(searchParams.get("kategori") ?? "");
   const [sort, setSort] = useState(searchParams.get("sorter") ?? "nyeste");
   const [condition, setCondition] = useState(searchParams.get("tilstand") ?? "");
+  const [locationFilter, setLocationFilter] = useState(searchParams.get("sted") ?? "");
+  const [giBortOnly, setGiBortOnly] = useState(searchParams.get("gi_bort") === "1");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState("");
@@ -126,9 +129,11 @@ function ExplorePage() {
     if (debouncedMin) params.set("fra", debouncedMin);
     if (debouncedMax) params.set("til", debouncedMax);
     if (debouncedSize) params.set("str", debouncedSize);
+    if (locationFilter) params.set("sted", locationFilter);
+    if (giBortOnly) params.set("gi_bort", "1");
     const str = params.toString();
     router.replace(`/utforsk${str ? `?${str}` : ""}`, { scroll: false });
-  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, router]);
+  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, locationFilter, giBortOnly, router]);
 
   // Fetch — depends only on settled (debounced) values + instant filters
   const categoriesReady = categories.length > 0;
@@ -157,6 +162,8 @@ function ExplorePage() {
 
       if (condition) q = q.ilike("condition", condition);
       if (debouncedSize.trim()) q = q.ilike("size_range", `%${debouncedSize.trim()}%`);
+      if (locationFilter) q = q.ilike("location", `%${locationFilter}%`);
+      if (giBortOnly) q = q.eq("listing_type", "gi_bort");
 
       const min = parseInt(debouncedMin);
       const max = parseInt(debouncedMax);
@@ -189,7 +196,7 @@ function ExplorePage() {
       setVisibleCount(PAGE_SIZE);
       setLoading(false);
     })();
-  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, categories, categoriesReady, userLocation]);
+  }, [debouncedQuery, activeCategory, sort, condition, debouncedMin, debouncedMax, debouncedSize, locationFilter, giBortOnly, categories, categoriesReady, userLocation]);
 
   function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
     const R = 6371;
@@ -204,10 +211,11 @@ function ExplorePage() {
   function resetAll() {
     setQuery(""); setActiveCategory(""); setSort("nyeste");
     setCondition(""); setMinPrice(""); setMaxPrice(""); setSizeFilter("");
+    setLocationFilter(""); setGiBortOnly(false);
     setUserLocation(null); setGeoError(""); setGeoErrorPersist("");
   }
 
-  const hasActiveFilters = query || activeCategory || condition || minPrice || maxPrice || sizeFilter || sort !== "nyeste";
+  const hasActiveFilters = query || activeCategory || condition || minPrice || maxPrice || sizeFilter || locationFilter || giBortOnly || sort !== "nyeste";
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -313,12 +321,36 @@ function ExplorePage() {
             className="w-20 rounded-lg border border-border bg-white px-3 py-1.5 text-xs text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20"
           />
           <span className="text-xs text-ink-light">kr</span>
-          {hasActiveFilters && (
-            <button onClick={resetAll} className="ml-1 text-xs text-ink-light hover:text-forest transition-colors duration-[120ms] whitespace-nowrap">
-              Nullstill
-            </button>
-          )}
         </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">Sted:</span>
+          <select
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="rounded-lg border border-border bg-white px-3 py-1.5 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-forest/20"
+          >
+            <option value="">Alle steder</option>
+            {NORWEGIAN_CITIES.map((c) => (
+              <option key={c.name} value={c.name}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          onClick={() => setGiBortOnly((v) => !v)}
+          className={`rounded-[20px] px-3 py-1 text-xs font-medium transition-colors duration-[120ms] ${
+            giBortOnly ? "bg-green-600 text-white" : "bg-cream text-ink-mid hover:bg-border"
+          }`}
+        >
+          🎁 Gratis
+        </button>
+
+        {hasActiveFilters && (
+          <button onClick={resetAll} className="text-xs text-ink-light hover:text-forest transition-colors duration-[120ms] whitespace-nowrap">
+            Nullstill alle
+          </button>
+        )}
       </div>
 
 

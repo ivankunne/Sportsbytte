@@ -147,6 +147,13 @@ export function ListingCard({ listing, initialSaved = false }: Props) {
             </span>
           )}
 
+          {/* gi_bort badge */}
+          {listing.listing_type === "gi_bort" && (
+            <span className="inline-flex items-center rounded-full bg-green-100 border border-green-300 px-2 py-0.5 text-[11px] font-semibold text-green-800 mb-2">
+              🎁 Gratis
+            </span>
+          )}
+
           {/* Location + time */}
           <div className="flex items-center gap-1 text-xs text-ink-light mb-3">
             <svg
@@ -168,7 +175,7 @@ export function ListingCard({ listing, initialSaved = false }: Props) {
               />
             </svg>
             <span>
-              {listing.clubs.name} • {formatDaysAgo(listing.created_at)}
+              {listing.location ?? listing.clubs?.name ?? "Ukjent sted"} • {formatDaysAgo(listing.created_at)}
             </span>
           </div>
 

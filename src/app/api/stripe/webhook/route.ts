@@ -141,6 +141,18 @@ export async function POST(req: NextRequest) {
             .eq("id", listing.seller_id);
         }
 
+        // Record transaction for buyer history
+        if (buyerProfileId) {
+          const paymentIntent = typeof session.payment_intent === "string" ? session.payment_intent : null;
+          await admin.from("transactions").insert({
+            listing_id: listingId,
+            buyer_profile_id: buyerProfileId,
+            seller_profile_id: listing.seller_id,
+            amount: listing.price,
+            stripe_payment_intent_id: paymentIntent,
+          }).then(() => {}, () => {});
+        }
+
         // Keep club stats in sync (only decrement active_listings when fully sold)
         let clubIsPro = false;
         if (listing.club_id) {

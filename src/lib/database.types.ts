@@ -119,18 +119,24 @@ export type Database = {
           id: number
           name: string
           slug: string
+          parent_id: number | null
+          sport_attributes: Json | null
         }
         Insert: {
           emoji: string
           id?: never
           name: string
           slug: string
+          parent_id?: number | null
+          sport_attributes?: Json | null
         }
         Update: {
           emoji?: string
           id?: never
           name?: string
           slug?: string
+          parent_id?: number | null
+          sport_attributes?: Json | null
         }
         Relationships: []
       }
@@ -219,12 +225,16 @@ export type Database = {
           created_at: string
           delivery_method: string | null
           description: string | null
+          expires_at: string | null
           id: number
           images: string[]
           is_boosted: boolean
           is_demo: boolean
           is_sold: boolean
+          lat: number | null
           listing_type: string
+          lng: number | null
+          location: string | null
           members_only: boolean
           price: number
           quantity: number | null
@@ -244,12 +254,16 @@ export type Database = {
           created_at?: string
           delivery_method?: string | null
           description?: string | null
+          expires_at?: string | null
           id?: never
           images?: string[]
           is_boosted?: boolean
           is_demo?: boolean
           is_sold?: boolean
+          lat?: number | null
           listing_type?: string
+          lng?: number | null
+          location?: string | null
           members_only?: boolean
           price: number
           quantity?: number | null
@@ -269,12 +283,16 @@ export type Database = {
           created_at?: string
           delivery_method?: string | null
           description?: string | null
+          expires_at?: string | null
           id?: never
           images?: string[]
           is_boosted?: boolean
           is_demo?: boolean
           is_sold?: boolean
+          lat?: number | null
           listing_type?: string
+          lng?: number | null
+          location?: string | null
           members_only?: boolean
           price?: number
           quantity?: number | null
@@ -425,6 +443,7 @@ export type Database = {
           id: number
           profile_id: number
           rating: number
+          review_type: string
           reviewer_id: number | null
           text: string
         }
@@ -434,6 +453,7 @@ export type Database = {
           id?: never
           profile_id: number
           rating: number
+          review_type?: string
           reviewer_id?: number | null
           text: string
         }
@@ -443,6 +463,7 @@ export type Database = {
           id?: never
           profile_id?: number
           rating?: number
+          review_type?: string
           reviewer_id?: number | null
           text?: string
         }
@@ -723,6 +744,111 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reports: {
+        Row: {
+          id: number
+          listing_id: number
+          reporter_id: number | null
+          reporter_email: string | null
+          reason: string
+          description: string | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          listing_id: number
+          reporter_id?: number | null
+          reporter_email?: string | null
+          reason: string
+          description?: string | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          listing_id?: number
+          reporter_id?: number | null
+          reporter_email?: string | null
+          reason?: string
+          description?: string | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      blocked_users: {
+        Row: {
+          id: number
+          blocker_id: number
+          blocked_id: number
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          blocker_id: number
+          blocked_id: number
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          blocker_id?: number
+          blocked_id?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      listing_drafts: {
+        Row: {
+          id: number
+          seller_id: number
+          form_data: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          seller_id: number
+          form_data: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          seller_id?: number
+          form_data?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          id: number
+          listing_id: number | null
+          buyer_profile_id: number | null
+          seller_profile_id: number | null
+          amount: number
+          stripe_payment_intent_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          listing_id?: number | null
+          buyer_profile_id?: number | null
+          seller_profile_id?: number | null
+          amount: number
+          stripe_payment_intent_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          listing_id?: number | null
+          buyer_profile_id?: number | null
+          seller_profile_id?: number | null
+          amount?: number
+          stripe_payment_intent_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

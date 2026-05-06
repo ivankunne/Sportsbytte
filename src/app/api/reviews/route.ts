@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   if (!reviewerProfile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
 
-  let body: { profile_id: number; rating: number; text?: string };
+  let body: { profile_id: number; rating: number; text?: string; review_type?: string };
   try {
     body = await req.json();
   } catch {
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { profile_id, rating, text } = body;
+  const reviewType = body.review_type === "buyer" ? "buyer" : "seller";
 
   if (!profile_id || !rating) {
     return NextResponse.json({ error: "Mangler påkrevde felt" }, { status: 400 });
@@ -63,29 +64,45 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   if (!targetProfile) return NextResponse.json({ error: "Profil ikke funnet" }, { status: 404 });
 
-  // Prevent duplicate reviews from the same reviewer
+  // Prevent duplicate reviews of the same type from the same reviewer
   const { data: existing } = await admin
     .from("reviews")
     .select("id")
     .eq("profile_id", profile_id)
     .eq("reviewer_id", reviewerProfile.id)
+    .eq("review_type", reviewType)
     .limit(1)
     .maybeSingle();
   if (existing) {
     return NextResponse.json({ error: "already_reviewed" }, { status: 409 });
   }
 
-  // Require a completed purchase before allowing a review
-  const { data: purchase } = await admin
-    .from("listings")
-    .select("id")
-    .eq("seller_id", profile_id)
-    .eq("buyer_profile_id", reviewerProfile.id)
-    .eq("is_sold", true)
-    .limit(1)
-    .maybeSingle();
-  if (!purchase) {
-    return NextResponse.json({ error: "no_purchase" }, { status: 403 });
+  if (reviewType === "seller") {
+    // Buyer reviewing seller: require completed purchase from this seller
+    const { data: purchase } = await admin
+      .from("listings")
+      .select("id")
+      .eq("seller_id", profile_id)
+      .eq("buyer_profile_id", reviewerProfile.id)
+      .eq("is_sold", true)
+      .limit(1)
+      .maybeSingle();
+    if (!purchase) {
+      return NextResponse.json({ error: "no_purchase" }, { status: 403 });
+    }
+  } else {
+    // Seller reviewing buyer: require the buyer purchased something from this seller
+    const { data: purchase } = await admin
+      .from("listings")
+      .select("id")
+      .eq("seller_id", reviewerProfile.id)
+      .eq("buyer_profile_id", profile_id)
+      .eq("is_sold", true)
+      .limit(1)
+      .maybeSingle();
+    if (!purchase) {
+      return NextResponse.json({ error: "no_purchase" }, { status: 403 });
+    }
   }
 
   const { error: insertError } = await admin.from("reviews").insert({
@@ -94,6 +111,7 @@ export async function POST(req: NextRequest) {
     text: text?.trim() ?? "",
     author_name: reviewerProfile.name,
     reviewer_id: reviewerProfile.id,
+    review_type: reviewType,
   });
 
   if (insertError) return NextResponse.json({ error: "Intern feil" }, { status: 500 });

@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { showSuccess, showError } from "@/components/Toaster";
 
-type Tab = "innboks" | "annonser" | "tilbud" | "anmeldelser" | "profil";
+type Tab = "innboks" | "annonser" | "tilbud" | "kjøpshistorikk" | "anmeldelser" | "profil";
 
 type UserProfile = {
   id: number;
@@ -62,6 +62,7 @@ type MyListing = {
   views: number;
   images: string[];
   created_at: string;
+  expires_at: string | null;
 };
 
 // ─── Page ────────────────────────────────────────────────
@@ -180,6 +181,7 @@ function DashboardContent() {
           { id: "innboks" as Tab, label: "Innboks" },
           { id: "annonser" as Tab, label: "Mine annonser" },
           { id: "tilbud" as Tab, label: "Tilbud" },
+          { id: "kjøpshistorikk" as Tab, label: "Kjøpshistorikk" },
           { id: "anmeldelser" as Tab, label: "Anmeldelser" },
           { id: "profil" as Tab, label: "Profil" },
         ]).map((t) => (
@@ -212,6 +214,7 @@ function DashboardContent() {
       )}
       {tab === "annonser" && <AnnonserTab profile={profile} userClub={userClub} />}
       {tab === "tilbud" && <TilbudTab profile={profile} />}
+      {tab === "kjøpshistorikk" && <KjøpshistorikkTab profile={profile} />}
       {tab === "anmeldelser" && <AnmedelserTab profile={profile} />}
       {tab === "profil" && (
         <ProfilTab
@@ -849,7 +852,7 @@ function AnnonserTab({ profile, userClub }: { profile: UserProfile; userClub: Us
   useEffect(() => {
     supabase
       .from("listings")
-      .select("id, title, price, category, condition, description, listing_type, is_sold, is_boosted, boosted_until, views, images, created_at")
+      .select("id, title, price, category, condition, description, listing_type, is_sold, is_boosted, boosted_until, views, images, created_at, expires_at")
       .eq("seller_id", profile.id)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
@@ -1045,6 +1048,15 @@ function AnnonserTab({ profile, userClub }: { profile: UserProfile; userClub: Us
                   >
                     {listing.is_sold ? "Solgt" : "Aktiv"}
                   </span>
+                  {!listing.is_sold && listing.expires_at && (() => {
+                    const daysLeft = Math.ceil((new Date(listing.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    if (daysLeft > 14) return null;
+                    return (
+                      <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 ${daysLeft <= 3 ? "bg-red-100 text-red-600" : "bg-amber-50 text-amber-700"}`}>
+                        {daysLeft <= 0 ? "Utløper i dag" : `${daysLeft}d igjen`}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <p className="text-sm font-bold text-forest mt-0.5">
                   {listing.price.toLocaleString("nb-NO")} kr
@@ -1214,6 +1226,82 @@ function AnmedelserTab({ profile }: { profile: UserProfile }) {
           </div>
         ))
       )}
+    </div>
+  );
+}
+
+// ─── Kjøpshistorikk ──────────────────────────────────────
+
+type Transaction = {
+  id: number;
+  amount: number;
+  created_at: string;
+  listings: { id: number; title: string; images: string[] } | null;
+  seller: { name: string } | null;
+};
+
+function KjøpshistorikkTab({ profile }: { profile: UserProfile }) {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("transactions")
+      .select("id, amount, created_at, listings(id, title, images), seller:profiles!transactions_seller_profile_id_fkey(name)")
+      .eq("buyer_profile_id", profile.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setTransactions((data ?? []) as unknown as Transaction[]);
+        setLoading(false);
+      }, () => setLoading(false));
+  }, [profile.id]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-6 w-6 rounded-full border-2 border-forest border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <svg className="mx-auto h-10 w-10 text-border mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+        </svg>
+        <p className="text-ink-light text-sm">Ingen kjøp registrert ennå.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {transactions.map((tx) => (
+        <div key={tx.id} className="bg-white rounded-xl border border-border p-4 flex items-center gap-4">
+          {tx.listings?.images?.[0] ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={tx.listings.images[0]} alt="" className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />
+          ) : (
+            <div className="h-14 w-14 rounded-lg bg-border flex-shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            {tx.listings ? (
+              <Link href={`/annonse/${tx.listings.id}`} className="font-semibold text-sm text-ink hover:text-forest truncate block">
+                {tx.listings.title}
+              </Link>
+            ) : (
+              <p className="font-semibold text-sm text-ink truncate">Slettet annonse</p>
+            )}
+            <p className="text-xs text-ink-light mt-0.5">
+              Fra {tx.seller?.name ?? "ukjent"} · {new Date(tx.created_at).toLocaleDateString("nb-NO")}
+            </p>
+          </div>
+          <div className="text-sm font-bold text-forest flex-shrink-0">
+            {tx.amount.toLocaleString("nb-NO")} kr
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

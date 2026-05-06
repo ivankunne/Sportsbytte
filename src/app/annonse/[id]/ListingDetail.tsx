@@ -13,6 +13,7 @@ import { ConditionBadge } from "@/components/ConditionBadge";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { ListingCard } from "@/components/ListingCard";
 import { ListingChat } from "@/components/ListingChat";
+import { ReportListingButton } from "@/components/ReportListingButton";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sportsbytte.no";
 
@@ -430,11 +431,27 @@ export function ListingDetail({ id }: { id: string }) {
               </h1>
 
               <div className="flex items-baseline gap-2 mt-4 mb-2">
-                <span className="text-3xl font-display font-bold text-forest">
-                  {listing.price.toLocaleString("nb-NO")}
-                </span>
-                <span className="text-lg text-ink-mid">kr</span>
+                {listing.listing_type === "gi_bort" ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 border border-green-300 px-3 py-1 text-lg font-bold text-green-800">
+                    🎁 Gratis
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-3xl font-display font-bold text-forest">
+                      {listing.price.toLocaleString("nb-NO")}
+                    </span>
+                    <span className="text-lg text-ink-mid">kr</span>
+                  </>
+                )}
               </div>
+              {listing.location && (
+                <div className="flex items-center gap-1.5 text-sm text-ink-mid mb-2">
+                  <svg className="h-4 w-4 text-ink-light flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm6 2.5a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {listing.location}
+                </div>
+              )}
               {listing.listing_type === "bulk" && listing.quantity !== null && listing.quantity > 0 && (
                 <p className="text-xs text-ink-light mb-1">{listing.quantity} igjen på lager</p>
               )}
@@ -491,6 +508,21 @@ export function ListingDetail({ id }: { id: string }) {
                       </button>
                     </div>
                   )}
+                </div>
+              ) : listing.listing_type === "gi_bort" ? (
+                <div className="mb-6 space-y-3">
+                  <div className="rounded-lg bg-green-50 border border-green-200 py-3.5 px-4 text-sm text-green-800 text-center font-medium">
+                    🎁 Denne gjenstanden gis bort gratis
+                  </div>
+                  <button
+                    onClick={() => setChatOpen(true)}
+                    className="w-full rounded-lg bg-forest py-3.5 text-sm font-bold text-white hover:bg-forest-mid transition-colors duration-[120ms] flex items-center justify-center gap-2"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                    </svg>
+                    Kontakt selger
+                  </button>
                 </div>
               ) : listing.listing_type === "iso" ? (
                 <div className="mb-6 rounded-lg bg-amber-light border border-amber/30 py-3.5 px-4 text-sm text-amber-dark text-center font-medium">
@@ -701,6 +733,9 @@ export function ListingDetail({ id }: { id: string }) {
                     </div>
                   )}
                 </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-border flex justify-end">
+                <ReportListingButton listingId={Number(id)} />
               </div>
             </div>
           </div>

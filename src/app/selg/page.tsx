@@ -6,9 +6,10 @@ import Link from "next/link";
 import type { Category, Club } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { AuthForm } from "@/components/AuthForm";
+import { NORWEGIAN_CITIES } from "@/lib/norwegian-cities";
 
 type AuthPhase = "checking" | "auth" | "form";
-type ListingType = "regular" | "iso" | "bulk";
+type ListingType = "regular" | "iso" | "bulk" | "gi_bort";
 
 type FormState = {
   title: string;
@@ -19,6 +20,8 @@ type FormState = {
   quantity: string;
   sizeRange: string;
   membersOnly: boolean;
+  location: string;
+  sportAttributes: Record<string, string>;
 };
 
 type DraftData = {
@@ -50,6 +53,23 @@ const INITIAL_FORM: FormState = {
   quantity: "2",
   sizeRange: "",
   membersOnly: false,
+  location: "",
+  sportAttributes: {},
+};
+
+// Sport-specific attribute definitions per category
+const SPORT_ATTRIBUTES: Record<string, { key: string; label: string; placeholder: string }[]> = {
+  "Alpint":        [{ key: "ski_length", label: "Skilengde (cm)", placeholder: "F.eks. 170" }, { key: "boot_size", label: "Støvelstørrelse", placeholder: "F.eks. 26.5" }, { key: "binding", label: "Binding", placeholder: "F.eks. Marker Griffon" }],
+  "Langrenn":      [{ key: "ski_length", label: "Skilengde (cm)", placeholder: "F.eks. 195" }, { key: "boot_size", label: "Støvelstørrelse", placeholder: "F.eks. 43" }],
+  "Ski (andre)":   [{ key: "ski_length", label: "Skilengde (cm)", placeholder: "F.eks. 160" }],
+  "Sykling":       [{ key: "frame_size", label: "Rammestørrelse", placeholder: "F.eks. M / 54 cm" }, { key: "wheel_size", label: "Hjulstørrelse", placeholder: "F.eks. 29 tommer" }, { key: "bike_type", label: "Sykkeltype", placeholder: "F.eks. MTB, Landevei, Gravel" }],
+  "Fotball":       [{ key: "shoe_size", label: "Skostørrelse", placeholder: "F.eks. 42" }],
+  "Ishockey":      [{ key: "skate_size", label: "Skøytestørrelse", placeholder: "F.eks. 9" }, { key: "stick_flex", label: "Stav flex", placeholder: "F.eks. 75" }],
+  "Løping":        [{ key: "shoe_size", label: "Skostørrelse", placeholder: "F.eks. 43" }],
+  "Tennis / Padel":[{ key: "grip_size", label: "Gripstørrelse", placeholder: "F.eks. L2 / 4 1/4" }, { key: "string_pattern", label: "Strenging", placeholder: "F.eks. 16x19" }],
+  "Golf":          [{ key: "shaft_flex", label: "Skaftflex", placeholder: "F.eks. Regular / Stiff" }, { key: "club_type", label: "Kølle-type", placeholder: "F.eks. Jern, Driver, Wedge" }],
+  "Svømming":      [{ key: "suit_size", label: "Drakt størrelse", placeholder: "F.eks. M / 36" }],
+  "Kampsport":     [{ key: "glove_size", label: "Hansker størrelse", placeholder: "F.eks. 12 oz" }],
 };
 
 function detectCategory(title: string, categories: Category[]): string {
@@ -84,6 +104,11 @@ const LISTING_TYPE_ICONS: Record<ListingType, React.ReactNode> = {
   bulk: (
     <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3" />
+    </svg>
+  ),
+  gi_bort: (
+    <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1019.5 7.125c0 1.023-.49 1.93-1.259 2.525A2.625 2.625 0 1012 4.875zm0 0A2.625 2.625 0 104.5 7.125c0 1.023.49 1.93 1.259 2.525M12 4.875V7.5m0 0H8.25M12 7.5h3.75M12 7.5v9.375" />
     </svg>
   ),
 };
@@ -143,6 +168,8 @@ function SellPageContent() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function prefillFromSession(authUserId: string) {
+    const { data: { session } } = await supabase.auth.getSession();
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("id, club_id")
@@ -160,19 +187,38 @@ function SellPageContent() {
           .maybeSingle();
         if (club) setUserClub(club);
       }
-    }
 
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) {
-        const draft = JSON.parse(raw) as DraftData;
-        const age = Date.now() - new Date(draft.savedAt).getTime();
-        if (age < 24 * 60 * 60 * 1000 && draft.form.title) {
-          setPendingDraft(draft);
-          setShowDraftBanner(true);
+      // Load DB draft first, fall back to localStorage
+      if (session) {
+        try {
+          const res = await fetch("/api/listing-draft", {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          const { draft } = await res.json();
+          if (draft?.form_data?.form?.title) {
+            const age = Date.now() - new Date(draft.updated_at).getTime();
+            if (age < 7 * 24 * 60 * 60 * 1000) {
+              setPendingDraft({ ...draft.form_data, savedAt: draft.updated_at });
+              setShowDraftBanner(true);
+            }
+          }
+        } catch {
+          // Fall back to localStorage
+          try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (raw) {
+              const draft = JSON.parse(raw) as DraftData;
+              const age = Date.now() - new Date(draft.savedAt).getTime();
+              if (age < 24 * 60 * 60 * 1000 && draft.form.title) {
+                setPendingDraft(draft);
+                setShowDraftBanner(true);
+              }
+            }
+          } catch {}
         }
       }
-    } catch {}
+    }
+
     try {
       const tpl = localStorage.getItem(TEMPLATE_KEY);
       if (tpl) setSavedTemplate(JSON.parse(tpl) as TemplateData);
@@ -215,16 +261,28 @@ function SellPageContent() {
     if (detected) setSelectedCategory(detected);
   }, [form.title]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Draft auto-save (debounced 800ms)
+  // Draft auto-save (debounced 800ms) — local + DB
   useEffect(() => {
     if (authPhase !== "form") return;
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       if (!form.title && !selectedCategory) return;
       const draft: DraftData = {
         form, selectedCategory, listingType, deliveryMethod, fastMode,
         savedAt: new Date().toISOString(),
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      // Also persist to DB (best-effort)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        fetch("/api/listing-draft", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(draft),
+        }).catch(() => {});
+      }
     }, 800);
     return () => clearTimeout(timer);
   }, [form, selectedCategory, listingType, deliveryMethod, fastMode, authPhase]);
@@ -337,11 +395,12 @@ function SellPageContent() {
     const effectiveListingType = fastMode ? "regular" : listingType;
     const isISO = effectiveListingType === "iso";
     const isBulk = effectiveListingType === "bulk";
+    const isGiBort = effectiveListingType === "gi_bort";
 
     if (!selectedCategory) return setError("Velg en kategori");
     if (!form.title.trim()) return setError("Skriv inn en tittel");
-    if (!fastMode && !isISO && !effectiveCondition) return setError("Velg stand på utstyret");
-    if (!isISO && !form.price) return setError("Skriv inn pris");
+    if (!fastMode && !isISO && !isGiBort && !effectiveCondition) return setError("Velg stand på utstyret");
+    if (!isISO && !isGiBort && !form.price) return setError("Skriv inn pris");
 
     if (!userProfileId) return setError("Profil ikke funnet. Prøv å logge inn på nytt.");
 
@@ -356,9 +415,14 @@ function SellPageContent() {
       if (form.wearDescription) specs["Slitasje"] = form.wearDescription;
       if (isBulk && form.quantity) specs["Antall"] = form.quantity;
       if (isBulk && form.sizeRange) specs["Størrelser"] = form.sizeRange;
+      // Merge sport-specific attributes
+      Object.assign(specs, form.sportAttributes);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Ikke innlogget");
+
+      // Resolve lat/lng for location
+      const cityCoords = NORWEGIAN_CITIES.find((c) => c.name === form.location);
 
       const res = await fetch("/api/create-listing", {
         method: "POST",
@@ -370,8 +434,8 @@ function SellPageContent() {
           title: form.title.trim(),
           description: form.description.trim() || null,
           category: selectedCategory,
-          condition: isISO ? "Søker" : effectiveCondition,
-          price: parseInt(form.price || "0"),
+          condition: isISO ? "Søker" : isGiBort ? "Gi bort" : effectiveCondition,
+          price: isISO || isGiBort ? 0 : parseInt(form.price || "0"),
           images: imageUrls,
           specs,
           club_id: selectedClubId,
@@ -381,6 +445,9 @@ function SellPageContent() {
           size_range: isISO ? null : form.sizeRange || null,
           delivery_method: isISO ? null : deliveryMethod,
           is_sold: false,
+          location: form.location || null,
+          lat: cityCoords?.lat ?? null,
+          lng: cityCoords?.lng ?? null,
         }),
       });
 
@@ -397,8 +464,10 @@ function SellPageContent() {
 
   const isISO = !fastMode && listingType === "iso";
   const isBulk = !fastMode && listingType === "bulk";
-  const step4Num = isISO ? "3" : "4";
-  const step5Num = isISO ? "4" : "5";
+  const isGiBort = !fastMode && listingType === "gi_bort";
+  const noPhotoStep = isISO || isGiBort;
+  const step4Num = noPhotoStep ? "3" : "4";
+  const step5Num = noPhotoStep ? "4" : "5";
 
   if (authPhase === "checking") {
     return (
@@ -599,6 +668,8 @@ function SellPageContent() {
           ? "Publiser ettersøk"
           : isBulk
           ? "Publiser massesalg"
+          : isGiBort
+          ? "🎁 Publiser gratis annonse"
           : "Publiser annonse"}
       </button>
       <p className="mt-4 text-center text-xs text-ink-light">
@@ -783,6 +854,24 @@ function SellPageContent() {
             />
           </div>
 
+          {/* Location */}
+          <div className="bg-white rounded-xl p-6">
+            <label htmlFor="fast-location" className="block text-sm font-medium text-ink mb-1.5">
+              Sted <span className="text-ink-light font-normal">(valgfritt)</span>
+            </label>
+            <select
+              id="fast-location"
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+            >
+              <option value="">Velg by / sted</option>
+              {NORWEGIAN_CITIES.map((c) => (
+                <option key={c.name} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Club */}
           {clubSection}
 
@@ -798,11 +887,12 @@ function SellPageContent() {
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-forest text-white text-sm font-bold">1</span>
               <h2 className="font-display text-xl font-semibold text-ink">Type annonse</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {([
                 { id: "regular" as const, label: "Selg utstyr", desc: "Selg ett enkelt utstyr" },
                 { id: "iso" as const, label: "Ettersøk (ISO)", desc: "Søker etter bestemt utstyr" },
                 { id: "bulk" as const, label: "Massesalg", desc: "Selg lag-utstyr i bulk" },
+                { id: "gi_bort" as const, label: "Gi bort gratis", desc: "Gi bort utstyr du ikke trenger" },
               ]).map((type) => (
                 <button
                   key={type.id}
@@ -850,7 +940,7 @@ function SellPageContent() {
           </section>
 
           {/* Step 3: Photos */}
-          {!isISO && (
+          {!noPhotoStep && (
             <section>
               <div className="flex items-center gap-3 mb-5">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-forest text-white text-sm font-bold">3</span>
@@ -886,7 +976,7 @@ function SellPageContent() {
                 />
               </div>
 
-              {!isISO && (
+              {!isISO && !isGiBort && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label htmlFor="condition" className="block text-sm font-medium text-ink mb-1.5">Stand</label>
@@ -919,7 +1009,13 @@ function SellPageContent() {
                 </div>
               )}
 
-              {!isISO && (
+              {isGiBort && (
+                <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+                  🎁 Gi bort-annonser er gratis. Ingen betaling — avtalt direkte mellom giver og mottaker.
+                </div>
+              )}
+
+              {!isISO && !isGiBort && (
                 <div>
                   <label htmlFor="sizeRange" className="block text-sm font-medium text-ink mb-1.5">
                     {isBulk ? "Størrelser tilgjengelig" : "Størrelse (valgfritt)"}
@@ -935,7 +1031,7 @@ function SellPageContent() {
                 </div>
               )}
 
-              {!isISO && (
+              {!isISO && !isGiBort && (
                 <div>
                   <label htmlFor="wear" className="block text-sm font-medium text-ink mb-1.5">Nøyaktig stand</label>
                   <textarea
@@ -949,22 +1045,24 @@ function SellPageContent() {
                 </div>
               )}
 
-              <div>
-                <label htmlFor="price" className="block text-sm font-medium text-ink mb-1.5">
-                  {isISO ? "Budsjett / maks pris (valgfritt)" : isBulk ? "Pris per enhet (NOK)" : "Pris (NOK)"}
-                </label>
-                <div className="relative">
-                  <input
-                    id="price"
-                    type="number"
-                    value={form.price}
-                    onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    placeholder="0"
-                    className="w-full rounded-lg border border-border px-4 py-3 text-2xl font-bold text-forest placeholder:text-ink-light/40 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg text-ink-light">kr</span>
+              {!isGiBort && (
+                <div>
+                  <label htmlFor="price" className="block text-sm font-medium text-ink mb-1.5">
+                    {isISO ? "Budsjett / maks pris (valgfritt)" : isBulk ? "Pris per enhet (NOK)" : "Pris (NOK)"}
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="price"
+                      type="number"
+                      value={form.price}
+                      onChange={(e) => setForm({ ...form, price: e.target.value })}
+                      placeholder="0"
+                      className="w-full rounded-lg border border-border px-4 py-3 text-2xl font-bold text-forest placeholder:text-ink-light/40 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg text-ink-light">kr</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label htmlFor="description" className="block text-sm font-medium text-ink mb-1.5">
@@ -983,6 +1081,48 @@ function SellPageContent() {
                   className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
                 />
               </div>
+
+              {/* Location */}
+              <div>
+                <label htmlFor="location" className="block text-sm font-medium text-ink mb-1.5">
+                  Sted <span className="text-ink-light font-normal">(valgfritt)</span>
+                </label>
+                <select
+                  id="location"
+                  value={form.location}
+                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  className="w-full rounded-lg border border-border px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                >
+                  <option value="">Velg by / sted</option>
+                  {NORWEGIAN_CITIES.map((c) => (
+                    <option key={c.name} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sport-specific attributes */}
+              {selectedCategory && SPORT_ATTRIBUTES[selectedCategory] && (
+                <div>
+                  <p className="block text-sm font-medium text-ink mb-3">Spesifikasjoner for {selectedCategory}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {SPORT_ATTRIBUTES[selectedCategory].map((attr) => (
+                      <div key={attr.key}>
+                        <label className="block text-xs font-medium text-ink-mid mb-1">{attr.label}</label>
+                        <input
+                          type="text"
+                          value={form.sportAttributes[attr.key] ?? ""}
+                          onChange={(e) => setForm({
+                            ...form,
+                            sportAttributes: { ...form.sportAttributes, [attr.key]: e.target.value },
+                          })}
+                          placeholder={attr.placeholder}
+                          className="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink placeholder:text-ink-light focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 

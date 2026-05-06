@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   const { data: listing } = await admin
     .from("listings")
-    .select("id, created_at, is_sold")
+    .select("id, created_at, expires_at, is_sold")
     .eq("id", listingId)
     .eq("seller_id", profile.id)
     .maybeSingle();
@@ -48,7 +48,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  await admin.from("listings").update({ created_at: new Date().toISOString() }).eq("id", listingId);
+  const newExpiresAt = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString();
+  await admin.from("listings").update({
+    created_at: new Date().toISOString(),
+    expires_at: newExpiresAt,
+  }).eq("id", listingId);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, expires_at: newExpiresAt });
 }

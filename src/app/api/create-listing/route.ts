@@ -18,6 +18,7 @@ const ALLOWED_COLUMNS = [
   "title", "description", "category", "condition", "price",
   "images", "specs", "club_id", "listing_type", "members_only",
   "quantity", "size_range", "is_sold", "delivery_method",
+  "location", "lat", "lng",
 ] as const;
 
 export async function POST(req: NextRequest) {
@@ -77,6 +78,8 @@ export async function POST(req: NextRequest) {
   }
 
   filtered.title = title;
+  // Set expiry 42 days from now
+  filtered.expires_at = new Date(Date.now() + 42 * 24 * 60 * 60 * 1000).toISOString();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await supabase
@@ -86,6 +89,9 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (error || !data) return NextResponse.json({ error: "Intern feil" }, { status: 500 });
+
+  // Clear any saved draft for this seller
+  await supabase.from("listing_drafts").delete().eq("seller_id", profile.id).then(() => {}, () => {});
 
   const clubId = filtered.club_id as number | null | undefined;
   if (clubId) {
