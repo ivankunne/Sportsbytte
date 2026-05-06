@@ -16,6 +16,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // TODO: re-enable when moving to production — set DIGEST_ENABLED=true in env
+  if (process.env.DIGEST_ENABLED !== "true") {
+    return NextResponse.json({ sent: 0, disabled: true });
+  }
+
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   // Get all clubs
@@ -71,12 +76,12 @@ export async function GET(req: NextRequest) {
       if (!profile?.auth_user_id) continue;
 
       const { data: authData } = await admin.auth.admin.getUserById(profile.auth_user_id);
-      const email = authData.user?.email;
-      if (!email) continue;
+      const userEmail = authData.user?.email;
+      if (!userEmail) continue;
 
       resend.emails.send({
         from: FROM,
-        to: email,
+        to: userEmail,
         subject: `${newListings.length} nye annonser fra ${club.name} denne uken`,
         html,
       }).catch(() => {});

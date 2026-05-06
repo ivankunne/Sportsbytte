@@ -34,6 +34,12 @@ export async function POST(req: NextRequest) {
     footerNote: `Du har fått denne e-posten fordi en klubbadministrator i ${safeClub} har invitert deg til Sportsbytte. Hvis du ikke ønsker å bli med, kan du ignorere denne e-posten.`,
   });
 
+  // TODO: re-enable when moving to production — set BULK_INVITE_ENABLED=true in env
+  if (process.env.BULK_INVITE_ENABLED !== "true") {
+    const validEmails = emails.filter((e) => e.trim().includes("@")).slice(0, 200);
+    return NextResponse.json({ sent: 0, errors: [], disabled: true, would_send_to: validEmails.length });
+  }
+
   let sent = 0;
   const errors: string[] = [];
 
