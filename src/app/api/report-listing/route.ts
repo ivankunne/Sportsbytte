@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   });
   resend.emails.send({
     from: FROM,
-    to: "Ivan@box.no",
+    to: "ivan@frameflow.no",
     subject: `[Rapport] Annonse #${listingId} — ${reasonLabel}`,
     html,
   }).catch(() => {});
