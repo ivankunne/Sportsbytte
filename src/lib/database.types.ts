@@ -164,6 +164,7 @@ export type Database = {
           stripe_subscription_id: string | null
           total_sold: number
           updated_at: string
+          vipps_agreement_id: string | null
         }
         Insert: {
           active_listings?: number
@@ -188,6 +189,7 @@ export type Database = {
           slug: string
           total_sold?: number
           updated_at?: string
+          vipps_agreement_id?: string | null
         }
         Update: {
           active_listings?: number
@@ -212,6 +214,7 @@ export type Database = {
           stripe_subscription_id?: string | null
           total_sold?: number
           updated_at?: string
+          vipps_agreement_id?: string | null
         }
         Relationships: []
       }
@@ -385,6 +388,7 @@ export type Database = {
           total_sold: number
           updated_at: string
           vipps_phone: string | null
+          vipps_agreement_id: string | null
         }
         Insert: {
           auth_user_id?: string | null
@@ -405,6 +409,7 @@ export type Database = {
           total_sold?: number
           updated_at?: string
           vipps_phone?: string | null
+          vipps_agreement_id?: string | null
         }
         Update: {
           auth_user_id?: string | null
@@ -425,6 +430,7 @@ export type Database = {
           total_sold?: number
           updated_at?: string
           vipps_phone?: string | null
+          vipps_agreement_id?: string | null
         }
         Relationships: [
           {
@@ -829,6 +835,12 @@ export type Database = {
           amount: number
           stripe_payment_intent_id: string | null
           created_at: string
+          status: string
+          provider: string
+          release_at: string | null
+          confirmed_at: string | null
+          disputed_at: string | null
+          vipps_reference: string | null
         }
         Insert: {
           id?: never
@@ -838,6 +850,12 @@ export type Database = {
           amount: number
           stripe_payment_intent_id?: string | null
           created_at?: string
+          status?: string
+          provider?: string
+          release_at?: string | null
+          confirmed_at?: string | null
+          disputed_at?: string | null
+          vipps_reference?: string | null
         }
         Update: {
           id?: never
@@ -847,6 +865,12 @@ export type Database = {
           amount?: number
           stripe_payment_intent_id?: string | null
           created_at?: string
+          status?: string
+          provider?: string
+          release_at?: string | null
+          confirmed_at?: string | null
+          disputed_at?: string | null
+          vipps_reference?: string | null
         }
         Relationships: []
       }

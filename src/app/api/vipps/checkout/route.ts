@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "crypto";
 import type { Database } from "@/lib/database.types";
-import { stripe, platformFee } from "@/lib/stripe";
+import { createPayment, platformFeeNok } from "@/lib/vipps";
 
 const admin = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,7 +13,7 @@ const anonClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Per-user rate limit: max 5 checkout attempts per minute (per serverless instance)
+// Per-user rate limit: max 5 checkout attempts per minute (per serverless instance).
 const checkoutAttempts = new Map<string, { count: number; resetAt: number }>();
 function isRateLimited(userId: string): boolean {
   const now = Date.now();
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   const { data: listing } = await admin
     .from("listings")
-    .select("id, title, price, is_sold, seller_id, images, members_only, club_id, quantity, clubs(is_pro), profiles(id, stripe_account_id, stripe_onboarding_complete, is_pro)")
+    .select("id, title, price, is_sold, seller_id, images, members_only, club_id, quantity, clubs(is_pro), profiles(id, is_pro)")
     .eq("id", listing_id)
     .maybeSingle();
 
@@ -54,25 +55,20 @@ export async function POST(req: NextRequest) {
   if (listing.is_sold) return NextResponse.json({ error: "Annonsen er allerede solgt" }, { status: 400 });
   if (listing.quantity !== null && listing.quantity <= 0) return NextResponse.json({ error: "Annonsen er utsolgt" }, { status: 400 });
 
-  const seller = listing.profiles as { id: number; stripe_account_id: string | null; stripe_onboarding_complete: boolean; is_pro?: boolean } | null;
+  const seller = listing.profiles as { id: number; is_pro?: boolean } | null;
   const clubIsPro = (listing.clubs as { is_pro: boolean } | null)?.is_pro ?? false;
   const isPro = clubIsPro || (seller?.is_pro ?? false);
 
-  if (!seller?.stripe_account_id || !seller.stripe_onboarding_complete) {
-    return NextResponse.json({ error: "seller_onboarding_incomplete" }, { status: 400 });
-  }
-
-  // Prevent seller from buying their own listing
   const { data: buyerProfile } = await admin
     .from("profiles")
     .select("id")
     .eq("auth_user_id", user.id)
     .maybeSingle();
-  if (buyerProfile?.id === seller.id) {
+
+  if (buyerProfile?.id === seller?.id) {
     return NextResponse.json({ error: "Du kan ikke kjøpe din egen annonse" }, { status: 400 });
   }
 
-  // Enforce members_only listings — buyer must be an approved club member
   if (listing.members_only && listing.club_id && buyerProfile) {
     const { data: membership } = await admin
       .from("memberships")
@@ -86,43 +82,51 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
-  const amountOre = listing.price * 100;
-  const feeOre = platformFee(listing.price, isPro);
+  // Prevent duplicate active checkout for same buyer+listing
+  if (buyerProfile) {
+    const { data: existing } = await admin
+      .from("transactions")
+      .select("id")
+      .eq("listing_id", listing.id)
+      .eq("buyer_profile_id", buyerProfile.id)
+      .in("status", ["pending", "pending_confirmation"])
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json(
+        { error: "Du har allerede en aktiv betaling for denne annonsen. Sjekk kjøpshistorikken din." },
+        { status: 409 }
+      );
+    }
+  }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    payment_method_types: ["card"],
-    currency: "nok",
-    line_items: [
-      {
-        price_data: {
-          currency: "nok",
-          unit_amount: amountOre,
-          product_data: {
-            name: listing.title,
-            ...(listing.images?.[0] ? { images: [listing.images[0]] } : {}),
-          },
-        },
-        quantity: 1,
-      },
-      {
-        price_data: {
-          currency: "nok",
-          unit_amount: feeOre,
-          product_data: { name: "Servicegebyr" },
-        },
-        quantity: 1,
-      },
-    ],
-    payment_intent_data: {
-      application_fee_amount: feeOre,
-      transfer_data: { destination: seller.stripe_account_id },
-    },
-    success_url: `${siteUrl}/stripe/success?session_id={CHECKOUT_SESSION_ID}&listing_id=${listing.id}`,
-    cancel_url: `${siteUrl}/annonse/${listing.id}`,
-    metadata: { listing_id: String(listing.id), buyer_auth_id: user.id },
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
+  const callbackSecret = process.env.VIPPS_CALLBACK_SECRET ?? "";
+  const feeNok = platformFeeNok(listing.price, isPro);
+  const totalNok = listing.price + feeNok;
+  const reference = randomUUID();
+
+  if (buyerProfile) {
+    await admin.from("transactions").insert({
+      listing_id: listing.id,
+      buyer_profile_id: buyerProfile.id,
+      seller_profile_id: listing.seller_id,
+      amount: listing.price,
+      vipps_reference: reference,
+      provider: "vipps",
+      status: "pending",
+      release_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+  }
+
+  const payment = await createPayment({
+    reference,
+    totalNok,
+    description: listing.title,
+    returnUrl: `${siteUrl}/vipps/success?reference=${reference}&listing_id=${listing.id}`,
+    // Vipps sends this token as the Authorization header in callbacks — never exposed in URLs or logs
+    callbackUrl: `${siteUrl}/api/vipps/callback`,
+    callbackAuthorizationToken: callbackSecret,
   });
 
-  return NextResponse.json({ url: session.url });
+  return NextResponse.json({ url: payment.redirectUrl });
 }

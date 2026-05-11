@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 const ADMIN_API_ROUTES = [
   "/api/admin/action",
   "/api/approve-club",
+  "/api/vipps/pro-subscribe",
 ];
 
 const BEARER_ROUTES = [
@@ -14,6 +15,10 @@ const BEARER_ROUTES = [
   "/api/stripe/seller-pro-subscribe",
   "/api/stripe/seller-pro-cancel",
   "/api/stripe/boost-listing",
+  "/api/vipps/checkout",
+  "/api/vipps/release-payment",
+  "/api/vipps/dispute",
+  "/api/vipps/seller-pro-subscribe",
 ];
 
 export async function middleware(req: NextRequest) {

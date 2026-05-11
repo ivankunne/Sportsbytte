@@ -24,6 +24,8 @@ type UserProfile = {
   stripe_onboarding_complete: boolean;
   is_pro: boolean;
   stripe_subscription_id: string | null;
+  vipps_phone: string | null;
+  vipps_agreement_id: string | null;
 };
 
 type UserClub = { id: number; name: string; slug: string };
@@ -1240,25 +1242,125 @@ type Transaction = {
   id: number;
   amount: number;
   created_at: string;
+  status: string;
+  provider: string;
   listings: { id: number; title: string; images: string[] } | null;
-  seller: { name: string } | null;
+  seller: { id: number; name: string } | null;
 };
 
+type MySale = {
+  id: number;
+  amount: number;
+  created_at: string;
+  status: string;
+  provider: string;
+  release_at: string | null;
+  listings: { id: number; title: string; images: string[] } | null;
+  buyer: { name: string } | null;
+};
+
+function statusBadge(status: string, role: "buyer" | "seller") {
+  if (status === "pending_confirmation") {
+    return role === "buyer"
+      ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Bekreft mottak</span>
+      : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Venter på kjøper</span>;
+  }
+  if (status === "released") return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-forest-light text-forest">Betalt ut</span>;
+  if (status === "disputed") return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600">Under behandling</span>;
+  return null;
+}
+
 function KjøpshistorikkTab({ profile }: { profile: UserProfile }) {
+  const [view, setView] = useState<"kjøp" | "salg">("kjøp");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [sales, setSales] = useState<MySale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState<number | null>(null);
+  const [disputeModal, setDisputeModal] = useState<{ txId: number } | null>(null);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [ratingModal, setRatingModal] = useState<{ sellerId: number; sellerName: string } | null>(null);
+  const [rating, setRating] = useState(5);
+  const [ratingText, setRatingText] = useState("");
+  const [ratingLoading, setRatingLoading] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("transactions")
-      .select("id, amount, created_at, listings(id, title, images), seller:profiles!transactions_seller_profile_id_fkey(name)")
-      .eq("buyer_profile_id", profile.id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setTransactions((data ?? []) as unknown as Transaction[]);
-        setLoading(false);
-      }, () => setLoading(false));
+    Promise.all([
+      supabase
+        .from("transactions")
+        .select("id, amount, created_at, status, provider, listings(id, title, images), seller:profiles!transactions_seller_profile_id_fkey(id, name)")
+        .eq("buyer_profile_id", profile.id)
+        .neq("status", "pending")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("transactions")
+        .select("id, amount, created_at, status, provider, release_at, listings(id, title, images), buyer:profiles!transactions_buyer_profile_id_fkey(name)")
+        .eq("seller_profile_id", profile.id)
+        .neq("status", "pending")
+        .order("created_at", { ascending: false }),
+    ]).then(([purchasesRes, salesRes]) => {
+      setTransactions((purchasesRes.data ?? []) as unknown as Transaction[]);
+      setSales((salesRes.data ?? []) as unknown as MySale[]);
+      setLoading(false);
+    });
   }, [profile.id]);
+
+  async function handleConfirm(txId: number, sellerId: number, sellerName: string) {
+    setActing(txId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setActing(null); return; }
+    const res = await fetch("/api/vipps/release-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ transaction_id: txId }),
+    });
+    const json = await res.json();
+    if (json.ok) {
+      setTransactions((prev) => prev.map((tx) => tx.id === txId ? { ...tx, status: "released" } : tx));
+      setRatingModal({ sellerId, sellerName });
+    } else {
+      showError(json.error ?? "Noe gikk galt");
+    }
+    setActing(null);
+  }
+
+  async function handleDispute() {
+    if (!disputeModal) return;
+    setActing(disputeModal.txId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setActing(null); return; }
+    const res = await fetch("/api/vipps/dispute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ transaction_id: disputeModal.txId, reason: disputeReason }),
+    });
+    const json = await res.json();
+    if (json.ok) {
+      setTransactions((prev) => prev.map((tx) => tx.id === disputeModal.txId ? { ...tx, status: "disputed" } : tx));
+      setDisputeModal(null);
+      setDisputeReason("");
+      showSuccess("Problem rapportert. Vi kontakter deg innen 3 virkedager.");
+    } else {
+      showError(json.error ?? "Noe gikk galt");
+    }
+    setActing(null);
+  }
+
+  async function submitRating() {
+    if (!ratingModal) return;
+    setRatingLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setRatingLoading(false); return; }
+    await fetch("/api/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ profile_id: ratingModal.sellerId, rating, text: ratingText, review_type: "seller" }),
+    });
+    setRatingModal(null);
+    setRating(5);
+    setRatingText("");
+    showSuccess("Vurdering sendt!");
+    setRatingLoading(false);
+  }
 
   if (loading) {
     return (
@@ -1268,44 +1370,205 @@ function KjøpshistorikkTab({ profile }: { profile: UserProfile }) {
     );
   }
 
-  if (transactions.length === 0) {
-    return (
-      <div className="text-center py-16">
-        <svg className="mx-auto h-10 w-10 text-border mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
-        </svg>
-        <p className="text-ink-light text-sm">Ingen kjøp registrert ennå.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-3">
-      {transactions.map((tx) => (
-        <div key={tx.id} className="bg-white rounded-xl border border-border p-4 flex items-center gap-4">
-          {tx.listings?.images?.[0] ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={tx.listings.images[0]} alt="" className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />
-          ) : (
-            <div className="h-14 w-14 rounded-lg bg-border flex-shrink-0" />
-          )}
-          <div className="flex-1 min-w-0">
-            {tx.listings ? (
-              <Link href={`/annonse/${tx.listings.id}`} className="font-semibold text-sm text-ink hover:text-forest truncate block">
-                {tx.listings.title}
-              </Link>
-            ) : (
-              <p className="font-semibold text-sm text-ink truncate">Slettet annonse</p>
-            )}
-            <p className="text-xs text-ink-light mt-0.5">
-              Fra {tx.seller?.name ?? "ukjent"} · {new Date(tx.created_at).toLocaleDateString("nb-NO")}
-            </p>
+    <div className="space-y-4">
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-cream rounded-xl p-1 w-fit">
+        {(["kjøp", "salg"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors duration-[120ms] capitalize ${view === v ? "bg-white text-ink shadow-sm" : "text-ink-light hover:text-ink"}`}
+          >
+            {v === "kjøp" ? "Mine kjøp" : "Mine salg"}
+          </button>
+        ))}
+      </div>
+
+      {/* Purchases */}
+      {view === "kjøp" && (
+        transactions.length === 0 ? (
+          <div className="text-center py-16">
+            <svg className="mx-auto h-10 w-10 text-border mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+            </svg>
+            <p className="text-ink-light text-sm">Ingen kjøp registrert ennå.</p>
           </div>
-          <div className="text-sm font-bold text-forest flex-shrink-0">
-            {tx.amount.toLocaleString("nb-NO")} kr
+        ) : (
+          <div className="space-y-3">
+            {transactions.map((tx) => (
+              <div key={tx.id} className="bg-white rounded-xl border border-border p-4 space-y-3">
+                <div className="flex items-center gap-4">
+                  {tx.listings?.images?.[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={tx.listings.images[0]} alt="" className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="h-14 w-14 rounded-lg bg-border flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    {tx.listings ? (
+                      <Link href={`/annonse/${tx.listings.id}`} className="font-semibold text-sm text-ink hover:text-forest truncate block">
+                        {tx.listings.title}
+                      </Link>
+                    ) : (
+                      <p className="font-semibold text-sm text-ink truncate">Slettet annonse</p>
+                    )}
+                    <p className="text-xs text-ink-light mt-0.5">
+                      Fra {tx.seller?.name ?? "ukjent"} · {new Date(tx.created_at).toLocaleDateString("nb-NO")}
+                    </p>
+                    <div className="mt-1">{statusBadge(tx.status, "buyer")}</div>
+                  </div>
+                  <div className="text-sm font-bold text-forest flex-shrink-0">
+                    {tx.amount.toLocaleString("nb-NO")} kr
+                  </div>
+                </div>
+                {tx.status === "pending_confirmation" && tx.provider === "vipps" && tx.seller && (
+                  <div className="flex gap-2 pt-1 border-t border-border">
+                    <button
+                      onClick={() => handleConfirm(tx.id, tx.seller!.id, tx.seller!.name)}
+                      disabled={acting === tx.id}
+                      className="flex-1 rounded-lg bg-forest py-2 text-xs font-semibold text-white hover:bg-forest-mid transition-colors disabled:opacity-50"
+                    >
+                      {acting === tx.id ? "..." : "✓ Mottatt"}
+                    </button>
+                    <button
+                      onClick={() => setDisputeModal({ txId: tx.id })}
+                      disabled={acting === tx.id}
+                      className="flex-1 rounded-lg border border-border py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                    >
+                      Rapporter problem
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Sales */}
+      {view === "salg" && (
+        sales.length === 0 ? (
+          <div className="text-center py-16">
+            <svg className="mx-auto h-10 w-10 text-border mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33" />
+            </svg>
+            <p className="text-ink-light text-sm">Ingen salg registrert ennå.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sales.map((sale) => (
+              <div key={sale.id} className="bg-white rounded-xl border border-border p-4 flex items-center gap-4">
+                {sale.listings?.images?.[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={sale.listings.images[0]} alt="" className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-14 w-14 rounded-lg bg-border flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  {sale.listings ? (
+                    <Link href={`/annonse/${sale.listings.id}`} className="font-semibold text-sm text-ink hover:text-forest truncate block">
+                      {sale.listings.title}
+                    </Link>
+                  ) : (
+                    <p className="font-semibold text-sm text-ink truncate">Slettet annonse</p>
+                  )}
+                  <p className="text-xs text-ink-light mt-0.5">
+                    Til {sale.buyer?.name ?? "ukjent"} · {new Date(sale.created_at).toLocaleDateString("nb-NO")}
+                  </p>
+                  <div className="mt-1">{statusBadge(sale.status, "seller")}</div>
+                  {sale.status === "pending_confirmation" && sale.release_at && (
+                    <p className="text-xs text-ink-light mt-0.5">
+                      Frigjøres automatisk {new Date(sale.release_at).toLocaleDateString("nb-NO")}
+                    </p>
+                  )}
+                </div>
+                <div className="text-sm font-bold text-forest flex-shrink-0">
+                  {sale.amount.toLocaleString("nb-NO")} kr
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Dispute modal */}
+      {disputeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setDisputeModal(null); setDisputeReason(""); }} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <h2 className="font-display text-lg font-bold text-ink">Rapporter problem</h2>
+            <p className="text-sm text-ink-mid">Beskriv hva som er galt. Vi behandler saken innen 3 virkedager og holder betalingen tilbake i mellomtiden.</p>
+            <textarea
+              value={disputeReason}
+              onChange={(e) => setDisputeReason(e.target.value)}
+              rows={4}
+              placeholder="Beskriv problemet..."
+              className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => { setDisputeModal(null); setDisputeReason(""); }} className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-ink hover:bg-cream transition-colors">
+                Avbryt
+              </button>
+              <button
+                onClick={handleDispute}
+                disabled={!disputeReason.trim() || acting !== null}
+                className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-40"
+              >
+                {acting !== null ? "Sender..." : "Send rapport"}
+              </button>
+            </div>
           </div>
         </div>
-      ))}
+      )}
+
+      {/* Rating modal */}
+      {ratingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setRatingModal(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="text-center space-y-1">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-forest-light mb-2">
+                <svg className="h-6 w-6 text-forest" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </div>
+              <h2 className="font-display text-lg font-bold text-ink">Vare mottatt!</h2>
+              <p className="text-sm text-ink-mid">Hva synes du om {ratingModal.sellerName}?</p>
+            </div>
+            <div className="flex justify-center gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setRating(star)}
+                  className={`text-3xl transition-transform duration-[80ms] hover:scale-110 ${star <= rating ? "text-amber-400" : "text-border"}`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={ratingText}
+              onChange={(e) => setRatingText(e.target.value)}
+              rows={3}
+              placeholder="Legg til en kommentar (valgfritt)..."
+              className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setRatingModal(null)} className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-ink hover:bg-cream transition-colors">
+                Hopp over
+              </button>
+              <button
+                onClick={submitRating}
+                disabled={ratingLoading}
+                className="flex-1 rounded-lg bg-forest py-2.5 text-sm font-semibold text-white hover:bg-forest-mid transition-colors disabled:opacity-50"
+              >
+                {ratingLoading ? "Sender..." : "Send vurdering"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1470,11 +1733,13 @@ function SelgerProCard({ profile }: { profile: UserProfile }) {
   const [loading, setLoading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
+  const provider = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER === "vipps" ? "vipps" : "stripe";
+
   async function handleSubscribe() {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setLoading(false); return; }
-    const res = await fetch("/api/stripe/seller-pro-subscribe", {
+    const res = await fetch(`/api/${provider}/seller-pro-subscribe`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${session.access_token}` },
     });
@@ -1488,7 +1753,7 @@ function SelgerProCard({ profile }: { profile: UserProfile }) {
     setCancelling(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setCancelling(false); return; }
-    const res = await fetch("/api/stripe/seller-pro-cancel", {
+    const res = await fetch(`/api/${provider}/seller-pro-cancel`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${session.access_token}` },
     });
@@ -1556,6 +1821,7 @@ function ProfilTab({
   const [form, setForm] = useState({
     name: profile.name,
     bio: profile.bio ?? "",
+    vipps_phone: profile.vipps_phone ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -1613,6 +1879,7 @@ function ProfilTab({
       .update({
         name: form.name.trim(),
         bio: form.bio.trim(),
+        vipps_phone: form.vipps_phone.trim() || null,
       })
       .eq("id", profile.id);
 
@@ -1622,6 +1889,7 @@ function ProfilTab({
       onSave({
         name: form.name.trim(),
         bio: form.bio.trim(),
+        vipps_phone: form.vipps_phone.trim() || null,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -1700,6 +1968,22 @@ function ProfilTab({
           />
         </div>
 
+
+        {process.env.NEXT_PUBLIC_PAYMENT_PROVIDER === "vipps" && (
+          <div>
+            <label className="block text-xs font-medium text-ink mb-1.5">
+              Vipps-nummer <span className="text-ink-light font-normal">(for å motta betaling for salg)</span>
+            </label>
+            <input
+              type="tel"
+              value={form.vipps_phone}
+              onChange={(e) => setForm((f) => ({ ...f, vipps_phone: e.target.value }))}
+              placeholder="90000000"
+              className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+            />
+            <p className="text-xs text-ink-light mt-1">Nummeret du har registrert på Vipps — brukes til utbetaling når varen er mottatt.</p>
+          </div>
+        )}
 
         {error && <p className="text-xs text-red-500">{error}</p>}
 

@@ -335,7 +335,8 @@ export function ListingDetail({ id }: { id: string }) {
         setCheckingOut(false);
         return;
       }
-      const res = await fetch("/api/stripe/checkout", {
+      const provider = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER === "vipps" ? "vipps" : "stripe";
+      const res = await fetch(`/api/${provider}/checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -656,8 +657,9 @@ export function ListingDetail({ id }: { id: string }) {
                 </div>
               ) : (
                 <div className="space-y-3 mb-6">
-                  {(listing.profiles as { stripe_account_id?: string | null; stripe_onboarding_complete?: boolean }).stripe_account_id &&
-                   (listing.profiles as { stripe_onboarding_complete?: boolean }).stripe_onboarding_complete && (
+                  {(process.env.NEXT_PUBLIC_PAYMENT_PROVIDER === "vipps" ||
+                    ((listing.profiles as { stripe_account_id?: string | null; stripe_onboarding_complete?: boolean }).stripe_account_id &&
+                     (listing.profiles as { stripe_onboarding_complete?: boolean }).stripe_onboarding_complete)) && (
                     <button
                       onClick={() => setShowCheckoutConfirm(true)}
                       disabled={checkingOut}
@@ -669,8 +671,9 @@ export function ListingDetail({ id }: { id: string }) {
                       {checkingOut ? "Åpner betaling..." : `Kjøp nå — ${listing.price.toLocaleString("nb-NO")} kr`}
                     </button>
                   )}
-                  {(listing.profiles as { stripe_account_id?: string | null; stripe_onboarding_complete?: boolean }).stripe_account_id &&
-                   (listing.profiles as { stripe_onboarding_complete?: boolean }).stripe_onboarding_complete && (() => {
+                  {(process.env.NEXT_PUBLIC_PAYMENT_PROVIDER === "vipps" ||
+                    ((listing.profiles as { stripe_account_id?: string | null; stripe_onboarding_complete?: boolean }).stripe_account_id &&
+                     (listing.profiles as { stripe_onboarding_complete?: boolean }).stripe_onboarding_complete)) && (() => {
                     const isPro = (listing.clubs as { is_pro?: boolean })?.is_pro || (listing.profiles as { is_pro?: boolean })?.is_pro;
                     const feeNok = Math.round(listing.price * (isPro ? 2 : 5)) / 100;
                     return (
@@ -1008,7 +1011,7 @@ export function ListingDetail({ id }: { id: string }) {
                 <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                 </svg>
-                Trygt kjøp — betaling håndteres sikkert via Stripe
+                Trygt kjøp — betaling håndteres sikkert via {process.env.NEXT_PUBLIC_PAYMENT_PROVIDER === "vipps" ? "Vipps" : "Stripe"}
               </div>
 
               <div className="flex flex-col gap-2 pt-1">
