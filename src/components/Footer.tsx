@@ -103,7 +103,11 @@ export function Footer() {
               © 2026 Sportsbytte · Alle rettigheter reservert.
             </p>
             <p className="text-xs text-white/30">
-              Driftes av Frameflow / Ivan Kunne · Org.nr. 936 600 018 ·{" "}
+              Driftes av{" "}
+              <a href="https://frameflow.no" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors duration-[120ms]">
+                Frameflow
+              </a>{" "}
+              / Ivan Kunne · Org.nr. 936 600 018 ·{" "}
               <a href="mailto:ivan@frameflow.no" className="hover:text-white/50 transition-colors duration-[120ms]">
                 ivan@frameflow.no
               </a>
